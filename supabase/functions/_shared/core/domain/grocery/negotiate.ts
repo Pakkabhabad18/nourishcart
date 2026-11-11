@@ -16,6 +16,8 @@ export interface BasketPatch {
   mealReplacements?: { mealId: string; recipeId: string }[];
   cheapestOnly?: string[];
   removed?: string[];
+  /** ingredientId -> productId the user picked by hand */
+  skuOverrides?: Record<string, string>;
 }
 
 export interface PatchEvaluation {
@@ -71,6 +73,7 @@ export function mergePatch(a: BasketPatch, b: BasketPatch): BasketPatch {
     mealReplacements: [...repl.entries()].map(([mealId, recipeId]) => ({ mealId, recipeId })).sort((x, y) => x.mealId.localeCompare(y.mealId)),
     cheapestOnly: [...new Set([...(a.cheapestOnly ?? []), ...(b.cheapestOnly ?? [])])].sort(),
     removed: [...new Set([...(a.removed ?? []), ...(b.removed ?? [])])].sort(),
+    skuOverrides: { ...(a.skuOverrides ?? {}), ...(b.skuOverrides ?? {}) },
   };
 }
 

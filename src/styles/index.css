@@ -1,0 +1,29 @@
+@import '@fontsource-variable/inter';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-canvas text-ink font-sans text-base antialiased; font-feature-settings: 'cv11', 'ss01'; }
+  /* Numbers line up in tables, totals and charts. */
+  .num { font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 2px solid #2D7A69; outline-offset: 2px; border-radius: 6px; }
+  h1, h2, h3 { @apply text-ink; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+@layer components {
+  .card { @apply bg-surface border border-line rounded-card; }
+  .field-input { @apply w-full rounded-ctl border border-line bg-surface px-3 py-2.5 text-base text-ink placeholder:text-muted/70 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20 disabled:bg-canvas; }
+  .field-input[aria-invalid='true'] { @apply border-danger focus:ring-danger/20; }
+  .chip { @apply inline-flex min-h-[40px] items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm text-ink transition-colors hover:border-teal-300 cursor-pointer select-none; }
+  .chip[aria-pressed='true'], .chip[aria-checked='true'] { @apply border-forest bg-mint text-forest font-medium; }
+  .link { @apply text-teal underline decoration-teal/30 underline-offset-2 hover:decoration-teal; }
+}
+
+/* One orchestrated motion moment: the range marker settling into place. */
+@keyframes settle { from { transform: translateX(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
+.range-marker { animation: settle 420ms cubic-bezier(.2,.7,.2,1) both; }

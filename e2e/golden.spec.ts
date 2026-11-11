@@ -1,0 +1,176 @@
+// PRD 17.3 golden demo, end to end, in demo mode. Screenshots go to e2e/screenshots/.
+import { expect, test, type Page } from '@playwright/test';
+
+const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/${name}.png`, fullPage: true });
+
+async function signIn(page: Page, email: string) {
+  await page.goto('/');
+  await shot(page, '01-landing');
+  await page.getByRole('link', { name: 'Get started with email' }).click();
+  await page.getByLabel('Email address').fill(email);
+  await page.getByRole('button', { name: 'Email me a code' }).click();
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+  // Resend is throttled
+  await expect(page.getByRole('button', { name: /Resend code in \d+s/ })).toBeDisabled();
+  const code = (await page.getByLabel('Demo inbox').locator('p.num').first().textContent())!.trim();
+  await shot(page, '02-otp');
+  await page.getByLabel('6-digit code').fill('000000');
+  await page.getByRole('button', { name: 'Verify and continue' }).click();
+  await expect(page.getByRole('alert')).toContainText('incorrect or has expired');
+  await page.getByLabel('6-digit code').fill(code);
+  await page.getByRole('button', { name: 'Verify and continue' }).click();
+}
+
+async function onboard(page: Page) {
+  // About
+  await page.getByLabel('Date of birth').fill('2000-05-14');
+  await page.getByRole('radio', { name: 'Female' }).click();
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  // Body
+  await page.getByLabel('Height in centimetres').fill('162');
+  await page.getByLabel('Weight in kg').fill('58');
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  // Activity
+  await page.getByRole('radio', { name: /Mostly sitting/ }).click();
+  await page.getByRole('radio', { name: /Medium/ }).click();
+  await page.getByLabel('Workouts per week').fill('3');
+  await page.getByLabel('Minutes per session').fill('45');
+  await page.getByLabel('Type').selectOption('strength');
+  await page.getByRole('radio', { name: /Moderate: a bit breathless/ }).click();
+  await shot(page, '04-onboarding-activity');
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  // Food
+  await page.getByRole('radio', { name: 'Eggetarian' }).click();
+  await page.getByLabel('No allergies or severe intolerances').check();
+  await page.getByLabel('Search foods').fill('okra');
+  await page.getByRole('checkbox', { name: 'Okra (bhindi)' }).click();
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  // Goal & budget
+  await page.getByRole('radio', { name: /Support training and muscle/ }).click();
+  await page.getByLabel('Grocery budget for this person').fill('1500');
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  // Health scope
+  await page.getByLabel('None of these apply').check();
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  // Review
+  await expect(page.getByText('Okra (bhindi)')).toBeVisible();
+  await page.getByRole('button', { name: 'Calculate my estimates' }).click();
+}
+
+test('golden demo journey', async ({ page, context }) => {
+  await signIn(page, 'demo.asha@example.com');
+  await expect(page.getByRole('heading', { name: 'Before you add any personal details' })).toBeVisible();
+  await page.getByRole('button', { name: 'Create profile and continue' }).click();
+  await expect(page.getByText('Please accept the privacy notice')).toBeVisible();
+  await page.getByLabel(/I have read the notice/).check();
+  await page.getByLabel('Profile name').fill('Demo Asha');
+  await shot(page, '03-welcome');
+  await page.getByRole('button', { name: 'Create profile and continue' }).click();
+
+  // Validation blocks an empty step
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  await expect(page.getByText('Enter a date of birth.')).toBeVisible();
+  await onboard(page);
+
+  // Nutrition results
+  await expect(page.getByRole('heading', { name: 'Daily estimates for Demo Asha' })).toBeVisible();
+  await expect(page.getByText(/planning floor/)).toBeVisible();
+  await page.getByRole('button', { name: 'How was this estimated?' }).click();
+  await expect(page.getByText('provisional demo method')).toBeVisible();
+  await shot(page, '05-nutrition');
+
+  // Three plans
+  await page.getByRole('button', { name: 'See meal plan options' }).click();
+  await page.getByRole('button', { name: 'Show me three plans' }).click();
+  await expect(page.getByRole('heading', { name: 'Choose a plan for this week' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Choose / })).toHaveCount(3);
+  await shot(page, '06-compare');
+  await page.getByRole('button', { name: 'Choose Balanced' }).click();
+  await expect(page.getByRole('heading', { name: 'Balanced week' })).toBeVisible();
+
+  // Replace lunch on the current day
+  await page.getByRole('button', { name: 'Replace' }).nth(1).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await shot(page, '07-replace');
+  await page.getByRole('dialog').getByRole('button', { name: 'Use this' }).first().click();
+  await expect(page.getByText(/replaced/)).toBeVisible();
+  await shot(page, '08-week');
+
+  // Groceries: over budget, accept alternatives until under
+  await page.getByRole('link', { name: 'Build this week’s groceries' }).click();
+  await expect(page.getByRole('heading', { name: 'Groceries for this week' })).toBeVisible();
+  await expect(page.getByText(/over your hard budget/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Review basket' })).toBeDisabled();
+  await shot(page, '09-over-budget');
+  for (let i = 0; i < 4; i++) {
+    if (!(await page.getByText(/over your hard budget/).isVisible())) break;
+    await page.getByRole('button', { name: 'Accept', exact: true }).first().click();
+    await page.waitForTimeout(400);
+  }
+  await expect(page.getByText(/under budget/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Changes you accepted' })).toBeVisible();
+  await shot(page, '10-under-budget');
+
+  // Checkout
+  await page.getByRole('button', { name: 'Review basket' }).click();
+  await page.getByRole('button', { name: 'Approve basket' }).click();
+  // Offline blocks checkout
+  await context.setOffline(true);
+  await page.getByLabel(/I understand this is a simulated order/).check();
+  await expect(page.getByRole('button', { name: /Place simulated order/ })).toBeDisabled();
+  await context.setOffline(false);
+  await shot(page, '11-checkout');
+  await page.getByRole('button', { name: /Place simulated order/ }).click();
+  await expect(page.getByText('SIMULATED ORDER – NO PURCHASE PLACED – NO PAYMENT TAKEN')).toBeVisible();
+  await shot(page, '12-receipt');
+
+  // Orders + pantry + replenishment
+  await page.getByRole('link', { name: 'Orders' }).first().click();
+  await expect(page.getByText('Confirmed (simulated)')).toHaveCount(1);
+  await page.getByRole('link', { name: 'Pantry' }).first().click();
+  await expect(page.getByText(/Reorder around/).first()).toBeVisible();
+  await shot(page, '13-pantry');
+  await page.getByRole('link', { name: 'Overview' }).first().click();
+  await shot(page, '14-overview');
+
+  // Second profile + isolation
+  await page.getByRole('link', { name: 'Profiles' }).first().click();
+  await page.getByRole('button', { name: 'Add adult profile' }).click();
+  await page.getByRole('dialog').getByLabel('Name').fill('Ravi');
+  await page.getByRole('button', { name: 'Create and set up' }).click();
+  await expect(page.getByText('Setting up')).toBeVisible();
+  await page.getByRole('link', { name: 'Pantry' }).first().click();
+  await expect(page.getByText('The pantry is empty')).toBeVisible();
+  await page.getByRole('link', { name: 'Profiles' }).first().click();
+  await shot(page, '15-profiles');
+  await page.getByRole('button', { name: 'Switch to Demo Asha' }).click();
+  await page.getByRole('link', { name: 'Pantry' }).first().click();
+  await expect(page.getByText(/Reorder around/).first()).toBeVisible();
+});
+
+test('mobile layout of the key screens @mobile', async ({ page }) => {
+  await page.goto('/');
+  await shot(page, 'm01-landing');
+  await page.getByRole('link', { name: 'Get started with email' }).click();
+  await page.getByLabel('Email address').fill('mobile@example.com');
+  await page.getByRole('button', { name: 'Email me a code' }).click();
+  const code = (await page.getByLabel('Demo inbox').locator('p.num').first().textContent())!.trim();
+  await page.getByLabel('6-digit code').fill(code);
+  await page.getByRole('button', { name: 'Verify and continue' }).click();
+  await page.getByLabel(/I have read the notice/).check();
+  await page.getByLabel('Profile name').fill('Demo Asha');
+  await page.getByRole('button', { name: 'Create profile and continue' }).click();
+  await onboard(page);
+  await expect(page.getByRole('heading', { name: 'Daily estimates for Demo Asha' })).toBeVisible();
+  await shot(page, 'm02-nutrition');
+  await page.getByRole('link', { name: 'Plan' }).click();
+  await page.getByRole('button', { name: 'Show me three plans' }).click();
+  await shot(page, 'm03-compare');
+  await page.getByRole('button', { name: 'Choose Budget Optimised' }).click();
+  await shot(page, 'm04-week');
+  await page.getByRole('link', { name: 'Shop' }).click();
+  await shot(page, 'm05-groceries');
+  // No horizontal overflow in the primary flow (NFR responsive)
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  expect(overflow).toBe(false);
+});

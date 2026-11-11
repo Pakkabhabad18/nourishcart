@@ -48,6 +48,7 @@ export function runPipeline(i: PipelineInput): PipelineResult {
     products: i.cat.products,
     ingredients: i.cat.ingredients,
     cheapestOnly: i.patch.cheapestOnly,
+    skuOverrides: i.patch.skuOverrides,
     removed: i.patch.removed,
     budgetInr: i.budgetInrOverride !== undefined ? i.budgetInrOverride : weeklyBudget(i.bundle),
     budgetMode: i.bundle.budget.mode,

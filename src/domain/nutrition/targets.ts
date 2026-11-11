@@ -86,7 +86,7 @@ export function calculateTargets(b: ProfileBundle, now: Date = new Date()): Targ
   const refSex = sex === 'prefer_not_to_say' ? null : sex;
   const referenceContext = refSex
     ? {
-        label: `ICMR-NIN 2020 reference ${refSex === 'male' ? 'man' : 'woman'} (${ICMR_REFERENCE_ENERGY[refSex].referenceWeightKg} kg) — population context, not your target`,
+        label: `ICMR-NIN 2020 reference ${refSex === 'male' ? 'man' : 'woman'} (${ICMR_REFERENCE_ENERGY[refSex].referenceWeightKg} kg). Population context, not your target`,
         rows: [
           { work: 'Sedentary work', kcal: ICMR_REFERENCE_ENERGY[refSex].sedentary },
           { work: 'Moderate work', kcal: ICMR_REFERENCE_ENERGY[refSex].moderate },

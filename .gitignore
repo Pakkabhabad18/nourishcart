@@ -14,3 +14,4 @@ supabase/.temp
 supabase/functions/.env*
 supabase/functions/.sandbox-proxy-ca.crt
 .DS_Store
+e2e/screenshots/
