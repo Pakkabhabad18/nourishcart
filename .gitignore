@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dev-dist/
+coverage/
+playwright-report/
+test-results/
+*.log
+.env
+.env.*
+!.env.example
+# Supabase local state and sandbox-only files
+supabase/.branches
+supabase/.temp
+supabase/functions/.env*
+supabase/functions/.sandbox-proxy-ca.crt
+.DS_Store
