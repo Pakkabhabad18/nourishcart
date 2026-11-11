@@ -61,6 +61,14 @@ export function SettingsPage() {
     URL.revokeObjectURL(a.href);
     toast('Export downloaded');
   }
+  async function copyData() {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(await store.exportData(), null, 2));
+      toast('Your data was copied as JSON');
+    } catch {
+      toast('Copy is not allowed here. Use Export instead.');
+    }
+  }
   async function toggleConsent(purpose: 'profile_processing' | 'analytics', accepted: boolean) {
     await store.setConsent(purpose, accepted);
     await qc.invalidateQueries({ queryKey: qk.consents });
@@ -124,7 +132,10 @@ export function SettingsPage() {
         <section className="card p-5">
           <h2 className="font-semibold">Your data</h2>
           <p className="mt-1 text-sm text-muted">Download everything stored for your account as JSON.</p>
-          <Button className="mt-4" variant="secondary" icon={<Download className="h-4 w-4" aria-hidden />} onClick={exportData}>Export my data</Button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button variant="secondary" icon={<Download className="h-4 w-4" aria-hidden />} onClick={exportData}>Export my data</Button>
+            <Button variant="ghost" onClick={copyData}>Copy as JSON</Button>
+          </div>
         </section>
         <section className="card border-danger/30 p-5">
           <h2 className="font-semibold">Delete account</h2>

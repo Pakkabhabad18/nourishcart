@@ -1,6 +1,6 @@
 // Routes. Signed-out users see landing and sign-in only; signed-in users without a
 // profile are sent to the first-run welcome; the rest lives inside the app shell.
-import { BrowserRouter, HashRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, MemoryRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppProvider, useApp } from './context.tsx';
 import { AppShell } from './AppShell.tsx';
@@ -48,7 +48,9 @@ function Home() {
   return session ? <Navigate to="/overview" replace /> : <LandingPage />;
 }
 
-const Router = import.meta.env.VITE_ROUTER_MODE === 'hash' ? HashRouter : BrowserRouter;
+// browser (default, Cloudflare Pages), hash (sub-path hosting) or memory (sandboxed review previews).
+const mode = import.meta.env.VITE_ROUTER_MODE;
+const Router = mode === 'hash' ? HashRouter : mode === 'memory' ? (props: { children: React.ReactNode }) => <MemoryRouter initialEntries={['/']}>{props.children}</MemoryRouter> : BrowserRouter;
 
 export function App() {
   return (

@@ -1,11 +1,11 @@
 {
   "name": "nourishcart",
   "version": "0.1.0",
-  "description": "NourishCart – personal nutrition, meal planning and grocery intelligence PWA (India-first)",
+  "description": "NourishCart \u2013 personal nutrition, meal planning and grocery intelligence PWA (India-first)",
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
-    "build:preview": "VITE_ROUTER_MODE=hash VITE_BASE=./ npm run build",
+    "build:preview": "VITE_ROUTER_MODE=memory VITE_BASE=./ VITE_DISABLE_SW=1 tsc -p tsconfig.json && VITE_ROUTER_MODE=memory VITE_BASE=./ VITE_DISABLE_SW=1 vite build --outDir dist-preview",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
