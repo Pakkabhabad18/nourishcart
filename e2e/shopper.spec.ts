@@ -20,8 +20,42 @@ test('compare prices with the extension (stores and AI mocked)', async ({}, test
   // both names to it, so every tab the extension opens gets saved pages, never the real sites.
   const dir = mkdtempSync(path.join(tmpdir(), 'nc-'));
   execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=localhost', '-keyout', `${dir}/k.pem`, '-out', `${dir}/c.pem`], { stdio: 'ignore' });
+  const added: { title: string; qty: number }[] = [];
   const server = https.createServer({ key: readFileSync(`${dir}/k.pem`), cert: readFileSync(`${dir}/c.pem`) }, (req, res) => {
     const u = new URL(req.url ?? '/', 'https://x');
+    if (u.pathname === '/cart-log') {
+      added.push({ title: u.searchParams.get('title') ?? '', qty: Number(u.searchParams.get('qty')) });
+      res.writeHead(204);
+      return res.end();
+    }
+    // Zepto toor dal and paneer are served as real-looking product cards with working Add
+    // buttons, so the extension's "fill cart" can be tested end to end.
+    if ((req.headers.host ?? '').includes('zepto') && /toor|paneer/.test(u.searchParams.get('query') ?? '')) {
+      const pg = saved(u.searchParams.get('query')!.includes('toor') ? 'zepto-toor' : 'zepto-paneer');
+      const lines = pg.text.split('\n');
+      let from = 0;
+      const cards = pg.gold.map((g) => {
+        const at = lines.indexOf(g.title, from);
+        from = at + 1;
+        const pack = lines[at + 1] ?? '';
+        return `<div class="card"><button class="add">ADD</button><p>₹${g.price}</p><span>${g.title}</span><p>${pack}</p></div>`;
+      });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      return res.end(`<!doctype html><html><head><meta charset="utf-8"></head><body><p>Showing results for "${u.searchParams.get('query')}"</p>${cards.join('')}
+<script>
+document.querySelectorAll('.card').forEach((c) => {
+  const title = c.querySelector('span').textContent;
+  c.querySelector('button.add').addEventListener('click', (e) => {
+    let qty = 1;
+    const box = document.createElement('div');
+    box.innerHTML = '<button aria-label="Decrease quantity">−</button><b>1</b><button aria-label="Increase quantity">+</button>';
+    e.target.replaceWith(box);
+    fetch('/cart-log?title=' + encodeURIComponent(title) + '&qty=1');
+    box.querySelector('[aria-label="Increase quantity"]').addEventListener('click', () => { qty++; box.querySelector('b').textContent = qty; fetch('/cart-log?title=' + encodeURIComponent(title) + '&qty=' + qty); });
+  });
+});
+</script></body></html>`);
+    }
     const q = u.searchParams.get('query') ?? '';
     const isZepto = (req.headers.host ?? '').includes('zepto');
     const text = isZepto
@@ -43,8 +77,8 @@ test('compare prices with the extension (stores and AI mocked)', async ({}, test
   await context.route('**/api/listings', async (route) => {
     const { pages } = route.request().postDataJSON() as { pages: { id: string; text: string }[] };
     const out = pages.map((p) => {
-      const known = STORE_PAGES.find((s) => s.text === p.text && s.gold.length);
-      const lines = p.text.split('\n');
+      const known = STORE_PAGES.find((s) => s.gold.length && s.store === (p.id.startsWith('zepto') ? 'zepto' : 'instamart') && s.gold.every((g) => p.text.includes(g.title)));
+      const lines = p.text.split('\n').map((l) => l.trim()).filter(Boolean);
       const seen: Record<string, number> = {};
       // pack text = first size-looking line after the n-th occurrence of the title (as a careful reader would copy it)
       const packFor = (title: string) => {
@@ -89,6 +123,15 @@ test('compare prices with the extension (stores and AI mocked)', async ({}, test
   await expect(live.getByText(/Green Moong Whole Pesticide Free Natural: looks like/)).toHaveCount(1);
   await expect(live.getByText(/RASOI TATTVA Chana Dal: /)).toHaveCount(1);
   await page.screenshot({ path: 'e2e/screenshots/13-compare.png', fullPage: true });
+
+  // Fill the Zepto cart with Zepto's cheapest picks: confirmation first, then the extension clicks Add.
+  await page.getByRole('button', { name: /to my Zepto cart/ }).click();
+  await expect(page.getByText(/items to your Zepto cart\?/)).toBeVisible();
+  await page.getByRole('button', { name: 'Yes, add them' }).click();
+  await expect(page.getByText(/: added/).first()).toBeVisible({ timeout: 120_000 });
+  await expect.poll(() => added.length, { timeout: 60_000 }).toBeGreaterThan(0);
+  console.log('cart log', JSON.stringify(added));
+  await page.screenshot({ path: 'e2e/screenshots/13b-fill-cart.png', fullPage: true });
 
   // Without the extension path: saved pages, same checks
   await page.getByRole('button', { name: 'Try it on saved store pages' }).click();

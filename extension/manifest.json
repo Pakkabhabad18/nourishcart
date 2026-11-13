@@ -1,16 +1,31 @@
 {
   "manifest_version": 3,
   "name": "NourishCart Shopper",
-  "version": "0.1.0",
-  "description": "Lets NourishCart read Zepto and Instamart search results in your own browser to compare prices. It never logs in, never adds to cart and never pays.",
-  "icons": { "128": "icons/icon-128.png" },
-  "permissions": ["scripting"],
-  "host_permissions": ["https://www.zepto.com/*", "https://www.swiggy.com/*"],
-  "background": { "service_worker": "background.js" },
+  "version": "0.2.0",
+  "description": "Lets NourishCart compare Zepto and Instamart prices in your own browser, and, when you ask, click Add for the chosen products. It never opens checkout or pays.",
+  "icons": {
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.zepto.com/*",
+    "https://www.swiggy.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
-      "matches": ["https://nourishcart.vercel.app/*", "http://localhost/*", "http://127.0.0.1/*"],
-      "js": ["bridge.js"],
+      "matches": [
+        "https://nourishcart.vercel.app/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
       "run_at": "document_start"
     }
   ]

@@ -101,3 +101,31 @@ export async function aiReadListings(pages: PageInput[], onBatch: (done: number,
   await Promise.all([worker(), worker()]);
   return { pages: out, model, failedBatches: failed };
 }
+
+export interface FillItem {
+  id: string; // ingredientId
+  store: StoreId;
+  url: string;
+  title: string;
+  price: number;
+  packs: number;
+}
+export type FillStatus = 'added' | 'already_in_cart' | 'not_found' | 'needs_login_or_location' | 'not_allowed' | 'error';
+
+/** Ask the extension to click Add for each chosen product, one store tab at a time, in view. */
+export function fillStoreCart(items: FillItem[], onItem: (id: string, status: FillStatus, done: number, total: number, note?: string) => void): Promise<void> {
+  const requestId = `f${Date.now()}`;
+  return new Promise((resolve) => {
+    const onMsg = (e: MessageEvent<ShopperMsg & { status?: FillStatus; note?: string }>) => {
+      const m = e.data;
+      if (e.source !== window || m?.source !== 'nourishcart-shopper' || m.requestId !== requestId) return;
+      if (m.type === 'ADDED' && m.id) onItem(m.id, m.status ?? 'error', m.done ?? 0, m.total ?? items.length, m.note);
+      if (m.type === 'FILL_DONE') {
+        window.removeEventListener('message', onMsg);
+        resolve();
+      }
+    };
+    window.addEventListener('message', onMsg);
+    window.postMessage({ source: 'nourishcart-app', type: 'FILL_CART', requestId, items }, window.location.origin);
+  });
+}

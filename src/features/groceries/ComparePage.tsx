@@ -17,7 +17,7 @@ import { formatInr } from '../../lib/format.ts';
 import { searchQueries } from '../../domain/commerce/instamart.ts';
 import { compareStores, STORE_NAMES, type CompareLine, type Comparison, type StoreId } from '../../domain/commerce/compare.ts';
 import type { Listing, PageInput, PageState } from '../../domain/commerce/listings.ts';
-import { aiReadListings, detectShopper, readStorePages, STORE_SEARCH, type ReadJob } from '../../lib/shopper.ts';
+import { aiReadListings, detectShopper, fillStoreCart, readStorePages, STORE_SEARCH, type FillStatus, type ReadJob } from '../../lib/shopper.ts';
 import { STORE_PAGES } from '../../eval/datasets/storePages.ts';
 
 const STORES: StoreId[] = ['zepto', 'instamart'];
@@ -49,6 +49,10 @@ export function ComparePage() {
   const [model, setModel] = useState<string | null>(null);
   const [checksRejected, setChecksRejected] = useState(0);
   const [sample, setSample] = useState(false);
+  // Cart filling: which store the person is confirming, and what happened per item.
+  const [confirmStore, setConfirmStore] = useState<StoreId | null>(null);
+  const [filling, setFilling] = useState<StoreId | null>(null);
+  const [fillResults, setFillResults] = useState<Record<string, FillStatus>>({});
 
   useEffect(() => {
     detectShopper().then((v) => setShopper(v ?? 'missing'));
@@ -119,7 +123,18 @@ export function ComparePage() {
     await readAndCompare(lines, pages);
   }
 
-  const busy = phase.kind === 'reading' || phase.kind === 'ai';
+  const busy = phase.kind === 'reading' || phase.kind === 'ai' || filling !== null;
+
+  /** Items where this store is the cheapest choice (the split option). */
+  const itemsFor = (s: StoreId) => (result ? result.lines.filter((l) => l.cheapest === s).map((l) => ({ line: l.line, pick: l.best[s]! })) : []);
+
+  async function fill(s: StoreId) {
+    setConfirmStore(null);
+    setFilling(s);
+    const items = itemsFor(s).map(({ line, pick }) => ({ id: line.ingredientId, store: s, url: STORE_SEARCH[s](searchQueries(line)[0]), title: pick.title, price: pick.priceInr, packs: pick.packs }));
+    await fillStoreCart(items, (id, status) => setFillResults((r) => ({ ...r, [`${s}:${id}`]: status })));
+    setFilling(null);
+  }
   const best = result ? STORES.filter((s) => result.totals[s].found === result.lines.length).sort((a, c) => result.totals[a].costInr - result.totals[c].costInr)[0] : undefined;
 
   return (
@@ -260,6 +275,52 @@ export function ComparePage() {
               </tbody>
             </table>
           </section>
+          {!sample && shopper !== 'missing' && shopper !== 'checking' && (
+            <section className="card p-5">
+              <h2 className="text-lg font-medium">Put the cheapest picks in your carts</h2>
+              <p className="mt-1 text-sm text-on-surface-variant">
+                The extension opens each store's search page in front of you and clicks Add on the exact product chosen above, after checking its name and price on the card. It stops there: you review the cart and pay in the store's own app or site.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                {STORES.filter((s) => itemsFor(s).length).map((s) => (
+                  <Button key={s} variant="tonal" onClick={() => setConfirmStore(s)} disabled={busy} loading={filling === s}>
+                    Add {itemsFor(s).length} item{itemsFor(s).length === 1 ? '' : 's'} to my {STORE_NAMES[s]} cart
+                  </Button>
+                ))}
+              </div>
+              {confirmStore && (
+                <Notice className="mt-4" tone="warn" title={`Add ${itemsFor(confirmStore).length} items to your ${STORE_NAMES[confirmStore]} cart?`}>
+                  <ul className="mt-1 list-disc pl-5">
+                    {itemsFor(confirmStore).map(({ line, pick }) => (
+                      <li key={line.ingredientId}>
+                        {pick.title}
+                        {pick.packs > 1 ? ` × ${pick.packs}` : ''} ({formatInr(pick.costInr)})
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2">Tabs will open one by one while it works. Nothing is ordered or paid.</p>
+                  <div className="mt-3 flex gap-3">
+                    <Button onClick={() => fill(confirmStore)}>Yes, add them</Button>
+                    <Button variant="ghost" onClick={() => setConfirmStore(null)}>Cancel</Button>
+                  </div>
+                </Notice>
+              )}
+              {Object.keys(fillResults).length > 0 && (
+                <ul className="mt-4 space-y-1 text-sm" aria-live="polite">
+                  {Object.entries(fillResults).map(([k, st]) => {
+                    const [s, id] = k.split(':') as [StoreId, string];
+                    const l = result.lines.find((x) => x.line.ingredientId === id);
+                    const text: Record<FillStatus, string> = { added: 'added', already_in_cart: 'already in your cart', not_found: "couldn't find that exact product on the page, add it yourself", needs_login_or_location: 'the store asked you to log in or set your location; do that, then try again', not_allowed: 'not allowed', error: 'something went wrong' };
+                    return (
+                      <li key={k}>
+                        <Tag tone={st === 'added' || st === 'already_in_cart' ? 'good' : 'warn'}>{STORE_NAMES[s]}</Tag> {l?.best[s]?.title ?? id}: {text[st]}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          )}
           {result.missingEverywhere.length > 0 && <Notice tone="info">Not found on either store: {result.missingEverywhere.join(', ')}. Search for these yourself or pick a substitute.</Notice>}
         </>
       )}

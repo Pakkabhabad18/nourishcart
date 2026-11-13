@@ -13,6 +13,13 @@ window.addEventListener('message', (event) => {
     return;
   }
 
+  if (msg.type === 'FILL_CART' && Array.isArray(msg.items)) {
+    const port = chrome.runtime.connect({ name: 'fill-cart' });
+    port.onMessage.addListener((m) => window.postMessage({ source: 'nourishcart-shopper', requestId: msg.requestId, ...m }, window.location.origin));
+    port.postMessage({ items: msg.items });
+    return;
+  }
+
   if (msg.type === 'READ_PAGES' && Array.isArray(msg.jobs)) {
     // One port per request so progress can be streamed back as each page is read.
     const port = chrome.runtime.connect({ name: 'read-pages' });
