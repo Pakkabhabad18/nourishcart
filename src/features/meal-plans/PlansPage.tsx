@@ -320,7 +320,7 @@ export function PlansPage() {
 
   if (busy) return <Spinner label="Building three plan options" />;
 
-  if (comparing && proposed.length === 3)
+  if (comparing && proposed.length >= 1)
     return (
       <>
         <PageHeader
@@ -335,6 +335,11 @@ export function PlansPage() {
             </>
           }
         />
+        {proposed.length < 3 && (
+          <Notice className="mb-4" title={`Only ${proposed.length} different week${proposed.length === 1 ? '' : 's'} possible`}>
+            {profile.displayName}’s food rules leave too few recipes for three different weeks, so we show {proposed.length === 1 ? 'one' : 'two'} instead of repeating a plan. Removing a non-allergy exclusion adds more choice.
+          </Notice>
+        )}
         <Compare plans={proposed} bundle={b} onChoose={choose} choosing={choosing} />
       </>
     );
@@ -362,8 +367,8 @@ export function PlansPage() {
         title={`${OPTION_META[plan.optionKey].label} week`}
         description={`Week of ${new Date(plan.weekStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}. Tap a meal to see the recipe, change servings or replace it.`}
         actions={
-          <Button variant="secondary" icon={<RefreshCw className="h-4 w-4" aria-hidden />} onClick={() => (proposed.length === 3 ? setParams({ compare: '1' }) : generate())} disabled={!online}>
-            {proposed.length === 3 ? 'Compare options' : 'Regenerate options'}
+          <Button variant="secondary" icon={<RefreshCw className="h-4 w-4" aria-hidden />} onClick={() => (proposed.length >= 1 ? setParams({ compare: '1' }) : generate())} disabled={!online}>
+            {proposed.length >= 1 ? 'Compare options' : 'Regenerate options'}
           </Button>
         }
       />

@@ -10,7 +10,7 @@ export const PLANNER_VERSION = 'planner-1.0.0';
 export const DAYS = 7;
 export const SERVING_STEP = 0.25;
 export const SERVING_MIN = 0.5;
-export const SERVING_MAX = 2.5;
+export const SERVING_MAX = 3;
 /** A day is accepted when energy is within ±10% of the planning estimate. */
 export const ENERGY_TOLERANCE = 0.1;
 
@@ -159,7 +159,7 @@ function score(f: RecipeFacts, ctx: ScoreCtx): number {
       break;
   }
   s += likes * 0.4 - dislikeHits * 1.2 - overTime * 0.05;
-  if (ctx.usedInEarlierOptions.has(f.recipe.id)) s -= 0.15;
+  if (ctx.usedInEarlierOptions.has(f.recipe.id)) s -= ctx.option === 'budget' ? 0 : 0.6;
   return s;
 }
 
@@ -174,12 +174,14 @@ export interface GenerateResult {
   ok: boolean;
   plans: PlanDraft[];
   reasons: string[];
+  /** Shown with the comparison, e.g. when fewer than three distinct weeks are possible. */
+  notes: string[];
 }
 
-export function generatePlanOptions(b: ProfileBundle, targets: PlanTargets, cat: Catalog): GenerateResult {
+export function generatePlanOptions(b: ProfileBundle, targets: PlanTargets, cat: Catalog, addSnack = false): GenerateResult {
   const r = restrictionsOf(b);
   const pool = eligibleRecipes(cat, r);
-  const slots = slotsFor(b.preferences.mealsPerDay);
+  const slots = slotsFor(addSnack ? 4 : b.preferences.mealsPerDay);
   const reasons: string[] = [];
   const bySlot = new Map<MealSlot, RecipeFacts[]>();
   for (const slot of slots) {
@@ -187,7 +189,7 @@ export function generatePlanOptions(b: ProfileBundle, targets: PlanTargets, cat:
     if (list.length === 0) reasons.push(`No recipe for ${slot} fits your food pattern, allergies and exclusions.`);
     bySlot.set(slot, list);
   }
-  if (reasons.length) return { ok: false, plans: [], reasons };
+  if (reasons.length) return { ok: false, plans: [], reasons, notes: [] };
 
   const usedInEarlierOptions = new Set<string>();
   const plans: PlanDraft[] = [];
@@ -222,7 +224,30 @@ export function generatePlanOptions(b: ProfileBundle, targets: PlanTargets, cat:
     draft.meals.forEach((m) => usedInEarlierOptions.add(m.recipeId));
     plans.push(draft);
   }
-  return { ok: true, plans, reasons };
+  // Never show two identical weeks as different options (FR-008). With very few allowed
+  // recipes, fewer than three distinct weeks exist; say so instead of padding.
+  const seen = new Set<string>();
+  const distinct = plans.filter((p) => {
+    const sig = p.meals.map((m) => `${m.recipeId}x${m.servings}`).join();
+    if (seen.has(sig)) return false;
+    seen.add(sig);
+    return true;
+  });
+  // Energy check: high needs with 3 meals can exceed sensible portions. First add a daily
+  // snack (and say so); if a plan still misses, drop it rather than show it as valid.
+  const energyOk = (p: PlanDraft) => evaluatePlan(p, targets, cat, b.preferences.groceryTier).days.every((d) => d.energyOk && d.proteinOk);
+  if (!addSnack && slots.length === 3 && !distinct.every(energyOk)) {
+    const withSnack = generatePlanOptions(b, targets, cat, true);
+    withSnack.notes.unshift(`A daily snack was added: ${targets.energyKcal.toLocaleString('en-IN')} kcal is hard to reach in 3 meals at normal portion sizes.`);
+    return withSnack;
+  }
+  const valid = distinct.filter(energyOk);
+  if (valid.length === 0)
+    return { ok: false, plans: [], notes: [], reasons: [`Your energy estimate (${targets.energyKcal.toLocaleString('en-IN')} kcal a day) is higher than our current recipes can reach at sensible portion sizes with your food rules. We will not show a plan that misses it.`] };
+  const notes: string[] = [];
+  if (valid.length < distinct.length) notes.push('Some plan options could not meet your energy or protein checks and were left out.');
+  if (distinct.length < plans.length) notes.push(`Your food rules allow only ${pool.length} recipes, so ${distinct.length === 1 ? 'one week plan is' : `${distinct.length} different week plans are`} possible instead of three. Removing a non-allergy exclusion would add more choice.`);
+  return { ok: true, plans: valid, reasons, notes };
 }
 
 /**
@@ -232,7 +257,7 @@ export function generatePlanOptions(b: ProfileBundle, targets: PlanTargets, cat:
 export function fitPortions(plan: PlanDraft, targets: PlanTargets, cat: Catalog): PlannedMeal[] {
   const meals = plan.meals.map((m) => ({ ...m }));
   for (let day = 0; day < DAYS; day++) {
-    for (let iter = 0; iter < 12; iter++) {
+    for (let iter = 0; iter < 40; iter++) {
       const dayMeals = meals.filter((m) => m.day === day);
       if (dayMeals.length === 0) break;
       const kcalOf = (m: PlannedMeal) => aggregateRecipeNutrition(cat.recipes.get(m.recipeId)!, cat.ingredients, m.servings, plan.swaps).energyKcal.value;

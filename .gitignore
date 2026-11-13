@@ -16,3 +16,4 @@ supabase/functions/.sandbox-proxy-ca.crt
 .DS_Store
 e2e/screenshots/
 dist-preview/
+eval-results/
