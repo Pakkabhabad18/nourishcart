@@ -11,6 +11,8 @@ import { SignInPage } from '../features/auth/SignInPage.tsx';
 import { WelcomePage } from '../features/profiles/WelcomePage.tsx';
 import { ProfilesPage } from '../features/profiles/ProfilesPage.tsx';
 import { OnboardingPage } from '../features/onboarding/OnboardingPage.tsx';
+import { QuickSetupPage } from '../features/onboarding/QuickSetupPage.tsx';
+import { EvaluationPage } from '../features/evaluation/EvaluationPage.tsx';
 import { NutritionPage } from '../features/nutrition/NutritionPage.tsx';
 import { PlansPage } from '../features/meal-plans/PlansPage.tsx';
 import { RecipePage } from '../features/meal-plans/RecipePage.tsx';
@@ -67,6 +69,8 @@ export function App() {
                   <Route path="/overview" element={<OverviewPage />} />
                   <Route path="/profiles" element={<ProfilesPage />} />
                   <Route path="/profiles/:id/setup" element={<OnboardingPage />} />
+                  <Route path="/profiles/:id/quick" element={<QuickSetupPage />} />
+                  <Route path="/evaluation" element={<EvaluationPage />} />
                   <Route path="/nutrition" element={<NutritionPage />} />
                   <Route path="/plans" element={<PlansPage />} />
                   <Route path="/recipes/:id" element={<RecipePage />} />

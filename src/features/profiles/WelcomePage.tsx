@@ -13,13 +13,13 @@ export function PrivacyNotice() {
   return (
     <div className="space-y-3 text-sm text-on-surface-variant">
       <p>
-        <strong>What we collect:</strong> for each profile, date of birth, height, weight, activity, food pattern, allergies, food exclusions, goal and grocery budget. We do not ask for diagnoses, medication, government ID, exact location or payment details.
+        <strong>What we collect:</strong> for each profile, age or date of birth, height, weight, activity, food pattern, allergies, food exclusions, goal and grocery budget. We do not ask for diagnoses, medication, government ID, exact location or payment details.
       </p>
       <p>
         <strong>Why:</strong> only to estimate reference nutrition needs, build meal plans and prepare simulated grocery baskets for you.
       </p>
       <p>
-        <strong>What we do not do:</strong> no advertising, no analytics on health or profile data, and no sending of your profile to any AI service.
+        <strong>What we do not do:</strong> no advertising, no analytics on health or profile data, and no sending of your profile to any AI service. Voice input is turned into text by your browser's own speech service.
       </p>
       <p>
         <strong>Your control:</strong> you can edit or archive profiles, export your data and delete your account at any time from Settings.
@@ -49,7 +49,7 @@ export function WelcomePage() {
       setActiveProfileId(p.id);
       await qc.refetchQueries({ queryKey: qk.profiles, type: 'all' });
       toast('Profile created');
-      nav(`/profiles/${p.id}/setup`);
+      nav(`/profiles/${p.id}/quick`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the profile.');
     } finally {

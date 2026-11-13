@@ -13,7 +13,7 @@ export const CAT: Catalog = { recipes: RECIPE_MAP, ingredients: INGREDIENT_MAP, 
 export function goldenBundle(overrides: Partial<{ [K in keyof ProfileBundle]: Partial<ProfileBundle[K]> }> = {}): ProfileBundle {
   const b: ProfileBundle = {
     profile: {
-      id: 'p-golden', ownerUserId: 'u-1', displayName: 'Demo Asha', dateOfBirth: '2000-05-14', sex: 'female',
+      id: 'p-golden', ownerUserId: 'u-1', displayName: 'Demo Asha', dateOfBirth: '2000-05-14', ageAtEntry: null, ageEnteredAt: null, sex: 'female',
       heightCm: 162, weightKg: 58, archived: false, onboardingStep: 6, onboardingComplete: true,
       createdAt: NOW.toISOString(), updatedAt: NOW.toISOString(),
     },

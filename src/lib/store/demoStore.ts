@@ -164,7 +164,7 @@ export class DemoStore implements NourishStore {
   async createProfile(displayName: string) {
     const { db, d, s } = this.user();
     const now = new Date().toISOString();
-    const p: Profile = { id: uuid(), ownerUserId: s.userId, displayName: displayName.trim(), dateOfBirth: null, sex: null, heightCm: null, weightKg: null, archived: false, onboardingStep: 0, onboardingComplete: false, createdAt: now, updatedAt: now };
+    const p: Profile = { id: uuid(), ownerUserId: s.userId, displayName: displayName.trim(), dateOfBirth: null, ageAtEntry: null, ageEnteredAt: null, sex: null, heightCm: null, weightKg: null, archived: false, onboardingStep: 0, onboardingComplete: false, createdAt: now, updatedAt: now };
     d.profiles.push(p);
     d.bundles[p.id] = emptyBundle(p);
     save(db);

@@ -55,13 +55,14 @@ function same(f: Field, a: unknown, b: unknown): boolean {
   return a === b;
 }
 
-export function runExtractionEval(today = new Date('2026-11-13T00:00:00Z')): ExtractionReport {
+/** Score any extractor (rules by default, or precomputed LLM results) on the labelled set. */
+export function runExtractionEval(today = new Date('2026-11-13T00:00:00Z'), extract: (text: string, id: string) => Extraction = (t) => extractProfile(t, today)): ExtractionReport {
   const fields: Record<string, FieldScore> = Object.fromEntries(SCORED_FIELDS.map((f) => [f, { correct: 0, missed: 0, wrong: 0, hallucinated: 0, precision: 0, recall: 0 }]));
   const perCase: ExtractionCaseResult[] = [];
   let critical = 0;
   let safeOver = 0;
   for (const c of UTTERANCES) {
-    const e = extractProfile(c.text, today);
+    const e = extract(c.text, c.id);
     const res: ExtractionCaseResult = { id: c.id, style: c.style, errors: [], critical: [], safeOverRestriction: [] };
     for (const f of SCORED_FIELDS) {
       const gold = c.gold[f];

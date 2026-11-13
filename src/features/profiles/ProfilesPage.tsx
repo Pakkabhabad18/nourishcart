@@ -34,7 +34,7 @@ export function ProfilesPage() {
     setBusy(false);
     setAdding(false);
     setName('');
-    nav(`/profiles/${p.id}/setup`);
+    nav(`/profiles/${p.id}/quick`);
   }
   async function rename() {
     if (!renaming || !name.trim()) return;

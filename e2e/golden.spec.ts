@@ -67,10 +67,24 @@ test('golden demo journey', async ({ page, context }) => {
   await shot(page, '03-welcome');
   await page.getByRole('button', { name: 'Create profile and continue' }).click();
 
-  // Validation blocks an empty step
-  await page.getByRole('button', { name: 'Save and continue' }).click();
-  await expect(page.getByText('Enter a date of birth.')).toBeVisible();
-  await onboard(page);
+  // Speak-or-type setup (typed here; the browser's speech service can't run headless).
+  await expect(page.getByRole('heading', { name: 'Tell us about Demo Asha' })).toBeVisible();
+  await page.getByLabel('Describe yourself').fill(
+    "I'm 26, female, 162 cm, 58 kg. Desk job, walk daily in the evening. Gym 3 times a week for 45 minutes, moderate strength training. Vegetarian but I eat eggs. Never eat bhindi. Build muscle.",
+  );
+  await shot(page, '04a-quick-describe');
+  await page.getByRole('button', { name: /Continue \(3 left to ask\)/ }).click();
+  // Only what was not said is asked: allergies, budget, health scope
+  await expect(page.getByRole('heading', { name: 'A few more details' })).toBeVisible();
+  await expect(page.getByText('Height (cm)')).toHaveCount(0);
+  await expect(page.getByText('from “never eat bhindi”')).toBeVisible();
+  await page.getByRole('button', { name: 'Save and see my targets' }).click();
+  await expect(page.getByText(/Still needed: allergies, budget, health conditions/)).toBeVisible();
+  await page.getByRole('checkbox', { name: 'No food allergies' }).click();
+  await page.getByLabel('Grocery budget (₹)').fill('1500');
+  await page.getByRole('checkbox', { name: 'None of these' }).click();
+  await shot(page, '04b-quick-review');
+  await page.getByRole('button', { name: 'Save and see my targets' }).click();
 
   // Nutrition results
   await expect(page.getByRole('heading', { name: 'Daily estimates for Demo Asha' })).toBeVisible();
@@ -138,7 +152,7 @@ test('golden demo journey', async ({ page, context }) => {
   await page.getByRole('button', { name: 'Add adult profile' }).click();
   await page.getByRole('dialog').getByLabel('Name').fill('Ravi');
   await page.getByRole('button', { name: 'Create and set up' }).click();
-  await expect(page.getByText('Setting up')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tell us about Ravi' })).toBeVisible();
   await page.getByRole('link', { name: 'Pantry' }).first().click();
   await expect(page.getByText('The pantry is empty')).toBeVisible();
   await page.getByRole('link', { name: 'Profiles' }).first().click();
@@ -173,4 +187,17 @@ test('mobile layout of the key screens @mobile', async ({ page }) => {
   // No horizontal overflow in the primary flow (NFR responsive)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   expect(overflow).toBe(false);
+});
+
+test('step-by-step form still works', async ({ page }) => {
+  await signIn(page, 'demo.ravi@example.com');
+  await page.getByLabel(/I have read the notice/).check();
+  await page.getByLabel('Profile name').fill('Ravi');
+  await page.getByRole('button', { name: 'Create profile and continue' }).click();
+  await page.getByRole('link', { name: 'Fill the form step by step instead' }).click();
+  // Validation blocks an empty step
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  await expect(page.getByText('Enter a date of birth or your age.')).toBeVisible();
+  await onboard(page);
+  await expect(page.getByRole('heading', { name: 'Daily estimates for Ravi' })).toBeVisible();
 });

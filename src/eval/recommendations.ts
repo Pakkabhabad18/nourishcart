@@ -33,7 +33,7 @@ export function makeProfile(i: number, diet: DietPattern, allergies: Allergen[],
   const weightKg = Math.round(45 + rnd() * 50);
   const workouts = pick([0, 0, 2, 3, 5]);
   return {
-    profile: { id, ownerUserId: 'eval', displayName: `Eval ${i}`, dateOfBirth: `${2026 - age - 1}-01-15`, sex, heightCm, weightKg, archived: false, onboardingStep: 6, onboardingComplete: true, createdAt: '', updatedAt: '' },
+    profile: { id, ownerUserId: 'eval', displayName: `Eval ${i}`, dateOfBirth: `${2026 - age - 1}-01-15`, ageAtEntry: null, ageEnteredAt: null, sex, heightCm, weightKg, archived: false, onboardingStep: 6, onboardingComplete: true, createdAt: '', updatedAt: '' },
     preferences: {
       profileId: id, dietPattern: diet, cuisines: [], likes: [], dislikes: [], hardExclusions: exclusions, allergies, allergiesConfirmed: true,
       mealsPerDay: pick([3, 4] as const), maxCookMinutes: pick([20, 40, 60]), groceryTier: pick(['value', 'standard', 'premium'] as const), clinicalFlags: [], noClinicalFlagsConfirmed: true,

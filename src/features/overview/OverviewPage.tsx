@@ -59,7 +59,7 @@ export function OverviewPage() {
   };
 
   const steps = [
-    { done: profile.onboardingComplete && elig.status === 'eligible', title: 'Finish the profile', to: `/profiles/${profile.id}/setup`, children: 'Body, activity, food rules and budget.', icon: <Sparkles className="h-4 w-4" /> },
+    { done: profile.onboardingComplete && elig.status === 'eligible', title: 'Finish the profile', to: `/profiles/${profile.id}/${profile.onboardingComplete ? 'setup' : 'quick'}`, children: 'Body, activity, food rules and budget.', icon: <Sparkles className="h-4 w-4" /> },
     { done: !!calc.data, title: 'See nutrition estimates', to: '/nutrition', children: 'Energy and protein, with the method shown.', icon: <Sparkles className="h-4 w-4" /> },
     { done: !!plan, title: 'Choose a meal plan', to: '/plans', children: 'Compare three options for the week.', icon: <CalendarDays className="h-4 w-4" /> },
     { done: myOrders.length > 0, title: 'Approve a basket', to: '/groceries', children: 'Review the simulated basket and place a test order.', icon: <ShoppingBasket className="h-4 w-4" /> },

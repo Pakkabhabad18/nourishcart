@@ -10,7 +10,7 @@ import { Button, Chip, ErrorState, Field, Input, Notice, Select, Spinner } from 
 import type { Allergen, ClinicalFlag, DietPattern, Goal, ProfileBundle } from '../../domain/types.ts';
 import { ALLERGEN_LABELS, DIET_LABELS } from '../../domain/diet.ts';
 import { cmToFtIn, ftInToCm, kgToLb, lbToKg, round, ageInYears } from '../../domain/units.ts';
-import { BOUNDS } from '../../domain/nutrition/eligibility.ts';
+import { BOUNDS, currentAge } from '../../domain/nutrition/eligibility.ts';
 import { INGREDIENTS } from '../../data/ingredients.ts';
 
 const STEPS = ['About', 'Body', 'Activity', 'Food', 'Goal and budget', 'Health scope', 'Review'] as const;
@@ -47,9 +47,10 @@ function stepErrors(step: number, b: ProfileBundle): Record<string, string> {
   const p = b.profile;
   if (step === 0) {
     if (!p.displayName.trim()) e.name = 'Enter a name for this profile.';
-    if (!p.dateOfBirth) e.dob = 'Enter a date of birth.';
+    if (!p.dateOfBirth && p.ageAtEntry == null) e.dob = 'Enter a date of birth or your age.';
     else {
-      const age = ageInYears(p.dateOfBirth);
+      // Either a date of birth, or an age the person stated (which moves on each year).
+      const age = p.dateOfBirth ? ageInYears(p.dateOfBirth) : currentAge(p);
       if (Number.isNaN(age)) e.dob = 'Enter a valid date.';
       else if (age < 18) e.dob = 'NourishCart currently plans only for adults aged 18 and over.';
       else if (age > 100) e.dob = 'Please check the year.';
@@ -159,9 +160,15 @@ export function OnboardingPage() {
             </Field>
             {err('name')}
             <div>
-              <Field label="Date of birth" htmlFor="dob" hint="Used to work out age in completed years. We never guess age.">
-                <Input id="dob" type="date" value={b.profile.dateOfBirth ?? ''} max={new Date().toISOString().slice(0, 10)} onChange={(e) => set((d) => ((d.profile.dateOfBirth = e.target.value || null), d))} invalid={!!errors.dob} />
-              </Field>
+              <div className="grid gap-4 sm:grid-cols-[1fr_auto_8rem] sm:items-end">
+                <Field label="Date of birth" htmlFor="dob" hint="Used to work out age in completed years. We never guess age.">
+                  <Input id="dob" type="date" value={b.profile.dateOfBirth ?? ''} max={new Date().toISOString().slice(0, 10)} onChange={(e) => set((d) => ((d.profile.dateOfBirth = e.target.value || null), (d.profile.ageAtEntry = null), (d.profile.ageEnteredAt = null), d))} invalid={!!errors.dob} />
+                </Field>
+                <span className="pb-3 text-sm text-on-surface-variant">or</span>
+                <Field label="Age" htmlFor="age-years">
+                  <Input id="age-years" type="number" inputMode="numeric" min={1} max={120} value={b.profile.dateOfBirth || b.profile.ageAtEntry == null ? '' : currentAge(b.profile)} onChange={(e) => { const v = Number(e.target.value); set((d) => ((d.profile.dateOfBirth = null), (d.profile.ageAtEntry = v > 0 ? v : null), (d.profile.ageEnteredAt = v > 0 ? new Date().toISOString() : null), d)); }} />
+                </Field>
+              </div>
               {err('dob')}
             </div>
             <fieldset>
