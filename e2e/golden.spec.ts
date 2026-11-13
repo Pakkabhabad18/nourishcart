@@ -128,6 +128,21 @@ test('golden demo journey', async ({ page, context }) => {
   // Checkout
   await page.getByRole('button', { name: 'Review basket' }).click();
   await page.getByRole('button', { name: 'Approve basket' }).click();
+  // Instamart (sandbox): search, fill cart, review, explicit confirmation, order
+  await page.getByRole('button', { name: 'Order from a store' }).click();
+  await page.getByRole('button', { name: 'Find products on Instamart' }).click();
+  await expect(page.getByText(/items found/)).toBeVisible();
+  await expect(page.getByText('Not added. Please pick these yourself')).toBeVisible();
+  await page.getByRole('button', { name: /Put \d+ items in my Instamart cart/ }).click();
+  await expect(page.getByText('To pay')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Place order for/ })).toBeDisabled();
+  await page.getByLabel(/I've checked the items and the total/).check();
+  await shot(page, '11a-instamart-cart');
+  await page.getByRole('button', { name: /Place order for/ }).click();
+  await expect(page.getByText(/Sandbox order SANDBOX-\d+ placed/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Find Okra (bhindi) on Zepto' })).toHaveCount(0); // excluded food never listed
+  await shot(page, '11b-store-order');
+  await page.getByRole('link', { name: 'Back to basket' }).click();
   // Offline blocks checkout
   await context.setOffline(true);
   await page.getByLabel(/I understand this is a simulated order/).check();

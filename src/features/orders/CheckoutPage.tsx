@@ -138,6 +138,16 @@ export function CheckoutPage() {
           </>
         )}
       </section>
+
+      {approved && (
+        <section className="card mt-4 flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-medium">Order from Swiggy Instamart or Zepto instead</h2>
+            <p className="text-sm text-on-surface-variant">Build the cart automatically on Instamart, or open each item on Instamart or Zepto with a shopping checklist.</p>
+          </div>
+          <Button variant="tonal" onClick={() => nav('/checkout/store')}>Order from a store</Button>
+        </section>
+      )}
     </div>
   );
 }

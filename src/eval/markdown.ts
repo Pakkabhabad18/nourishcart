@@ -37,6 +37,13 @@ export function renderMarkdown(r: EvalReport): string {
     lines.push('', 'Failures:', '');
     for (const f of mt.failures) lines.push(`- \`${f.id}\` “${f.title}”: expected ${f.expected}, got ${f.got}. ${f.note}`);
   }
+  const c = r.cart;
+  lines.push('', '## Store cart (Instamart sandbox)', '');
+  lines.push(`One sandbox Instamart cart per person (${c.carts} carts, ${c.lines} basket lines). The sandbox sells our catalogue plus every labelled look-alike title, including traps. Each item placed is checked against hand labels, not the matcher. Items placed ${c.itemsPlaced} (${pct(c.itemsPlaced / Math.max(1, c.lines))} of lines), left for the person ${c.linesSkipped}, unsafe ${c.unsafeItems}, wrong product ${c.wrongProduct}, short quantity ${c.underCovered}.`);
+  if (c.examples.length) {
+    lines.push('', 'Examples:', '');
+    for (const e of c.examples) lines.push(`- ${e}`);
+  }
   lines.push('');
   return lines.join('\n');
 }

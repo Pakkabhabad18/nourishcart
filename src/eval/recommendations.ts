@@ -2,6 +2,7 @@
 // Runs many synthetic users through the full pipeline (targets -> three plans -> grocery
 // basket -> budget alternatives) and checks every output against the independent oracle.
 import type { Allergen, DietPattern, Goal, ProfileBundle } from '../domain/types.ts';
+import type { BasketLine } from '../domain/grocery/optimise.ts';
 import { calculateTargets } from '../domain/nutrition/targets.ts';
 import { aggregateRecipeNutrition } from '../domain/recipes/aggregate.ts';
 import { evaluatePlan, generatePlanOptions, ENERGY_TOLERANCE, type Catalog, type PlanDraft } from '../domain/planning/plan.ts';
@@ -89,7 +90,13 @@ export interface RecommendationReport {
   durationMs: number;
 }
 
-export function runRecommendationEval(cat: Catalog, opts: { perCombination?: number; seed?: number; maxAlternatives?: number } = {}): RecommendationReport {
+/** Baskets handed to the store-cart evaluation (src/eval/cart.ts): one per feasible person. */
+export interface CollectedBasket {
+  restrictions: { dietPattern: DietPattern; allergies: Allergen[]; hardExclusions: string[] };
+  lines: BasketLine[];
+}
+
+export function runRecommendationEval(cat: Catalog, opts: { perCombination?: number; seed?: number; maxAlternatives?: number; collectBaskets?: CollectedBasket[] } = {}): RecommendationReport {
   const t0 = Date.now();
   const perCombination = opts.perCombination ?? 3;
   const maxAlt = opts.maxAlternatives ?? 3;
@@ -152,6 +159,7 @@ export function runRecommendationEval(cat: Catalog, opts: { perCombination?: num
             const input = { bundle: b, plan, targets, patch: {}, pantry: [], cat };
             const res = runPipeline(input);
             r.basketsChecked++;
+            if (opts.collectBaskets && plan === gen.plans[0]) opts.collectBaskets.push({ restrictions: { dietPattern: diet, allergies: [...b.preferences.allergies], hardExclusions: [...b.preferences.hardExclusions] }, lines: res.basket.lines });
             record(checkBasket(res.basket, u, cat.products, cat.ingredients), diet);
             checkBasketMaths(res.basket, r);
             // Budget alternatives: apply each (top N) and re-check everything.

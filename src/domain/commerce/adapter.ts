@@ -84,8 +84,9 @@ function disabledAdapter(code: string, displayName: string, status: string): Pro
 
 export const PROVIDERS: ProviderAdapter[] = [
   simulatedProvider,
-  disabledAdapter('SWIGGY_INSTAMART', 'Swiggy Instamart', 'Research spike. Requires Swiggy Builders Club access and production approval.'),
+  disabledAdapter('SWIGGY_INSTAMART', 'Swiggy Instamart', 'Cart builder ready (src/domain/commerce/instamart.ts) and running on an in-app sandbox. Live use needs Swiggy Builders Club approval.'),
   disabledAdapter('AMAZON_IN', 'Amazon.in (Creators API)', 'Catalogue discovery only; no grocery checkout API verified.'),
   disabledAdapter('BIGBASKET', 'BigBasket', 'Partnership required; no public ordering API verified.'),
+  disabledAdapter('ZEPTO', 'Zepto', 'No public ordering API. Hand-off links to Zepto search only.'),
   disabledAdapter('ONDC', 'ONDC buyer app', 'Future; requires an authorised network participant.'),
 ];

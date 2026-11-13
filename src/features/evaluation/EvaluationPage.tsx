@@ -33,7 +33,7 @@ export function EvaluationPage() {
     // Let the button show its spinner before the (synchronous) run blocks the main thread.
     await new Promise((r) => setTimeout(r, 50));
     const { runFullEvaluation } = await import('../../eval/report.ts');
-    setReport(runFullEvaluation(CAT, 'quick'));
+    setReport(await runFullEvaluation(CAT, 'quick'));
     setIsLive(true);
     setRunning(false);
   }

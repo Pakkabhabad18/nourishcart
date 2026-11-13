@@ -9,6 +9,8 @@ import { METHODS } from '../domain/nutrition/methods.ts';
 import { runRecommendationEval, type RecommendationReport } from './recommendations.ts';
 import { runExtractionEval, type ExtractionReport } from './extraction.ts';
 import { runMatchingEval, type MatchingReport } from './matching.ts';
+import { runCartEval, type CartReport } from './cart.ts';
+import type { CollectedBasket } from './recommendations.ts';
 
 export interface Gate {
   id: string;
@@ -27,6 +29,7 @@ export interface EvalReport {
   recommendation: RecommendationReport;
   extraction: ExtractionReport;
   matching: MatchingReport;
+  cart: CartReport;
   gates: Gate[];
   passed: boolean;
 }
@@ -37,7 +40,7 @@ export function ruleOfThree(n: number): number {
 }
 const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
 
-export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: MatchingReport): Gate[] {
+export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: MatchingReport, cart: CartReport): Gate[] {
   const g: Gate[] = [];
   const add = (x: Gate) => g.push(x);
   const meals = rec.mealsChecked;
@@ -63,14 +66,19 @@ export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: 
   add({ id: 'M2', group: 'Store matching', name: 'Precision when a product is mapped', measured: pct(mt.precisionWhenMapped), threshold: '≥ 95%', pass: mt.precisionWhenMapped >= 0.95, critical: false });
   add({ id: 'M3', group: 'Store matching', name: 'Processed/different products correctly left unmapped', measured: pct(mt.refusalRecall), threshold: '≥ 90%', pass: mt.refusalRecall >= 0.9, critical: false });
   add({ id: 'M4', group: 'Store matching', name: 'Pack size read correctly', measured: `${mt.packCorrect}/${mt.packCases}`, threshold: '≥ 95%', pass: mt.packCorrect / Math.max(1, mt.packCases) >= 0.95, critical: false });
+  add({ id: 'M5', group: 'Store matching', name: 'Store carts contain nothing that breaks the person’s rules (checked against hand labels)', measured: `${cart.unsafeItems} of ${cart.itemsPlaced.toLocaleString('en-IN')} items in ${cart.carts} carts`, threshold: '0', pass: cart.unsafeItems === 0, critical: true });
+  add({ id: 'M6', group: 'Store matching', name: 'Store cart items are the right product and enough of it', measured: `${cart.wrongProduct} wrong, ${cart.underCovered} short`, threshold: '0', pass: cart.wrongProduct === 0 && cart.underCovered === 0, critical: false });
+  add({ id: 'M7', group: 'Store matching', name: 'Basket lines placed in the store cart (the rest are listed for the person to add)', measured: pct(cart.itemsPlaced / Math.max(1, cart.lines)), threshold: '≥ 80%', pass: cart.itemsPlaced / Math.max(1, cart.lines) >= 0.8, critical: false });
   return g;
 }
 
-export function runFullEvaluation(cat: Catalog, mode: 'full' | 'quick' = 'full'): EvalReport {
-  const recommendation = runRecommendationEval(cat, mode === 'full' ? { perCombination: 3, maxAlternatives: 3 } : { perCombination: 1, maxAlternatives: 2, seed: 42 });
+export async function runFullEvaluation(cat: Catalog, mode: 'full' | 'quick' = 'full'): Promise<EvalReport> {
+  const baskets: CollectedBasket[] = [];
+  const recommendation = runRecommendationEval(cat, mode === 'full' ? { perCombination: 3, maxAlternatives: 3, collectBaskets: baskets } : { perCombination: 1, maxAlternatives: 2, seed: 42, collectBaskets: baskets });
   const extraction = runExtractionEval();
   const matching = runMatchingEval(cat.ingredients);
-  const gates = buildGates(recommendation, extraction, matching);
+  const cart = await runCartEval(baskets, cat.ingredients);
+  const gates = buildGates(recommendation, extraction, matching, cart);
   return {
     generatedAt: new Date().toISOString(),
     mode,
@@ -78,6 +86,7 @@ export function runFullEvaluation(cat: Catalog, mode: 'full' | 'quick' = 'full')
     recommendation,
     extraction,
     matching,
+    cart,
     gates,
     passed: gates.every((x) => x.pass),
   };

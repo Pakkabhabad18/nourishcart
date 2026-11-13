@@ -10,7 +10,7 @@ import { INGREDIENT_MAP } from '../data/ingredients.ts';
 import { CATALOGUE } from '../data/catalogue.ts';
 import { renderMarkdown } from './markdown.ts';
 
-const report = runFullEvaluation({ recipes: RECIPE_MAP, ingredients: INGREDIENT_MAP, products: CATALOGUE }, 'full');
+const report = await runFullEvaluation({ recipes: RECIPE_MAP, ingredients: INGREDIENT_MAP, products: CATALOGUE }, 'full');
 mkdirSync('eval-results', { recursive: true });
 writeFileSync('eval-results/report.json', JSON.stringify(report, null, 2));
 writeFileSync('src/eval/latest-report.json', JSON.stringify(report));
