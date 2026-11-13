@@ -38,6 +38,10 @@ export interface BasketLine {
   optional: boolean;
   sources: DemandLine['sources'];
   alternativesCount: number;
+  /** The person changed the pack count by hand, or added this item themselves. */
+  adjusted?: boolean;
+  /** Added by the person from the catalogue (not needed by any meal). */
+  extra?: boolean;
 }
 
 export type BasketStatus = 'DRAFT' | 'REVIEW' | 'OVER_BUDGET' | 'APPROVED' | 'SIMULATED_ORDER' | 'EXPIRED';
@@ -69,6 +73,12 @@ export interface OptimiseInput {
   cheapestOnly?: string[];
   /** optional ingredientIds the user removed */
   removed?: string[];
+  /** ingredientIds the person chose not to buy ("I have it" / "don't want it") */
+  skip?: string[];
+  /** ingredientId -> number of packs of the chosen product, set by hand in the cart */
+  packCount?: Record<string, number>;
+  /** Products the person added from the catalogue */
+  extras?: { productId: string; packs: number }[];
   budgetInr: number | null;
   budgetMode: BudgetMode;
 }
@@ -139,6 +149,7 @@ export function optimiseBasket(input: OptimiseInput): BasketResult {
   for (const d of input.demand) {
     if (d.toBuyQty <= 0) continue;
     if (input.removed?.includes(d.ingredientId) && d.optional) continue;
+    if (input.skip?.includes(d.ingredientId)) continue;
     const ing = input.ingredients.get(d.ingredientId);
     if (!ing) throw new Error(`Unknown ingredient ${d.ingredientId}`);
     const all = input.products.filter((p) => p.ingredientId === d.ingredientId);
@@ -150,12 +161,18 @@ export function optimiseBasket(input: OptimiseInput): BasketResult {
     }
     const forced = input.skuOverrides?.[d.ingredientId];
     if (forced && cands.some((c) => c.id === forced)) cands = cands.filter((c) => c.id === forced);
-    const combo = bestCombination(d.toBuyQty, cands, ing, input.tier, input.cheapestOnly?.includes(d.ingredientId) ?? false);
+    let combo = bestCombination(d.toBuyQty, cands, ing, input.tier, input.cheapestOnly?.includes(d.ingredientId) ?? false);
+    // Hand-set pack count: that many packs of the product we'd have picked first.
+    const wanted = input.packCount?.[d.ingredientId];
+    if (combo && wanted != null && wanted > 0) {
+      const p = input.products.find((x) => x.id === combo!.picks[0].productId)!;
+      combo = { picks: [{ productId: p.id, packs: wanted }], covered: p.packQty * wanted, costPaise: toPaise(p.priceInr) * wanted, objective: 0 };
+    }
     if (!combo) {
       unmatched.push({ ingredientId: d.ingredientId, name: d.name, reason: 'Quantity exceeds the pack limit for one order' });
       continue;
     }
-    const leftover = combo.covered - d.toBuyQty;
+    const leftover = Math.max(0, combo.covered - d.toBuyQty);
     const chosen = combo.picks.map((pk) => input.products.find((p) => p.id === pk.productId)!);
     const tierMatch = chosen.every((p) => p.tier === input.tier);
     const usability = Math.max(0, 1 - leftover / combo.covered);
@@ -182,6 +199,48 @@ export function optimiseBasket(input: OptimiseInput): BasketResult {
       optional: d.optional,
       sources: d.sources,
       alternativesCount: eligibleProducts(d.ingredientId, input.products, ing, input.restrictions).length - 1,
+      ...(wanted != null && wanted > 0 ? { adjusted: true } : {}),
+    });
+  }
+  // Items the person added. Each must pass the same diet and allergy rules as the plan's
+  // ingredients; anything that doesn't is refused with the reason, never silently added.
+  for (const x of input.extras ?? []) {
+    const p = input.products.find((q) => q.id === x.productId);
+    const ing = p ? input.ingredients.get(p.ingredientId) : undefined;
+    if (!p || !ing || x.packs <= 0) continue;
+    const ok = eligibleProducts(p.ingredientId, input.products, ing, input.restrictions).some((c) => c.id === p.id);
+    if (!ok) {
+      unmatched.push({ ingredientId: p.ingredientId, name: `${p.brand} ${p.title}`, reason: "Doesn't fit this person's diet or allergies, so it wasn't added" });
+      continue;
+    }
+    const same = lines.find((l) => l.ingredientId === p.ingredientId && !l.extra);
+    if (same) {
+      // Already on the list for a meal: add the packs to that line.
+      const pick = same.picks.find((k) => k.productId === p.id);
+      if (pick) pick.packs += x.packs;
+      else same.picks.push({ productId: p.id, packs: x.packs });
+      same.coveredQty += p.packQty * x.packs;
+      same.leftoverQty = round(same.coveredQty - same.demandQty, 1);
+      same.lineTotalInr = round(same.lineTotalInr + p.priceInr * x.packs, 2);
+      same.adjusted = true;
+      continue;
+    }
+    lines.push({
+      ingredientId: p.ingredientId,
+      name: ing.name,
+      unit: ing.unitBasis,
+      demandQty: p.packQty * x.packs,
+      picks: [{ productId: p.id, packs: x.packs }],
+      coveredQty: p.packQty * x.packs,
+      leftoverQty: 0,
+      lineTotalInr: round(p.priceInr * x.packs, 2),
+      matchScore: 1,
+      reasons: ['Added by you'],
+      optional: true,
+      sources: [],
+      alternativesCount: 0,
+      adjusted: true,
+      extra: true,
     });
   }
   const subtotalPaise = lines.reduce((s, l) => s + toPaise(l.lineTotalInr), 0);

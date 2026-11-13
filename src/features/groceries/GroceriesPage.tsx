@@ -3,16 +3,16 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { ChevronDown, ShoppingBasket, Undo2, Users } from 'lucide-react';
+import { ChevronDown, Minus, Plus, ShoppingBasket, Trash2, Undo2, Users } from 'lucide-react';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useApp } from '../../app/context.tsx';
 import { qk, useActiveProfile, useBasket, useBundle, useGroceryPipeline, usePantry, useSavePlan, useSaveBundle, useSelectedPlan } from '../../app/hooks.ts';
 import { store } from '../../lib/store/index.ts';
-import { Button, EmptyState, ErrorState, Notice, PageHeader, Select, Sheet, Spinner, Tag } from '../../components/ui.tsx';
+import { Button, EmptyState, ErrorState, Input, Notice, PageHeader, Select, Sheet, Spinner, Tag } from '../../components/ui.tsx';
 import { CAT } from '../../lib/catalog.ts';
 import { formatInr, formatQty } from '../../lib/format.ts';
 import { unitPrice } from '../../domain/units.ts';
-import { eligibleProducts } from '../../domain/grocery/optimise.ts';
+import { eligibleProducts, type BasketLine } from '../../domain/grocery/optimise.ts';
 import { mergePatch, type Alternative, type BasketPatch } from '../../domain/grocery/negotiate.ts';
 import { restrictionsOf } from '../../domain/planning/plan.ts';
 import { buildGroceryDemand } from '../../domain/grocery/demand.ts';
@@ -81,6 +81,8 @@ export function GroceriesPage() {
   const [raise, setRaise] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showAllAlts, setShowAllAlts] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [query, setQuery] = useState('');
   const pantryStock = useMemo(() => pantry.data?.map((p) => ({ profileId: p.profileId, ingredientId: p.ingredientId, quantity: p.quantity })), [pantry.data]);
   const pipe = useGroceryPipeline(bundle.data, plan, pantryStock);
 
@@ -109,6 +111,43 @@ export function GroceriesPage() {
     await savePlan.mutateAsync({ ...plan!, patch: next });
     toast(message);
   }
+  // ---- cart edits (saved on the plan's patch, so totals, compare and cart filling all follow)
+  const patch = plan.patch ?? {};
+  const packsOf = (l: BasketLine) => l.picks.reduce((sum, k) => sum + k.packs, 0);
+  async function changePacks(l: BasketLine, delta: number) {
+    const n = packsOf(l) + delta;
+    if (l.extra) {
+      const pid = l.picks[0].productId;
+      const extras = (patch.extras ?? []).map((x) => (x.productId === pid ? { ...x, packs: n } : x)).filter((x) => x.packs > 0);
+      return applyPatch({ ...patch, extras }, n > 0 ? 'Updated' : `${l.name} removed`);
+    }
+    if (n <= 0) return removeLine(l);
+    await applyPatch({ ...patch, packCount: { ...(patch.packCount ?? {}), [l.ingredientId]: n } }, 'Updated');
+  }
+  async function removeLine(l: BasketLine) {
+    if (l.extra) return applyPatch({ ...patch, extras: (patch.extras ?? []).filter((x) => x.productId !== l.picks[0].productId) }, `${l.name} removed`);
+    const pc = { ...(patch.packCount ?? {}) };
+    delete pc[l.ingredientId];
+    await applyPatch({ ...patch, packCount: pc, skip: [...new Set([...(patch.skip ?? []), l.ingredientId])] }, `${l.name} removed. Your meals still use it.`);
+  }
+  async function addProduct(productId: string) {
+    const extras = [...(patch.extras ?? [])];
+    const at = extras.findIndex((x) => x.productId === productId);
+    if (at >= 0) extras[at] = { ...extras[at], packs: extras[at].packs + 1 };
+    else extras.push({ productId, packs: 1 });
+    await applyPatch({ ...patch, extras }, 'Added to your list');
+    setAdding(false);
+    setQuery('');
+  }
+  const restrictions = restrictionsOf(b);
+  const q = query.trim().toLowerCase();
+  const addable = !adding
+    ? []
+    : CAT.products
+        .filter((p) => p.available && (!q || `${p.brand} ${p.title} ${CAT.ingredients.get(p.ingredientId)?.name ?? ''}`.toLowerCase().includes(q)))
+        .filter((p) => eligibleProducts(p.ingredientId, CAT.products, CAT.ingredients.get(p.ingredientId)!, restrictions).some((c) => c.id === p.id))
+        .slice(0, 30);
+
   async function accept(a: Alternative) {
     if (a.kind === 'raise_budget') return setRaise(true);
     await applyPatch(mergePatch(plan!.patch ?? {}, a.patch), `Applied: ${a.title.toLowerCase()}`);
@@ -253,18 +292,33 @@ export function GroceriesPage() {
               const pk = l.picks[0];
               const prod = pk ? CAT.products.find((x) => x.id === pk.productId) : undefined;
               return (
-                <li key={l.ingredientId}>
-                  {/* Row: name, what to buy, price. Tap for product choice and reasons. */}
-                  <button className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-on-surface/[0.04] sm:px-5" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : l.ingredientId)}>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-medium">{l.name}</span>
-                      <span className="num block text-sm text-on-surface-variant">
-                        {l.picks.map((x) => `${x.packs} × ${formatQty(CAT.products.find((y) => y.id === x.productId)!.packQty, CAT.products.find((y) => y.id === x.productId)!.packUnit)}`).join(' + ')}
+                <li key={`${l.ingredientId}${l.extra ? '-extra' : ''}`}>
+                  {/* Row: name and packs (tap for details), quantity stepper, remove. */}
+                  <div className="flex items-center gap-2 px-4 py-3 sm:px-5">
+                    <button className="min-w-0 flex-1 text-left" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : l.ingredientId)}>
+                      <span className="flex items-center gap-1 font-semibold">
+                        <span className="truncate">{l.name}</span>
+                        {l.extra && <Tag tone="good">Added</Tag>}
+                        <ChevronDown className={clsx('h-4 w-4 shrink-0 text-on-surface-variant transition-transform', isOpen && 'rotate-180')} aria-hidden />
                       </span>
-                    </span>
-                    <span className="num font-medium">{formatInr(l.lineTotalInr)}</span>
-                    <ChevronDown className={clsx('h-4 w-4 shrink-0 text-on-surface-variant transition-transform', isOpen && 'rotate-180')} aria-hidden />
-                  </button>
+                      <span className="num block text-sm text-on-surface-variant">
+                        {l.picks.map((x) => formatQty(CAT.products.find((y) => y.id === x.productId)!.packQty, CAT.products.find((y) => y.id === x.productId)!.packUnit)).join(' + ')}, <span className="font-medium text-on-surface">{formatInr(l.lineTotalInr)}</span>
+                      </span>
+                    </button>
+                    <div className="flex items-center rounded-full border border-outline-variant" role="group" aria-label={`Packs of ${l.name}`}>
+                      <button className="grid h-10 w-10 place-items-center text-primary disabled:opacity-30" aria-label={`One less ${l.name}`} disabled={!online || savePlan.isPending} onClick={() => changePacks(l, -1)}>
+                        <Minus className="h-4 w-4" aria-hidden />
+                      </button>
+                      <span className="num w-6 text-center font-semibold" aria-live="polite">{packsOf(l)}</span>
+                      <button className="grid h-10 w-10 place-items-center text-primary disabled:opacity-30" aria-label={`One more ${l.name}`} disabled={!online || savePlan.isPending} onClick={() => changePacks(l, 1)}>
+                        <Plus className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
+                    <button className="grid h-10 w-10 place-items-center rounded-full text-on-surface-variant hover:bg-error/[0.08] hover:text-error" aria-label={`Remove ${l.name}`} disabled={!online || savePlan.isPending} onClick={() => removeLine(l)}>
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                    </button>
+                  </div>
+                  {l.adjusted && !l.extra && l.coveredQty < l.demandQty && <p className="-mt-1 px-4 pb-2 text-xs text-warning sm:px-5">Less than your meals need ({formatQty(l.demandQty, l.unit)}).</p>}
                   {isOpen && (
                     <div className="mx-4 mb-3 rounded-ctl bg-surface-container p-3 text-sm sm:mx-5">
                       {prod && <p>{prod.brand} {prod.title}, {formatInr(prod.priceInr)} ({formatInr(unitPrice(prod.priceInr, prod.packQty, prod.packUnit).value)}{unitPrice(prod.priceInr, prod.packQty, prod.packUnit).label})</p>}
@@ -299,6 +353,21 @@ export function GroceriesPage() {
               );
             })}
           </ul>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant px-4 py-3 sm:px-5">
+            <Button variant="tonal" size="sm" icon={<Plus className="h-4 w-4" aria-hidden />} onClick={() => setAdding(true)} disabled={!online}>
+              Add an item
+            </Button>
+            {(plan.patch.skip ?? []).length > 0 && (
+              <span className="flex flex-wrap items-center gap-2 text-sm text-on-surface-variant">
+                Not buying:
+                {(plan.patch.skip ?? []).map((id) => (
+                  <button key={id} className="chip min-h-[32px] py-0.5 text-xs" onClick={() => applyPatch({ ...plan.patch, skip: (plan.patch.skip ?? []).filter((x) => x !== id) }, 'Back on the list')}>
+                    <Undo2 className="h-3.5 w-3.5" aria-hidden /> {CAT.ingredients.get(id)?.name}
+                  </button>
+                ))}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -311,6 +380,23 @@ export function GroceriesPage() {
           Practice checkout (no real order)
         </Button>
       </div>
+
+      <Sheet open={adding} onClose={() => (setAdding(false), setQuery(''))} title="Add to your list" wide>
+        <Input aria-label="Search products" placeholder="Search: milk, banana, atta…" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
+        <p className="mt-2 text-xs text-on-surface-variant">Only products that fit {profile.displayName}'s food rules and allergies are shown.</p>
+        <ul className="mt-2 max-h-[50vh] divide-y divide-outline-variant overflow-y-auto">
+          {addable.map((p) => (
+            <li key={p.id} className="flex items-center gap-3 py-2.5">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">{p.brand} {p.title}</span>
+                <span className="num text-sm text-on-surface-variant">{formatQty(p.packQty, p.packUnit)}, {formatInr(p.priceInr)}</span>
+              </span>
+              <Button size="sm" onClick={() => addProduct(p.id)} disabled={savePlan.isPending}>Add</Button>
+            </li>
+          ))}
+          {addable.length === 0 && <li className="py-4 text-sm text-on-surface-variant">Nothing found. Try another word.</li>}
+        </ul>
+      </Sheet>
 
       <Sheet
         open={raise}

@@ -18,6 +18,10 @@ export interface BasketPatch {
   removed?: string[];
   /** ingredientId -> productId the user picked by hand */
   skuOverrides?: Record<string, string>;
+  /** Cart edits: items not to buy, hand-set pack counts, items added from the catalogue. */
+  skip?: string[];
+  packCount?: Record<string, number>;
+  extras?: { productId: string; packs: number }[];
 }
 
 export interface PatchEvaluation {
@@ -74,6 +78,9 @@ export function mergePatch(a: BasketPatch, b: BasketPatch): BasketPatch {
     cheapestOnly: [...new Set([...(a.cheapestOnly ?? []), ...(b.cheapestOnly ?? [])])].sort(),
     removed: [...new Set([...(a.removed ?? []), ...(b.removed ?? [])])].sort(),
     skuOverrides: { ...(a.skuOverrides ?? {}), ...(b.skuOverrides ?? {}) },
+    skip: [...new Set([...(a.skip ?? []), ...(b.skip ?? [])])].sort(),
+    packCount: { ...(a.packCount ?? {}), ...(b.packCount ?? {}) },
+    extras: [...(a.extras ?? []), ...(b.extras ?? [])],
   };
 }
 

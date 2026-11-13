@@ -68,7 +68,10 @@ export function ComparePage() {
 
   const b = bundle.data;
   const rules = { dietPattern: b.preferences.dietPattern!, allergies: b.preferences.allergies, hardExclusions: b.preferences.hardExclusions };
-  const basketLines: CompareLine[] = pipe.result.basket.lines.filter((l) => l.demandQty > 0).map((l) => ({ ingredientId: l.ingredientId, name: l.name, demandQty: l.demandQty, unit: l.unit }));
+  // What's in the cart: the meals' need, or the amount the person set or added by hand.
+  const basketLines: CompareLine[] = pipe.result.basket.lines
+    .filter((l) => l.demandQty > 0 || l.adjusted)
+    .map((l) => ({ ingredientId: l.ingredientId, name: l.name, demandQty: l.adjusted ? l.coveredQty : l.demandQty, unit: l.unit }));
 
   /** Shared second half: AI reads the pages, checks run, comparison is computed. */
   async function readAndCompare(lines: CompareLine[], pages: PageInput[]) {

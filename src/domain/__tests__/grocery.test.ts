@@ -171,3 +171,28 @@ describe('provider adapters', () => {
     expect(() => restrictionsOf(goldenBundle({ preferences: { dietPattern: null } }))).toThrow();
   });
 });
+
+describe('cart edits', () => {
+  const base = { bundle: b, plan: plans[0], targets, pantry: [], cat: CAT };
+  const before = runPipeline({ ...base, patch: {} }).basket;
+  const line = before.lines[0];
+  it('skipping an item takes it off the list and lowers the total', () => {
+    const after = runPipeline({ ...base, patch: { skip: [line.ingredientId] } }).basket;
+    expect(after.lines.find((l) => l.ingredientId === line.ingredientId)).toBeUndefined();
+    expect(after.totalInr).toBeCloseTo(before.totalInr - line.lineTotalInr, 1);
+  });
+  it('a hand-set pack count is used and priced', () => {
+    const after = runPipeline({ ...base, patch: { packCount: { [line.ingredientId]: 3 } } }).basket;
+    const l = after.lines.find((x) => x.ingredientId === line.ingredientId)!;
+    expect(l.picks).toEqual([{ productId: line.picks[0].productId, packs: 3 }]);
+    expect(l.adjusted).toBe(true);
+  });
+  it('an added item joins the cart, and one that breaks the food rules is refused', () => {
+    const ok = CAT.products.find((p) => p.available && p.ingredientId === 'banana')!;
+    const meat = CAT.products.find((p) => p.available && CAT.ingredients.get(p.ingredientId)?.dietClass === 'meat')!;
+    const after = runPipeline({ ...base, patch: { extras: [{ productId: ok.id, packs: 2 }, { productId: meat.id, packs: 1 }] } }).basket;
+    expect(after.lines.some((l) => l.picks.some((k) => k.productId === ok.id))).toBe(true);
+    expect(after.lines.some((l) => l.picks.some((k) => k.productId === meat.id))).toBe(false);
+    expect(after.unmatched.some((u) => /diet or allergies/.test(u.reason))).toBe(true);
+  });
+});
