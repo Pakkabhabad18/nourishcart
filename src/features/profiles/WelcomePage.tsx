@@ -1,6 +1,6 @@
 // First run: privacy notice + consent (FR-021), then the first profile.
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { store } from '../../lib/store/index.ts';
 import { NOTICE_VERSION } from '../../lib/store/types.ts';
@@ -73,7 +73,7 @@ export function WelcomePage() {
             <span>I agree NourishCart can use my details to plan meals and groceries. No ads, no tracking, delete anytime.</span>
           </label>
           <details className="mt-2 pl-8 text-sm">
-            <summary className="cursor-pointer text-primary">Read the privacy notice</summary>
+            <summary className="cursor-pointer text-primary">Read the short privacy notice</summary>
             <div className="mt-2 rounded-ctl bg-surface-container p-4">
               <PrivacyNotice />
             </div>
@@ -82,7 +82,9 @@ export function WelcomePage() {
           <Button type="submit" size="lg" className="mt-6 w-full" loading={busy}>
             Continue
           </Button>
-          <p className="mt-4 text-center text-xs text-on-surface-variant">For healthy adults, 18 and over. Not medical advice.</p>
+          <p className="mt-4 text-center text-xs text-on-surface-variant">
+            For healthy adults, 18 and over. Not medical advice. <Link to="/legal/privacy" className="link">Privacy policy</Link>, <Link to="/legal/terms" className="link">terms</Link>.
+          </p>
         </div>
       </form>
     </div>

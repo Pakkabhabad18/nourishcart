@@ -112,6 +112,7 @@ export function ConversationPage() {
     }
 
     const next = nextQuestion(r.state);
+    if (r.refusal) return sayAndListen(`${r.refusal} ${QUESTIONS[key].ask}`, key);
     if (r.understood == null) {
       const misses = r.state.misses[key] ?? 0;
       const line = misses >= 2 && QUESTIONS[key].choices ? `${QUESTIONS[key].retry} You can also tap an option below.` : `Sorry, I didn't catch that. ${QUESTIONS[key].retry}`;

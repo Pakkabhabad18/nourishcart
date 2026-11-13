@@ -3,7 +3,7 @@
 //  - FocusPicker: nutrients the person wants more of
 // Both are controlled components; the caller owns the state and saves it.
 import { clsx } from 'clsx';
-import type { BodyGoal, FocusNutrient } from '../../domain/types.ts';
+import type { BodyGoal, FocusNutrient, MealSlot } from '../../domain/types.ts';
 import { BODY_GOAL_LABEL, FOCUS_LABEL, FOCUS_SOURCES } from '../../domain/nutrition/personal.ts';
 import { Chip } from '../../components/ui.tsx';
 
@@ -53,6 +53,39 @@ export function FocusPicker({ value, onChange }: { value: FocusNutrient[]; onCha
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+const MEAL_CHOICES: { slot: MealSlot; label: string }[] = [
+  { slot: 'breakfast', label: 'Breakfast' },
+  { slot: 'snack_am', label: 'Morning snack' },
+  { slot: 'lunch', label: 'Lunch' },
+  { slot: 'snack', label: 'Evening snack' },
+  { slot: 'dinner', label: 'Dinner' },
+];
+
+/**
+ * Which meals the person eats. Leaving some out is how intermittent fasting works
+ * (for 16:8, untick breakfast). At least one meal stays ticked.
+ */
+export function MealsPicker({ value, onChange }: { value: MealSlot[]; onChange: (v: MealSlot[]) => void }) {
+  const toggle = (s: MealSlot) => {
+    const next = value.includes(s) ? value.filter((x) => x !== s) : [...value, s];
+    if (next.length) onChange(MEAL_CHOICES.map((c) => c.slot).filter((x) => next.includes(x)));
+  };
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Meals you eat">
+        {MEAL_CHOICES.map((c) => (
+          <Chip key={c.slot} selected={value.includes(c.slot)} onClick={() => toggle(c.slot)}>
+            {c.label}
+          </Chip>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-on-surface-variant">
+        {value.length <= 2 ? 'Fewer meals means bigger portions so you still reach your targets.' : `${value.length} meals a day.`} Fasting? Just untick the meals you skip.
+      </p>
     </div>
   );
 }

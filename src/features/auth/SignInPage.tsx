@@ -115,7 +115,7 @@ export function SignInPage() {
                 Email me a code
               </Button>
               <p className="mt-5 text-xs text-on-surface-variant">
-                By continuing you agree to use NourishCart for general wellness planning. You will see the privacy notice before entering any personal details.
+                By continuing you agree to the <Link to="/legal/terms" className="link">terms of use</Link>. You'll see our <Link to="/legal/privacy" className="link">privacy policy</Link> before adding any personal details.
               </p>
             </form>
           ) : (

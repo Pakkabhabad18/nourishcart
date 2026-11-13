@@ -32,7 +32,9 @@ function play(c: ConvCase): { s: ConvState; asked: number; retries: number; stuc
     const n = times[k] ?? 0;
     times[k] = n + 1;
     if (n >= 2) return { s, asked, retries, stuck: true }; // asked three times: count as stuck
-    const text = Array.isArray(said) ? said[Math.min(n, said.length - 1)] : (said ?? 'no');
+    // The meals question was added after these scripts were written; people who weren't asked
+    // it answer the most common pattern.
+    const text = Array.isArray(said) ? said[Math.min(n, said.length - 1)] : (said ?? (k === 'meals' ? 'breakfast, lunch and dinner' : 'no'));
     asked++;
     const r = answer(s, k, text);
     if (r.understood == null) retries++;

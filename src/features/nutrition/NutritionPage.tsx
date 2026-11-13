@@ -9,12 +9,13 @@ import { ChevronDown } from 'lucide-react';
 import { store } from '../../lib/store/index.ts';
 import { useApp } from '../../app/context.tsx';
 import { qk, useActiveProfile, useCalculation, useBundle, useSaveBundle, useSelectedPlan } from '../../app/hooks.ts';
-import { Button, EmptyState, ErrorState, Input, Notice, Spinner, Tag } from '../../components/ui.tsx';
+import { Button, EmptyState, ErrorState, Notice, Spinner } from '../../components/ui.tsx';
 import type { EligibilityResult } from '../../domain/nutrition/eligibility.ts';
 import { validateProfileForNutrition } from '../../domain/nutrition/eligibility.ts';
 import { BODY_GOAL_LABEL, PROTEIN_G_PER_KG, macroKcal, type TargetValue } from '../../domain/nutrition/personal.ts';
-import type { BodyGoal, CustomTargets, FocusNutrient, Goal } from '../../domain/types.ts';
-import { FocusPicker, GoalPicker } from './TargetsEditor.tsx';
+import type { BodyGoal, CustomTargets, FocusNutrient, Goal, MealSlot } from '../../domain/types.ts';
+import { slotsOf } from '../../domain/planning/plan.ts';
+import { FocusPicker, GoalPicker, MealsPicker } from './TargetsEditor.tsx';
 
 export function ScopeMessage({ e }: { e: EligibilityResult }) {
   if (e.status === 'out_of_scope')
@@ -66,11 +67,11 @@ export function NutritionPage() {
   const [error, setError] = useState<unknown>(null);
   const [ineligible, setIneligible] = useState<EligibilityResult | null>(null);
   const [showMethod, setShowMethod] = useState(false);
-  const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
   // Form state, filled from the saved profile once it loads.
   const [goal, setGoal] = useState<BodyGoal | null>(null);
   const [focus, setFocus] = useState<FocusNutrient[]>([]);
+  const [meals, setMeals] = useState<MealSlot[]>([]);
   const [typed, setTyped] = useState<Record<Key, string>>({ kcal: '', proteinG: '', carbsG: '', fatG: '', fibreG: '' });
   const loadedFor = useRef<string | null>(null);
 
@@ -80,6 +81,7 @@ export function NutritionPage() {
     loadedFor.current = b.profile.id;
     setGoal(b.goals.bodyGoal);
     setFocus(b.goals.focusNutrients);
+    setMeals(slotsOf(b.preferences));
     const c = b.goals.custom;
     setTyped({ kcal: c.kcal?.toString() ?? '', proteinG: c.proteinG?.toString() ?? '', carbsG: c.carbsG?.toString() ?? '', fatG: c.fatG?.toString() ?? '', fibreG: c.fibreG?.toString() ?? '' });
   }, [bundle.data]);
@@ -115,9 +117,8 @@ export function NutritionPage() {
     if (!b || !goal) return;
     const num = (s: string) => (s.trim() === '' ? null : Math.round(Number(s)));
     const custom: CustomTargets = { kcal: num(typed.kcal), proteinG: num(typed.proteinG), carbsG: num(typed.carbsG), fatG: num(typed.fatG), fibreG: num(typed.fibreG) };
-    await save.mutateAsync({ ...b, goals: { ...b.goals, goal: plannerGoal(goal, b.goals.goal), bodyGoal: goal, custom, focusNutrients: focus } });
+    await save.mutateAsync({ ...b, preferences: { ...b.preferences, mealSlots: meals, mealsPerDay: meals.length }, goals: { ...b.goals, goal: plannerGoal(goal, b.goals.goal), bodyGoal: goal, custom, focusNutrients: focus } });
     await recalc();
-    setEditing(false);
     setSaved(true);
     toast('Targets saved');
   }
@@ -147,6 +148,7 @@ export function NutritionPage() {
   const dirty =
     goal !== b.goals.bodyGoal ||
     focus.join() !== b.goals.focusNutrients.join() ||
+    meals.join() !== slotsOf(b.preferences).join() ||
     ROWS.some((r) => (typed[r.key].trim() === '' ? null : Math.round(Number(typed[r.key]))) !== b.goals.custom[r.key]);
   const sumKcal = macroKcal(t);
 
@@ -162,54 +164,69 @@ export function NutritionPage() {
       </section>
 
       <section className="card mt-6 p-5" aria-labelledby="nums-h">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 id="nums-h" className="font-medium">Per day</h2>
-            <p className="text-xs text-on-surface-variant">You burn about {t.maintenanceKcal.toLocaleString('en-IN')} kcal a day</p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => setEditing((e) => !e)}>
-            {editing ? 'Done' : 'Edit numbers'}
-          </Button>
-        </div>
-        <ul className="mt-2 divide-y divide-outline-variant">
+        <h2 id="nums-h" className="text-lg">Per day</h2>
+        <p className="text-sm text-on-surface-variant">You burn about {t.maintenanceKcal.toLocaleString('en-IN')} kcal a day. Drag to change; the dot is our suggestion.</p>
+        <ul className="mt-3 space-y-5">
           {ROWS.map((r) => {
             const v: TargetValue = t[r.field];
+            const mine = typed[r.key].trim() !== '';
+            const shown = mine ? Number(typed[r.key]) : v.value;
+            const step = r.key === 'kcal' ? 10 : 1;
+            const pos = (x: number) => `${((x - v.min) / Math.max(1, v.max - v.min)) * 100}%`;
             return (
-              <li key={r.key} className="flex min-h-[56px] items-center gap-3 py-2">
-                <span className="w-20 shrink-0 text-on-surface-variant">{r.label}</span>
-                {editing ? (
-                  <label className="flex flex-1 items-center gap-2">
-                    <span className="sr-only">{r.label} per day</span>
-                    <Input
-                      inputMode="numeric"
-                      className="w-28"
-                      placeholder={v.suggested.toString()}
-                      value={typed[r.key]}
-                      onChange={(e) => setTyped({ ...typed, [r.key]: e.target.value.replace(/[^\d]/g, '') })}
-                    />
+              <li key={r.key}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <label htmlFor={`t-${r.key}`} className="font-semibold">{r.label}</label>
+                  <span className="flex items-baseline gap-2">
+                    <span className="num font-display text-2xl font-bold text-primary">{shown.toLocaleString('en-IN')}</span>
                     <span className="text-sm text-on-surface-variant">{r.unit}</span>
-                  </label>
-                ) : (
-                  <span className="num flex-1 text-xl">
-                    {v.value.toLocaleString('en-IN')} <span className="text-sm text-on-surface-variant">{r.unit}</span>
+                    {mine && (
+                      <button type="button" className="text-xs font-semibold text-primary underline" onClick={() => setTyped({ ...typed, [r.key]: '' })}>
+                        Use suggestion
+                      </button>
+                    )}
                   </span>
-                )}
-                {!editing && v.source !== 'suggested' && <Tag tone={v.source === 'yours_adjusted' ? 'warn' : 'good'}>{v.source === 'yours' ? 'Yours' : 'Adjusted'}</Tag>}
+                </div>
+                {/* A real slider: drag, tap, or use arrow keys. Limited to this person's safe range. */}
+                <div className="relative mt-2">
+                  <input
+                    id={`t-${r.key}`}
+                    type="range"
+                    min={v.min}
+                    max={v.max}
+                    step={step}
+                    value={Math.min(v.max, Math.max(v.min, shown))}
+                    onChange={(e) => setTyped({ ...typed, [r.key]: e.target.value })}
+                    aria-label={`${r.label} per day`}
+                    aria-valuetext={`${shown} ${r.unit}`}
+                    className="target-slider w-full"
+                    style={{ ['--fill' as string]: pos(Math.min(v.max, Math.max(v.min, shown))) }}
+                  />
+                  <span className="pointer-events-none absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-mango ring-2 ring-white" style={{ left: pos(v.suggested) }} aria-hidden />
+                </div>
+                <div className="num mt-1 flex justify-between text-xs text-on-surface-variant">
+                  <span>{v.min.toLocaleString('en-IN')}</span>
+                  <span>{v.max.toLocaleString('en-IN')}</span>
+                </div>
               </li>
             );
           })}
         </ul>
-        {editing && <p className="mt-2 text-xs text-on-surface-variant">Leave a box empty to use our suggestion (shown in grey).</p>}
-        {t.notes.length > 0 && !editing && (
-          <Notice tone="warn" className="mt-3">
+        {t.notes.length > 0 && (
+          <Notice tone="warn" className="mt-4">
             {t.notes.map((n) => (
               <p key={n}>{n}</p>
             ))}
           </Notice>
         )}
-        {!editing && Math.abs(sumKcal - t.kcal.value) > t.kcal.value * 0.1 && (
-          <p className="mt-2 text-xs text-on-surface-variant">Your protein, carbs and fat add up to {sumKcal.toLocaleString('en-IN')} kcal; meals follow the calorie number.</p>
+        {Math.abs(sumKcal - t.kcal.value) > t.kcal.value * 0.1 && (
+          <p className="mt-3 text-xs text-on-surface-variant">Your protein, carbs and fat add up to {sumKcal.toLocaleString('en-IN')} kcal; meals follow the calorie number.</p>
         )}
+      </section>
+
+      <section className="mt-6" aria-labelledby="meals-h">
+        <h2 id="meals-h" className="mb-2 font-medium">Meals you eat</h2>
+        <MealsPicker value={meals} onChange={setMeals} />
       </section>
 
       <section className="mt-6" aria-labelledby="focus-h">

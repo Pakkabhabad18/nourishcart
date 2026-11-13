@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { z } from 'zod';
 import { ArrowLeft } from 'lucide-react';
-import { GoalPicker, FocusPicker } from '../nutrition/TargetsEditor.tsx';
+import { GoalPicker, FocusPicker, MealsPicker } from '../nutrition/TargetsEditor.tsx';
+import { slotsOf } from '../../domain/planning/plan.ts';
 import { useBundle, useSaveBundle } from '../../app/hooks.ts';
 import { useApp } from '../../app/context.tsx';
 import { Button, Chip, ErrorState, Field, Input, Notice, Select, Spinner } from '../../components/ui.tsx';
@@ -358,13 +359,11 @@ export function OnboardingPage() {
                 ))}
               </div>
             </fieldset>
+            <fieldset>
+              <legend className="mb-3 text-sm font-medium">Which meals do you eat?</legend>
+              <MealsPicker value={slotsOf(pref)} onChange={(v) => set((x) => ((x.preferences.mealSlots = v), (x.preferences.mealsPerDay = v.length), x))} />
+            </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Meals per day" htmlFor="meals">
-                <Select id="meals" value={pref.mealsPerDay} onChange={(e) => set((x) => ((x.preferences.mealsPerDay = Number(e.target.value) === 3 ? 3 : 4), x))}>
-                  <option value={3}>3 meals</option>
-                  <option value={4}>3 meals + a snack</option>
-                </Select>
-              </Field>
               <Field label="Cooking time you usually have per meal" htmlFor="cook">
                 <Select id="cook" value={pref.maxCookMinutes} onChange={(e) => set((x) => ((x.preferences.maxCookMinutes = Number(e.target.value)), x))}>
                   <option value={20}>Up to 20 minutes</option>

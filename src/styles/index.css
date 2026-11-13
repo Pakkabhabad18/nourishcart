@@ -70,3 +70,13 @@
 /* Mango sparkle for celebrations */
 @keyframes sparkle { 0% { transform: scale(0) rotate(0); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(1.2) rotate(90deg); opacity: 0; } }
 .sparkle { animation: sparkle 900ms ease-out both; }
+
+/* Target sliders: thick track filled up to the thumb (--fill), big thumb for thumbs. */
+.target-slider { -webkit-appearance: none; appearance: none; height: 28px; background: transparent; cursor: pointer; }
+.target-slider::-webkit-slider-runnable-track { height: 10px; border-radius: 999px; background: linear-gradient(to right, theme('colors.primary') var(--fill), theme('colors.surface-container-highest') var(--fill)); }
+.target-slider::-moz-range-track { height: 10px; border-radius: 999px; background: theme('colors.surface-container-highest'); }
+.target-slider::-moz-range-progress { height: 10px; border-radius: 999px; background: theme('colors.primary'); }
+.target-slider::-webkit-slider-thumb { -webkit-appearance: none; margin-top: -9px; height: 28px; width: 28px; border-radius: 999px; background: #fff; border: 3px solid theme('colors.primary'); box-shadow: 0 2px 6px rgba(46,23,69,.25); }
+.target-slider::-moz-range-thumb { height: 22px; width: 22px; border-radius: 999px; background: #fff; border: 3px solid theme('colors.primary'); }
+.target-slider:focus-visible { outline: none; }
+.target-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px theme('colors.primary-container'); }

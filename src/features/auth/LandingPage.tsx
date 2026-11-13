@@ -3,7 +3,9 @@
 import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
 import { Logo } from '../../components/Logo.tsx';
-import { RangeBar } from '../../components/ui.tsx';
+import { Nutrion } from '../../components/Nutrion.tsx';
+import { Ring } from '../overview/OverviewPage.tsx';
+import { aggregateRecipeNutrition } from '../../domain/recipes/aggregate.ts';
 import { calculateTargets, planTargetsFrom } from '../../domain/nutrition/targets.ts';
 import { generatePlanOptions } from '../../domain/planning/plan.ts';
 import { runPipeline } from '../../domain/pipeline.ts';
@@ -25,58 +27,51 @@ function useSampleWeek() {
 export function LandingPage() {
   const s = useSampleWeek();
   const day = s?.plan.meals.filter((m) => m.day === 2) ?? [];
+  const dayKcal = day.reduce((sum, m) => sum + aggregateRecipeNutrition(CAT.recipes.get(m.recipeId)!, CAT.ingredients, m.servings, {}).energyKcal.value, 0);
+  const dayProtein = day.reduce((sum, m) => sum + aggregateRecipeNutrition(CAT.recipes.get(m.recipeId)!, CAT.ingredients, m.servings, {}).proteinG.value, 0);
   return (
-    <div className="min-h-dvh bg-surface-container">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
+    <div className="min-h-dvh bg-surface">
+      <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5 sm:px-8">
         <Logo />
-        <Link to="/sign-in" className="rounded-full px-4 py-2 text-sm font-medium text-primary hover:bg-primary/[0.08]">
+        <Link to="/sign-in" className="rounded-full px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/[0.08]">
           Sign in
         </Link>
       </header>
-      <main className="mx-auto grid max-w-6xl gap-10 px-5 pb-16 pt-6 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pt-14">
-        <section>
-          <h1 className="text-3xl font-normal leading-tight sm:text-4xl">A week of Indian meals for your goal, and the groceries in your cart.</h1>
+
+      <main className="mx-auto grid max-w-5xl gap-10 px-5 pb-16 pt-4 sm:px-8 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:pt-12">
+        <section className="rise">
+          <Nutrion mood="happy" size={96} />
+          <h1 className="mt-4 text-4xl leading-[1.1] sm:text-5xl">Meals for your goal. Groceries in your cart.</h1>
           <p className="mt-4 max-w-prose text-lg text-on-surface-variant">
-            Answer a few questions by voice. We plan meals for your calories, protein and budget, then fill your Zepto or Instamart cart with the cheapest picks.
+            Talk to Nutrion for two minutes. You get a week of Indian meals for your calories, protein and budget, and the cheapest Zepto or Instamart cart, ready to pay.
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link to="/sign-in" className="inline-flex min-h-[50px] items-center rounded-full bg-primary px-5 text-lg font-medium text-on-primary hover:brightness-110">
-              Get started
-            </Link>
-            <a href="#how" className="inline-flex min-h-[50px] items-center rounded-full px-5 font-medium text-primary hover:bg-primary/[0.08]">
-              How it works
-            </a>
-          </div>
-          <p className="mt-6 max-w-prose text-sm text-on-surface-variant">Plan for everyone at home. You always check the cart and pay in the store app yourself.</p>
+          <Link to="/sign-in" className="mt-7 inline-flex min-h-[56px] items-center rounded-full bg-primary px-8 text-lg font-semibold text-on-primary active:scale-95">
+            Get started
+          </Link>
+          <p className="mt-4 text-sm text-on-surface-variant">Free. Plan for the whole family. You always pay in the store app yourself.</p>
         </section>
 
         {s && (
-          <section aria-label="Example week for a sample profile" className="card p-5 sm:p-6">
+          <section aria-label="An example day" className="rise rise-2 card p-5 sm:p-6">
             <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-lg font-medium">A day for Asha</h2>
+              <h2 className="text-xl">A day for Asha</h2>
               <span className="text-xs text-on-surface-variant">Example</span>
             </div>
-            <p className="mt-1 text-sm text-on-surface-variant">26, desk job, walks daily, eggetarian, ₹1,500 a week.</p>
-            <RangeBar
-              ariaLabel={`Estimated energy ${s.t.energy.rangeKcal.low} to ${s.t.energy.rangeKcal.high} kcal per day, planning at ${s.t.planningEnergyKcal}`}
-              min={1500}
-              max={2500}
-              band={[s.t.energy.rangeKcal.low, s.t.energy.rangeKcal.high]}
-              value={s.t.planningEnergyKcal}
-              valueLabel={`${s.t.planningEnergyKcal} kcal`}
-              ticks={[{ at: 1660, label: 'ICMR ref. woman' }]}
-            />
-            <ul className="mt-2 divide-y divide-outline-variant">
+            <p className="mt-1 text-sm text-on-surface-variant">26, desk job, veg + eggs, wants to build muscle, ₹1,500 a week.</p>
+            <div className="mt-4 flex justify-around">
+              <Ring label="Calories" value={dayKcal} target={s.t.planningEnergyKcal} unit="kcal" size={104} />
+              <Ring label="Protein" value={dayProtein} target={s.t.personal?.proteinG.value ?? s.t.protein.earG} unit="g" size={104} />
+            </div>
+            <ul className="mt-3 divide-y divide-outline-variant">
               {day.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-3 py-2.5">
-                  <span className="w-20 shrink-0 text-sm text-on-surface-variant">{SLOT_LABEL[m.slot]}</span>
-                  <span className="flex-1 text-sm font-medium">{CAT.recipes.get(m.recipeId)?.name}</span>
-                  <span className="num text-xs text-on-surface-variant">×{m.servings}</span>
+                <li key={m.id} className="flex items-center gap-3 py-2.5">
+                  <span className="w-28 shrink-0 text-sm text-on-surface-variant">{SLOT_LABEL[m.slot]}</span>
+                  <span className="flex-1 text-sm font-semibold">{CAT.recipes.get(m.recipeId)?.name}</span>
                 </li>
               ))}
             </ul>
-            <div className="mt-4 rounded-ctl bg-secondary-container px-4 py-3 text-sm">
-              <p className="font-medium text-primary">
+            <div className="mt-4 rounded-ctl bg-mango-soft px-4 py-3 text-sm">
+              <p className="font-semibold">
                 Week's groceries: about <span className="num">{formatInr(s.r.basket.totalInr)}</span> for {s.r.basket.lines.length} items
               </p>
               <p className="mt-0.5 text-on-surface-variant">Under her ₹1,500 budget.</p>
@@ -85,29 +80,35 @@ export function LandingPage() {
         )}
       </main>
 
-      <section id="how" className="border-t border-outline-variant bg-surface">
-        <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
-          <h2 className="text-2xl font-normal">How it works</h2>
+      <section id="how" className="border-t border-outline-variant bg-surface-container-lowest">
+        <div className="mx-auto max-w-5xl px-5 py-14 sm:px-8">
+          <h2 className="text-3xl">How it works</h2>
           <ol className="mt-8 grid gap-6 sm:grid-cols-3">
             {[
-              ['Talk for two minutes', 'Your body, your day, what you eat, your goal and budget. Speak or type.'],
-              ['Pick your meals', 'Three weekly plans that hit your targets. Swap any dish.'],
+              ['Talk for two minutes', 'Nutrion asks about you, one question at a time. Speak or type.'],
+              ['Pick your meals', 'Three weekly plans that hit your targets. Swap any dish, log what you eat.'],
               ['Fill your cart', 'We compare Zepto and Instamart and add the cheapest picks. You pay in the store app.'],
             ].map(([t, d], i) => (
-              <li key={t} className="flex gap-3">
-                <span className="num grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary-container text-sm font-medium text-primary">{i + 1}</span>
-                <div>
-                  <h3 className="font-medium">{t}</h3>
-                  <p className="mt-1 text-sm text-on-surface-variant">{d}</p>
-                </div>
+              <li key={t} className="rounded-card bg-surface p-5">
+                <span className="num grid h-10 w-10 place-items-center rounded-full bg-mango font-display text-lg font-bold">{i + 1}</span>
+                <h3 className="mt-3 text-lg">{t}</h3>
+                <p className="mt-1 text-sm text-on-surface-variant">{d}</p>
               </li>
             ))}
           </ol>
-          <p className="mt-10 max-w-prose text-xs text-on-surface-variant">
-            For healthy adults, 18 and over. Not medical advice. Nutrition values are sample data in this version.
-          </p>
         </div>
       </section>
+
+      <footer className="border-t border-outline-variant">
+        <div className="mx-auto flex max-w-5xl flex-col gap-3 px-5 py-8 text-sm text-on-surface-variant sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          <p>For healthy adults, 18 and over. Not medical advice. Nutrition values are sample data in this version.</p>
+          <nav className="flex gap-4" aria-label="Legal">
+            <Link to="/legal/privacy" className="hover:text-primary">Privacy</Link>
+            <Link to="/legal/terms" className="hover:text-primary">Terms</Link>
+            <Link to="/legal/health" className="hover:text-primary">Health disclaimer</Link>
+          </nav>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -14,7 +14,7 @@
 // Safety rules carried over from the form: allergies and "no health conditions" are only
 // recorded from an answer to that exact question (or explicit words like "no allergies"),
 // never assumed from silence.
-import type { BodyGoal, ClinicalFlag, FocusNutrient, ProfileBundle } from '../types.ts';
+import type { BodyGoal, ClinicalFlag, FocusNutrient, MealSlot, ProfileBundle } from '../types.ts';
 import { extractProfile, normalise, type Extraction } from './extract.ts';
 import { applyExtraction } from './apply.ts';
 import { ALLERGEN_LABELS, DIET_LABELS } from '../diet.ts';
@@ -24,7 +24,7 @@ export const CONVERSATION_VERSION = 'conversation-1.0.0';
 
 export type QKey =
   | 'age' | 'sex' | 'height' | 'weight' | 'occupation' | 'movement' | 'workouts' | 'workoutDetails'
-  | 'diet' | 'allergies' | 'exclusions' | 'goal' | 'focus' | 'budget' | 'budgetPeriod' | 'clinical';
+  | 'diet' | 'allergies' | 'exclusions' | 'meals' | 'goal' | 'focus' | 'budget' | 'budgetPeriod' | 'clinical';
 
 export interface ConvState {
   e: Extraction; // everything heard so far, merged
@@ -32,10 +32,11 @@ export interface ConvState {
   budgetFirst: boolean;
   focus: FocusNutrient[] | null; // null = not asked yet; [] = "none"
   exclusionsDone: boolean;
+  mealSlots: MealSlot[] | null; // null = not asked yet
   misses: Partial<Record<QKey, number>>; // how many times a question wasn't understood
 }
 
-export const emptyConversation = (): ConvState => ({ e: { warnings: [], unknownFoods: [] }, bodyGoal: null, budgetFirst: false, focus: null, exclusionsDone: false, misses: {} });
+export const emptyConversation = (): ConvState => ({ e: { warnings: [], unknownFoods: [] }, bodyGoal: null, budgetFirst: false, focus: null, exclusionsDone: false, mealSlots: null, misses: {} });
 
 export interface Question {
   key: QKey;
@@ -83,6 +84,15 @@ export const QUESTIONS: Record<QKey, Question> = {
     key: 'exclusions', ask: 'Any food you never want in your meals?', retry: 'Say nothing, or name a food, like bhindi or mushroom.',
     choices: [{ label: 'Nothing', say: 'nothing' }],
   },
+  meals: {
+    key: 'meals', ask: 'Which meals do you usually eat? For example breakfast, lunch and dinner, or do you skip some?', retry: 'Like: all three with a snack, or lunch and dinner only.',
+    choices: [
+      { label: 'Breakfast, lunch, dinner', say: 'breakfast lunch and dinner' },
+      { label: '+ evening snack', say: 'breakfast lunch snack and dinner' },
+      { label: 'Skip breakfast (fasting)', say: 'lunch and dinner' },
+      { label: 'Five small meals', say: 'five meals' },
+    ],
+  },
   goal: {
     key: 'goal', ask: 'What is your goal? Lose fat, stay as you are, or build muscle?', retry: 'Lose fat, stay the same, or build muscle.',
     choices: [{ label: 'Lose fat', say: 'lose fat' }, { label: 'Stay as I am', say: 'stay the same' }, { label: 'Build muscle', say: 'build muscle' }],
@@ -102,7 +112,7 @@ export const QUESTIONS: Record<QKey, Question> = {
   },
 };
 
-const ORDER: QKey[] = ['age', 'sex', 'height', 'weight', 'occupation', 'movement', 'workouts', 'workoutDetails', 'diet', 'allergies', 'exclusions', 'goal', 'focus', 'budget', 'budgetPeriod', 'clinical'];
+const ORDER: QKey[] = ['age', 'sex', 'height', 'weight', 'occupation', 'movement', 'workouts', 'workoutDetails', 'diet', 'allergies', 'exclusions', 'meals', 'goal', 'focus', 'budget', 'budgetPeriod', 'clinical'];
 
 /** Is this question answered? */
 export function isAnswered(s: ConvState, k: QKey): boolean {
@@ -119,6 +129,7 @@ export function isAnswered(s: ConvState, k: QKey): boolean {
     case 'diet': return !!e.dietPattern;
     case 'allergies': return !!e.allergies || !!e.noAllergies;
     case 'exclusions': return s.exclusionsDone || !!e.hardExclusions;
+    case 'meals': return s.mealSlots != null;
     case 'goal': return s.bodyGoal != null;
     case 'focus': return s.focus != null;
     case 'budget': return !!e.budgetInr;
@@ -144,7 +155,7 @@ const has = (t: string, re: RegExp) => re.test(t);
 const found = <T,>(value: T, evidence: string) => ({ value, evidence: evidence.trim().slice(0, 80) });
 
 /** Small reader for the question just asked. Returns only what it is sure about. */
-function readFor(k: QKey, raw: string): Partial<Extraction> & { bodyGoal?: BodyGoal; budgetFirst?: boolean; focus?: FocusNutrient[]; exclusionsDone?: boolean } {
+function readFor(k: QKey, raw: string): Partial<Extraction> & { bodyGoal?: BodyGoal; budgetFirst?: boolean; focus?: FocusNutrient[]; exclusionsDone?: boolean; mealSlots?: MealSlot[] } {
   const t = normalise(raw);
   const n = /\b(\d+(?:\.\d+)?)\b/.exec(t);
   const num = n ? Number(n[1]) : null;
@@ -253,6 +264,21 @@ function readFor(k: QKey, raw: string): Partial<Extraction> & { bodyGoal?: BodyG
       if (readFor('goal', raw).bodyGoal || /\d/.test(t)) return {};
       return t.trim().length >= 3 ? { exclusionsDone: true } : {};
     }
+    case 'meals': {
+      // Count words first ("five meals", "2 meals", "one meal a day"), then named meals.
+      if (has(t, /\b(omad|one meal a day|1 meal)\b/)) return { mealSlots: ['dinner'] };
+      if (has(t, /\b(16[:/ ]?8|intermittent|skip(?:ping)? breakfast|no breakfast|2 meals|two meals)\b/)) return { mealSlots: ['lunch', 'dinner'] };
+      if (has(t, /\b(5 meals|five meals|5 small|small meals)\b/)) return { mealSlots: ['breakfast', 'snack_am', 'lunch', 'snack', 'dinner'] };
+      if (has(t, /\b(4 meals|four meals)\b/)) return { mealSlots: ['breakfast', 'lunch', 'snack', 'dinner'] };
+      if (has(t, /\b(3 meals|three meals|all three|normal|usual)\b/) && !/snack/.test(t)) return { mealSlots: ['breakfast', 'lunch', 'dinner'] };
+      const picked: MealSlot[] = [];
+      if (has(t, /\bbreakfast|tiffin\b/)) picked.push('breakfast');
+      if (has(t, /\b(morning snack|mid[- ]?morning)\b/)) picked.push('snack_am');
+      if (has(t, /\blunch\b/)) picked.push('lunch');
+      if (has(t, /\b(snacks?|evening snack|tea time)\b/) && !/\b(no|without|don'?t) snacks?\b/.test(t)) picked.push('snack');
+      if (has(t, /\b(dinner|supper)\b/)) picked.push('dinner');
+      return picked.length ? { mealSlots: picked } : {};
+    }
     case 'goal': {
       if (has(t, /\b(lose|loss|cut|cutting|fat|slim|reduce|lighter|weight down|drop|belly|tummy|trim)\b/)) return { bodyGoal: 'lose' };
       if (has(t, /\b(muscle|gain|bulk|build|bigger|stronger|bodybuilding|tone|toned|put on)\b/)) return { bodyGoal: 'gain' };
@@ -300,6 +326,8 @@ const FREE_FIELDS: (keyof Extraction)[] = ['ageYears', 'sex', 'heightCm', 'weigh
 
 export interface TurnResult {
   state: ConvState;
+  /** Set when the answer asked for something we won't plan; say this instead of the usual retry. */
+  refusal?: string;
   /** Short line to say back, e.g. "26, got it." null = not understood. */
   understood: string | null;
   /** Other questions this answer also filled, e.g. ['weight', 'diet']. */
@@ -308,6 +336,7 @@ export interface TurnResult {
 
 export function answer(s: ConvState, k: QKey, text: string, extra?: Extraction): TurnResult {
   const before = ORDER.filter((q) => isAnswered(s, q));
+  if (EXTREME_DIET.test(text)) return { state: s, understood: null, alsoFilled: [], refusal: EXTREME_DIET_REPLY };
   const next: ConvState = { ...s, e: { ...s.e }, misses: { ...s.misses } };
   // 1. Full reader on the whole answer (plus an optional AI reading that already passed its checks).
   for (const src of [extractProfile(text), ...(extra ? [extra] : [])]) {
@@ -324,7 +353,8 @@ export function answer(s: ConvState, k: QKey, text: string, extra?: Extraction):
   }
   // 2. Small reader for this question.
   const scoped = readFor(k, text);
-  const { bodyGoal, budgetFirst, focus, exclusionsDone, ...fields } = scoped;
+  const { bodyGoal, budgetFirst, focus, exclusionsDone, mealSlots, ...fields } = scoped;
+  if (mealSlots) next.mealSlots = mealSlots;
   Object.assign(next.e, fields);
   if (bodyGoal) next.bodyGoal = bodyGoal;
   if (budgetFirst) next.budgetFirst = true;
@@ -372,6 +402,7 @@ export function reopen(s: ConvState, k: QKey): ConvState {
     case 'diet': drop('dietPattern'); break;
     case 'allergies': drop('allergies', 'noAllergies'); break;
     case 'exclusions': drop('hardExclusions'); n.exclusionsDone = false; break;
+    case 'meals': n.mealSlots = null; break;
     case 'goal': n.bodyGoal = null; n.budgetFirst = false; break;
     case 'focus': n.focus = null; break;
     case 'budget': case 'budgetPeriod': drop('budgetInr', 'budgetPeriod'); break;
@@ -398,6 +429,7 @@ export function valueOf(s: ConvState, k: QKey, names: { food: (id: string) => st
     case 'diet': return e.dietPattern ? DIET_LABELS[e.dietPattern.value] : null;
     case 'allergies': return e.allergies ? e.allergies.value.map((a) => ALLERGEN_LABELS[a]).join(', ') : e.noAllergies ? 'None' : null;
     case 'exclusions': return e.hardExclusions ? e.hardExclusions.value.map(names.food).join(', ') : s.exclusionsDone ? 'Nothing' : null;
+    case 'meals': return s.mealSlots ? mealsText(s.mealSlots) : null;
     case 'goal': return s.bodyGoal ? BODY_GOAL_LABEL[s.bodyGoal] + (s.budgetFirst ? ', on a tight budget' : '') : null;
     case 'focus': return s.focus ? (s.focus.length ? s.focus.map((f) => FOCUS_LABEL[f]).join(', ') : 'Nothing') : null;
     case 'budget': return e.budgetInr ? `₹${e.budgetInr.value.toLocaleString('en-IN')}${e.budgetPeriod ? (e.budgetPeriod.value === 'weekly' ? ' a week' : ' a month') : ''}` : null;
@@ -407,6 +439,20 @@ export function valueOf(s: ConvState, k: QKey, names: { food: (id: string) => st
 }
 
 const cap = (x: string) => x[0].toUpperCase() + x.slice(1);
+
+const MEAL_WORD: Record<MealSlot, string> = { breakfast: 'breakfast', snack_am: 'morning snack', lunch: 'lunch', snack: 'evening snack', dinner: 'dinner' };
+function mealsText(slots: MealSlot[]): string {
+  const w = slots.map((x) => MEAL_WORD[x]);
+  return cap(w.length > 1 ? `${w.slice(0, -1).join(', ')} and ${w[w.length - 1]}` : w[0]);
+}
+
+/**
+ * Diets we will not plan: water fasting, juice-only, fruit-only, "detox" and other very
+ * low-calorie diets. They need medical supervision. We say why and offer what we can do.
+ */
+const EXTREME_DIET = /\b(water fast(?:ing)?|dry fast(?:ing)?|juice (?:diet|cleanse|only|fast(?:ing)?)|only juices?|fruit (?:diet|only)|only fruits?|fruitarian|detox (?:diet|cleanse)|liquid diet|starv(?:e|ing)|800 calories|very low calorie)\b/i;
+export const EXTREME_DIET_REPLY =
+  "I can't plan water fasts, juice-only, fruit-only or other very low-calorie diets. They need a doctor's supervision. I can plan intermittent fasting, though: just tell me which meals you eat.";
 
 function echo(s: ConvState, k: QKey): string {
   const v = valueOf(s, k, { food: (id) => id.replace(/_/g, ' ') });
@@ -421,7 +467,7 @@ function echo(s: ConvState, k: QKey): string {
 export function summaryRows(s: ConvState, names: { food: (id: string) => string }): { key: QKey; label: string; value: string }[] {
   const LABEL: Record<QKey, string> = {
     age: 'Age', sex: 'Sex', height: 'Height', weight: 'Weight', occupation: 'Your day', movement: 'Walking', workouts: 'Workouts', workoutDetails: 'Sessions',
-    diet: 'Food', allergies: 'Allergies', exclusions: 'Never include', goal: 'Goal', focus: 'More of', budget: 'Budget', budgetPeriod: 'Budget', clinical: 'Health',
+    diet: 'Food', allergies: 'Allergies', exclusions: 'Never include', meals: 'Meals', goal: 'Goal', focus: 'More of', budget: 'Budget', budgetPeriod: 'Budget', clinical: 'Health',
   };
   const rows: { key: QKey; label: string; value: string }[] = [];
   for (const k of ORDER) {
@@ -439,5 +485,9 @@ export function toBundle(s: ConvState, b: ProfileBundle, now: Date = new Date())
     n.goals.goal = s.budgetFirst ? 'budget_first' : s.bodyGoal === 'lose' ? 'weight_management' : s.bodyGoal === 'gain' ? 'muscle_fitness' : 'general';
   }
   if (s.focus) n.goals.focusNutrients = s.focus;
+  if (s.mealSlots) {
+    n.preferences.mealSlots = s.mealSlots;
+    n.preferences.mealsPerDay = s.mealSlots.length;
+  }
   return n;
 }

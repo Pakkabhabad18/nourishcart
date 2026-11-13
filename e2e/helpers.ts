@@ -5,7 +5,7 @@ import { expect, type Page } from '@playwright/test';
 export const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/${name}.png`, fullPage: true });
 
 /** Answers in the order the conversation asks them, for a 26-year-old woman who wants to build muscle. */
-export const ASHA_ANSWERS = ['26', 'female', '162 cm', '58', 'desk job', 'some walking', '3 times a week', '45 minutes moderate', 'vegetarian but I eat eggs', 'no', 'bhindi', 'build muscle', 'iron', '1500 a week', 'no'];
+export const ASHA_ANSWERS = ['26', 'female', '162 cm', '58', 'desk job', 'some walking', '3 times a week', '45 minutes moderate', 'vegetarian but I eat eggs', 'no', 'bhindi', 'breakfast lunch snack and dinner', 'build muscle', 'iron', '1500 a week', 'no'];
 
 export async function signIn(page: Page, email: string, base = '') {
   await page.goto(`${base}/`);
