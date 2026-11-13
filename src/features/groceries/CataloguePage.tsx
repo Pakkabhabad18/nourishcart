@@ -32,7 +32,7 @@ export function CataloguePage() {
   );
   return (
     <>
-      <Link to="/groceries" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
+      <Link to="/groceries" className="mb-4 inline-flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-on-surface">
         <ArrowLeft className="h-4 w-4" aria-hidden /> Groceries
       </Link>
       <PageHeader title="Product catalogue" description={<>Fictional brands and illustrative prices for planning. <SimulatedTag>Not live retailer data</SimulatedTag></>} />
@@ -45,7 +45,7 @@ export function CataloguePage() {
       </div>
       {restrictions && (
         <label className="mb-4 flex items-center gap-2 text-sm">
-          <input type="checkbox" className="h-4 w-4 accent-forest" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} />
+          <input type="checkbox" className="h-4 w-4 accent-primary" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} />
           Only show products allowed for {profile?.displayName}
         </label>
       )}
@@ -56,31 +56,31 @@ export function CataloguePage() {
             <li key={p.id} className={`card p-4 ${!p.available ? 'opacity-70' : ''}`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs text-muted">{p.brand}</p>
+                  <p className="text-xs text-on-surface-variant">{p.brand}</p>
                   <p className="font-medium">{p.title}</p>
                 </div>
                 <SimulatedTag />
               </div>
-              <p className="num mt-2 text-lg font-semibold">{formatInr(p.priceInr)} <span className="text-sm font-normal text-muted">{formatQty(p.packQty, p.packUnit)}, {formatInr(up.value)}{up.label}</span></p>
+              <p className="num mt-2 text-lg font-medium">{formatInr(p.priceInr)} <span className="text-sm font-normal text-on-surface-variant">{formatQty(p.packQty, p.packUnit)}, {formatInr(up.value)}{up.label}</span></p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Tag>{p.tier}</Tag>
                 {!p.available && <Tag tone="danger">Out of stock</Tag>}
                 {[...ing.allergens, ...p.allergens].map((a) => <Tag key={a} tone="warn">{ALLERGEN_LABELS[a]}</Tag>)}
                 {blocked && <Tag tone="danger">Not for {profile?.displayName}</Tag>}
               </div>
-              <p className="mt-2 text-xs text-muted">Maps to {ing.name}. Checked {new Date(p.lastCheckedAt).toLocaleDateString('en-IN')}.</p>
+              <p className="mt-2 text-xs text-on-surface-variant">Maps to {ing.name}. Checked {new Date(p.lastCheckedAt).toLocaleDateString('en-IN')}.</p>
             </li>
           );
         })}
       </ul>
       {items.length === 0 && <Notice>No products match. Try another search or category.</Notice>}
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">Retailers</h2>
-        <ul className="mt-3 divide-y divide-line rounded-card border border-line bg-surface">
+        <h2 className="text-lg font-medium">Retailers</h2>
+        <ul className="mt-3 divide-y divide-outline-variant rounded-card border border-outline-variant bg-surface">
           {PROVIDERS.map((p) => (
             <li key={p.code} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
               <span className="font-medium">{p.displayName}</span>
-              <span className="text-muted">{p.status}</span>
+              <span className="text-on-surface-variant">{p.status}</span>
               <Tag tone={p.enabled ? 'good' : 'neutral'}>{p.enabled ? 'Active (simulated)' : 'Not connected'}</Tag>
             </li>
           ))}

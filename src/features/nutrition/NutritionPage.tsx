@@ -125,8 +125,8 @@ export function NutritionPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="card p-5 sm:p-6" aria-labelledby="energy-h">
-          <h2 id="energy-h" className="text-lg font-semibold">Energy</h2>
-          <p className="mt-1 text-sm text-muted">Likely range for a day, with the value plans are built around.</p>
+          <h2 id="energy-h" className="text-lg font-medium">Energy</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">Likely range for a day, with the value plans are built around.</p>
           <RangeBar
             ariaLabel={`Energy estimate ${e.rangeKcal.low} to ${e.rangeKcal.high} kcal per day; plans use ${c.planningEnergyKcal} kcal`}
             min={Math.min(e.rangeKcal.low, c.referenceContext?.rows[0].kcal ?? e.rangeKcal.low) - 200}
@@ -136,7 +136,7 @@ export function NutritionPage() {
             valueLabel={`${c.planningEnergyKcal.toLocaleString('en-IN')} kcal`}
             ticks={c.referenceContext ? [{ at: c.referenceContext.rows[0].kcal, label: 'ICMR ref. sedentary' }] : []}
           />
-          <div className="grid grid-cols-3 gap-3 border-t border-line pt-4">
+          <div className="grid grid-cols-3 gap-3 border-t border-outline-variant pt-4">
             <Stat label="Range" value={<span className="text-base">{e.rangeKcal.low.toLocaleString('en-IN')}–{e.rangeKcal.high.toLocaleString('en-IN')}</span>} sub="kcal/day" />
             <Stat label="Resting (BMR)" value={<span className="text-base">{e.bmrKcal.toLocaleString('en-IN')}</span>} sub="kcal/day" />
             <Stat label="Activity level" value={<span className="text-base">PAL {e.pal.pal}</span>} sub={BAND_LABEL[e.pal.band]} />
@@ -144,8 +144,8 @@ export function NutritionPage() {
         </section>
 
         <section className="card p-5 sm:p-6" aria-labelledby="protein-h">
-          <h2 id="protein-h" className="text-lg font-semibold">Protein</h2>
-          <p className="mt-1 text-sm text-muted">Plans are checked against the planning reference (EAR). The RDA is shown for context.</p>
+          <h2 id="protein-h" className="text-lg font-medium">Protein</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">Plans are checked against the planning reference (EAR). The RDA is shown for context.</p>
           <RangeBar
             ariaLabel={`Protein planning reference ${p.earG} grams per day; RDA ${p.rdaG} grams`}
             min={0}
@@ -157,7 +157,7 @@ export function NutritionPage() {
               { at: p.cerealBasedContextG, label: `Cereal-diet note ${p.cerealBasedContextG} g` },
             ]}
           />
-          <ul className="space-y-1.5 border-t border-line pt-4 text-sm text-muted">
+          <ul className="space-y-1.5 border-t border-outline-variant pt-4 text-sm text-on-surface-variant">
             {p.notes.map((n) => (
               <li key={n}>{n}</li>
             ))}
@@ -167,21 +167,21 @@ export function NutritionPage() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <section className="card p-5 sm:p-6">
-          <h2 className="text-lg font-semibold">Carbohydrate, fat and fibre</h2>
-          <p className="mt-1 text-sm text-muted">{c.macros.message}</p>
+          <h2 className="text-lg font-medium">Carbohydrate, fat and fibre</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">{c.macros.message}</p>
           <p className="mt-3 text-sm">
-            BMI <span className="num font-medium">{c.bmi}</span> <span className="text-muted">is shown for context only. It does not set any target and is not a diagnosis.</span>
+            BMI <span className="num font-medium">{c.bmi}</span> <span className="text-on-surface-variant">is shown for context only. It does not set any target and is not a diagnosis.</span>
           </p>
         </section>
         {c.referenceContext && (
           <section className="card p-5 sm:p-6">
-            <h2 className="text-lg font-semibold">Population reference</h2>
-            <p className="mt-1 text-sm text-muted">{c.referenceContext.label}.</p>
+            <h2 className="text-lg font-medium">Population reference</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">{c.referenceContext.label}.</p>
             <table className="mt-3 w-full text-sm">
-              <tbody className="divide-y divide-line">
+              <tbody className="divide-y divide-outline-variant">
                 {c.referenceContext.rows.map((r) => (
                   <tr key={r.work}>
-                    <td className="py-2 text-muted">{r.work}</td>
+                    <td className="py-2 text-on-surface-variant">{r.work}</td>
                     <td className="num py-2 text-right font-medium">{r.kcal.toLocaleString('en-IN')} kcal/day</td>
                   </tr>
                 ))}
@@ -193,37 +193,37 @@ export function NutritionPage() {
 
       <section className="card mt-4">
         <button className="flex w-full items-center justify-between px-5 py-4 text-left sm:px-6" aria-expanded={showMethod} onClick={() => setShowMethod((s) => !s)}>
-          <span className="text-lg font-semibold">How was this estimated?</span>
-          <ChevronDown className={`h-5 w-5 text-muted transition-transform ${showMethod ? 'rotate-180' : ''}`} aria-hidden />
+          <span className="text-lg font-medium">How was this estimated?</span>
+          <ChevronDown className={`h-5 w-5 text-on-surface-variant transition-transform ${showMethod ? 'rotate-180' : ''}`} aria-hidden />
         </button>
         {showMethod && (
-          <div className="space-y-5 border-t border-line px-5 py-5 text-sm sm:px-6">
+          <div className="space-y-5 border-t border-outline-variant px-5 py-5 text-sm sm:px-6">
             <div>
-              <h3 className="font-semibold">Method</h3>
-              <p className="mt-1 text-muted">{METHODS.energy.title}.</p>
-              <p className="mt-1 text-muted">
+              <h3 className="font-medium">Method</h3>
+              <p className="mt-1 text-on-surface-variant">{METHODS.energy.title}.</p>
+              <p className="mt-1 text-on-surface-variant">
                 Status: <strong>provisional demo method</strong>, not reviewed by a nutrition professional. Version {c.methodVersion}, equation {c.equationId}, coefficients {c.coefficientSetId}, activity mapping {c.activityMappingId}.
               </p>
-              <p className="mt-1 text-muted">
+              <p className="mt-1 text-on-surface-variant">
                 Resting energy {e.bmrKcal} kcal × activity {e.pal.pal} (occupation {e.pal.occupationAnchor} + movement {e.pal.movementAdjustment} + exercise {e.pal.exerciseIncrement}) = {c.planningEnergyKcal} kcal.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold">Limitations</h3>
-              <ul className="mt-1 list-disc space-y-1 pl-4 text-muted">
+              <h3 className="font-medium">Limitations</h3>
+              <ul className="mt-1 list-disc space-y-1 pl-4 text-on-surface-variant">
                 {[...c.limitations, ...c.disclaimers].map((l) => (
                   <li key={l}>{l}</li>
                 ))}
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold">Inputs used</h3>
-              <p className="mt-1 text-muted">
+              <h3 className="font-medium">Inputs used</h3>
+              <p className="mt-1 text-on-surface-variant">
                 Age {c.inputsSnapshot.ageYears}, {c.inputsSnapshot.heightCm} cm, {c.inputsSnapshot.weightKg} kg, occupation {c.inputsSnapshot.occupation}, movement {c.inputsSnapshot.movement}, {c.inputsSnapshot.workoutsPerWeek} workouts of {c.inputsSnapshot.workoutMinutes} min, questionnaire {c.inputsSnapshot.questionnaireVersion}.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold">Sources</h3>
+              <h3 className="font-medium">Sources</h3>
               <ul className="mt-1 space-y-1">
                 {c.sourceRefs.map((s) => (
                   <li key={s}>

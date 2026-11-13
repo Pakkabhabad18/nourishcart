@@ -3,7 +3,8 @@ import { clsx } from 'clsx';
 import { AlertTriangle, CheckCircle2, Info, Loader2, ShieldAlert, X } from 'lucide-react';
 import { forwardRef, useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+// M3 common buttons: primary = filled, secondary = outlined, tonal = filled tonal, ghost = text, danger = filled error.
+type Variant = 'primary' | 'secondary' | 'tonal' | 'ghost' | 'danger';
 export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'sm' | 'md' | 'lg'; loading?: boolean; icon?: ReactNode }>(
   function Button({ variant = 'primary', size = 'md', loading, icon, className, children, disabled, ...rest }, ref) {
     return (
@@ -12,14 +13,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
         disabled={disabled || loading}
         aria-busy={loading || undefined}
         className={clsx(
-          'inline-flex items-center justify-center gap-2 rounded-ctl font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-          size === 'sm' && 'min-h-[36px] px-3 text-sm',
-          size === 'md' && 'min-h-[44px] px-4 text-base',
-          size === 'lg' && 'min-h-[50px] px-5 text-lg',
-          variant === 'primary' && 'bg-forest text-white hover:bg-forest-700',
-          variant === 'secondary' && 'border border-line bg-surface text-ink hover:border-teal-300 hover:bg-forest-50',
-          variant === 'ghost' && 'text-forest hover:bg-forest-50',
-          variant === 'danger' && 'bg-danger text-white hover:brightness-95',
+          'inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-[0.01em] transition-[background-color,box-shadow] disabled:cursor-not-allowed disabled:opacity-40',
+          size === 'sm' && 'min-h-[36px] px-4 text-sm',
+          size === 'md' && 'min-h-[44px] px-6 text-sm',
+          size === 'lg' && 'min-h-[52px] px-7 text-base',
+          variant === 'primary' && 'bg-primary text-on-primary hover:shadow-e1 hover:brightness-110',
+          variant === 'secondary' && 'border border-outline bg-transparent text-primary hover:bg-primary/[0.08]',
+          variant === 'tonal' && 'bg-secondary-container text-on-secondary-container hover:shadow-e1',
+          variant === 'ghost' && 'px-3 text-primary hover:bg-primary/[0.08]',
+          variant === 'danger' && 'bg-error text-on-error hover:shadow-e1',
           className,
         )}
         {...rest}
@@ -43,8 +45,8 @@ export function PageHeader({ title, description, actions }: { title: string; des
   return (
     <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="max-w-prose">
-        <h1 className="text-2xl font-semibold sm:text-3xl">{title}</h1>
-        {description && <p className="mt-1.5 text-muted">{description}</p>}
+        <h1 className="text-2xl font-normal sm:text-3xl">{title}</h1>
+        {description && <p className="mt-1.5 text-on-surface-variant">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </header>
@@ -54,13 +56,13 @@ export function PageHeader({ title, description, actions }: { title: string; des
 export function Field({ label, hint, error, children, htmlFor }: { label: string; hint?: ReactNode; error?: string | null; children: ReactNode; htmlFor: string }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-medium text-ink">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-on-surface">
         {label}
       </label>
       {children}
-      {hint && !error && <p id={`${htmlFor}-hint`} className="text-xs text-muted">{hint}</p>}
+      {hint && !error && <p id={`${htmlFor}-hint`} className="text-xs text-on-surface-variant">{hint}</p>}
       {error && (
-        <p id={`${htmlFor}-error`} role="alert" className="text-xs font-medium text-danger">
+        <p id={`${htmlFor}-error`} role="alert" className="text-xs font-medium text-error">
           {error}
         </p>
       )}
@@ -96,17 +98,17 @@ export function Notice({ tone = 'info', title, children, className }: { tone?: '
       role={tone === 'danger' ? 'alert' : 'status'}
       className={clsx(
         'flex gap-3 rounded-ctl border px-4 py-3 text-sm',
-        tone === 'info' && 'border-line bg-forest-50 text-ink',
-        tone === 'warn' && 'border-warn/30 bg-warn-bg text-ink',
-        tone === 'danger' && 'border-danger/30 bg-danger-bg text-ink',
-        tone === 'success' && 'border-teal/30 bg-mint text-ink',
+        tone === 'info' && 'border-outline-variant bg-secondary-container/50 text-on-surface',
+        tone === 'warn' && 'border-warninging/30 bg-warninging-container text-on-surface',
+        tone === 'danger' && 'border-error/30 bg-error-container text-on-surface',
+        tone === 'success' && 'border-primary/30 bg-secondary-container text-on-surface',
         className,
       )}
     >
-      <Icon className={clsx('mt-0.5 h-4 w-4 shrink-0', tone === 'warn' ? 'text-warn' : tone === 'danger' ? 'text-danger' : 'text-teal')} aria-hidden />
+      <Icon className={clsx('mt-0.5 h-[18px] w-[18px] shrink-0', tone === 'warn' ? 'text-warning' : tone === 'danger' ? 'text-error' : tone === 'success' ? 'text-success' : 'text-primary')} aria-hidden />
       <div className="min-w-0">
         {title && <p className="font-medium">{title}</p>}
-        {children && <div className={clsx(title && 'mt-0.5', 'text-muted [&_strong]:text-ink')}>{children}</div>}
+        {children && <div className={clsx(title && 'mt-0.5', 'opacity-90 [&_strong]:font-semibold')}>{children}</div>}
       </div>
     </div>
   );
@@ -114,7 +116,7 @@ export function Notice({ tone = 'info', title, children, className }: { tone?: '
 
 /** Visible on every simulated product, basket and order (FR-012). */
 export function SimulatedTag({ children = 'Simulated' }: { children?: ReactNode }) {
-  return <span className="inline-flex items-center rounded-md border border-warn/40 bg-warn-bg px-1.5 py-0.5 text-xs font-medium text-warn">{children}</span>;
+  return <span className="inline-flex items-center rounded-md border border-warninging/40 bg-warninging-container px-1.5 py-0.5 text-xs font-medium text-warning">{children}</span>;
 }
 
 export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'good' | 'warn' | 'danger' }) {
@@ -122,10 +124,10 @@ export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?
     <span
       className={clsx(
         'inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium',
-        tone === 'neutral' && 'bg-canvas text-muted ring-1 ring-line',
-        tone === 'good' && 'bg-mint text-forest',
-        tone === 'warn' && 'bg-warn-bg text-warn',
-        tone === 'danger' && 'bg-danger-bg text-danger',
+        tone === 'neutral' && 'bg-surface-container text-on-surface-variant ring-1 ring-outline-variant',
+        tone === 'good' && 'bg-secondary-container text-primary',
+        tone === 'warn' && 'bg-warninging-container text-warning',
+        tone === 'danger' && 'bg-error-container text-error',
       )}
     >
       {children}
@@ -136,10 +138,10 @@ export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?
 export function EmptyState({ icon, title, children, action }: { icon?: ReactNode; title: string; children?: ReactNode; action?: ReactNode }) {
   return (
     <div className="card flex flex-col items-start gap-3 p-6 sm:p-8">
-      {icon && <div className="rounded-full bg-mint p-2.5 text-forest">{icon}</div>}
+      {icon && <div className="rounded-full bg-primary-container p-3 text-on-primary-container">{icon}</div>}
       <div className="max-w-prose">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {children && <div className="mt-1 text-muted">{children}</div>}
+        <h2 className="text-xl font-normal">{title}</h2>
+        {children && <div className="mt-1 text-on-surface-variant">{children}</div>}
       </div>
       {action}
     </div>
@@ -148,7 +150,7 @@ export function EmptyState({ icon, title, children, action }: { icon?: ReactNode
 
 export function Spinner({ label = 'Loading' }: { label?: string }) {
   return (
-    <div className="flex items-center gap-2 py-10 text-muted" role="status">
+    <div className="flex items-center gap-2 py-10 text-on-surface-variant" role="status">
       <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> {label}…
     </div>
   );
@@ -193,19 +195,19 @@ export function RangeBar({
   const pct = (v: number) => `${Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100))}%`;
   return (
     <div role="img" aria-label={ariaLabel} className={clsx('pt-7', ticks.length > 1 ? 'pb-9' : 'pb-5')}>
-      <div className="relative h-2.5 rounded-full bg-canvas ring-1 ring-line">
-        {band && <div className="absolute inset-y-0 rounded-full bg-teal-300/60" style={{ left: pct(band[0]), width: `calc(${pct(band[1])} - ${pct(band[0])})` }} />}
+      <div className="relative h-2 rounded-full bg-surface-container-highest">
+        {band && <div className="absolute inset-y-0 rounded-full bg-primary/25" style={{ left: pct(band[0]), width: `calc(${pct(band[1])} - ${pct(band[0])})` }} />}
         {/* Tick labels alternate between two rows so close references never collide. */}
         {[...ticks].sort((a, b) => a.at - b.at).map((t, i) => (
           <div key={t.label} className="absolute top-0 flex -translate-x-1/2 flex-col items-center" style={{ left: pct(t.at) }}>
-            <span className="h-2.5 w-px bg-ink/40" style={{ height: i % 2 ? 26 : 14 }} />
-            <span className="whitespace-nowrap text-[11px] leading-none text-muted">{t.label}</span>
+            <span className="h-2.5 w-px bg-on-surface/40" style={{ height: i % 2 ? 26 : 14 }} />
+            <span className="whitespace-nowrap text-[11px] leading-none text-on-surface-variant">{t.label}</span>
           </div>
         ))}
         {value != null && (
           <div className="range-marker absolute -top-6 flex -translate-x-1/2 flex-col items-center" style={{ left: pct(value) }}>
-            {valueLabel && <span className={clsx('num whitespace-nowrap text-xs font-semibold', tone === 'warn' ? 'text-warn' : 'text-forest')}>{valueLabel}</span>}
-            <span className={clsx('mt-0.5 h-[18px] w-[18px] rounded-full border-[3px] border-white shadow-[0_0_0_1px_rgba(23,79,67,.25)]', tone === 'warn' ? 'bg-warn' : 'bg-forest')} />
+            {valueLabel && <span className={clsx('num whitespace-nowrap text-xs font-semibold', tone === 'warn' ? 'text-warning' : 'text-primary')}>{valueLabel}</span>}
+            <span className={clsx('mt-0.5 h-[18px] w-[18px] rounded-full border-[3px] border-surface-container-low shadow-e1', tone === 'warn' ? 'bg-warning' : 'bg-primary')} />
           </div>
         )}
       </div>
@@ -216,9 +218,9 @@ export function RangeBar({
 export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
   return (
     <div>
-      <p className="text-sm text-muted">{label}</p>
-      <p className="num mt-0.5 text-xl font-semibold">{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
+      <p className="text-sm text-on-surface-variant">{label}</p>
+      <p className="num mt-0.5 text-xl font-medium">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-on-surface-variant">{sub}</p>}
     </div>
   );
 }
@@ -239,20 +241,21 @@ export function Sheet({ open, onClose, title, children, footer, wide }: { open: 
       aria-labelledby={id}
       onClose={onClose}
       onCancel={onClose}
-      className={clsx('m-0 mt-auto w-full max-w-none rounded-t-card bg-surface p-0 text-ink backdrop:bg-ink/30 sm:m-auto sm:rounded-card', wide ? 'sm:max-w-2xl' : 'sm:max-w-lg')}
+      className={clsx('m-0 mt-auto w-full max-w-none rounded-t-xl2 bg-surface-container-low p-0 text-on-surface shadow-e3 backdrop:bg-scrim/40 sm:m-auto sm:rounded-xl2 sm:bg-surface-container-high', wide ? 'sm:max-w-2xl' : 'sm:max-w-lg')}
     >
       {open && (
         <div className="flex max-h-[88vh] flex-col">
-          <div className="flex items-center justify-between border-b border-line px-5 py-4">
-            <h2 id={id} className="text-lg font-semibold">
+          <div className="mx-auto mt-3 h-1 w-8 rounded-full bg-on-surface-variant/40 sm:hidden" aria-hidden />
+          <div className="flex items-center justify-between px-6 pb-2 pt-4">
+            <h2 id={id} className="text-2xl font-normal">
               {title}
             </h2>
-            <button onClick={onClose} className="rounded-ctl p-2 text-muted hover:bg-canvas" aria-label="Close">
+            <button onClick={onClose} className="rounded-ctl p-2 text-on-surface-variant hover:bg-on-surface/[0.06]" aria-label="Close">
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="overflow-y-auto px-5 py-4">{children}</div>
-          {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>}
+          <div className="overflow-y-auto px-6 py-3">{children}</div>
+          {footer && <div className="flex flex-wrap justify-end gap-2 px-6 pb-6 pt-3">{footer}</div>}
         </div>
       )}
     </dialog>
@@ -266,8 +269,8 @@ export function Toast({ message, onDone }: { message: string | null; onDone: () 
     return () => clearTimeout(t);
   }, [message, onDone]);
   return (
-    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 lg:bottom-6">
-      {message && <div className="pointer-events-auto rounded-ctl bg-ink px-4 py-2.5 text-sm text-white shadow-lg">{message}</div>}
+    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 lg:bottom-6 lg:left-20">
+      {message && <div className="pointer-events-auto min-w-[280px] max-w-[560px] rounded-xs bg-inverse-surface px-4 py-3.5 text-sm text-inverse-on-surface shadow-e3">{message}</div>}
     </div>
   );
 }

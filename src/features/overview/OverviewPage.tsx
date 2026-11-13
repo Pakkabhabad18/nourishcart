@@ -17,11 +17,11 @@ import { OPTION_META } from '../../domain/planning/plan.ts';
 function NextStep({ done, title, to, children, icon }: { done: boolean; title: string; to: string; children: string; icon: React.ReactNode }) {
   return (
     <li>
-      <Link to={to} className="flex items-start gap-3 rounded-ctl px-3 py-3 hover:bg-canvas">
-        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${done ? 'bg-forest text-white' : 'bg-mint text-forest'}`}>{done ? <Check className="h-4 w-4" aria-label="Done" /> : icon}</span>
+      <Link to={to} className="flex items-start gap-3 rounded-ctl px-3 py-3 hover:bg-on-surface/[0.06]">
+        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${done ? 'bg-primary text-on-primary' : 'bg-secondary-container text-primary'}`}>{done ? <Check className="h-4 w-4" aria-label="Done" /> : icon}</span>
         <span>
-          <span className={`block font-medium ${done ? 'text-muted line-through decoration-muted/40' : ''}`}>{title}</span>
-          <span className="block text-sm text-muted">{children}</span>
+          <span className={`block font-medium ${done ? 'text-on-surface-variant line-through decoration-on-surface-variant/40' : ''}`}>{title}</span>
+          <span className="block text-sm text-on-surface-variant">{children}</span>
         </span>
       </Link>
     </li>
@@ -68,7 +68,7 @@ export function OverviewPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold sm:text-3xl">{allDone ? `${dayLong(today)} for ${profile.displayName}` : `Let’s set up ${profile.displayName}’s week`}</h1>
+      <h1 className="text-2xl font-normal sm:text-3xl">{allDone ? `${dayLong(today)} for ${profile.displayName}` : `Let’s set up ${profile.displayName}’s week`}</h1>
       {elig.status === 'out_of_scope' && <Notice tone="warn" className="mt-4" title="Personal plans are not available for this profile">{elig.scopeReasons[0]}</Notice>}
       {scheduledDue && (
         <Notice tone="info" className="mt-4" title="Your scheduled basket is ready to review">
@@ -79,31 +79,31 @@ export function OverviewPage() {
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         {!allDone ? (
           <section className="card p-3 sm:p-4" aria-labelledby="next-h">
-            <h2 id="next-h" className="px-3 pt-2 text-lg font-semibold">Next steps</h2>
+            <h2 id="next-h" className="px-3 pt-2 text-lg font-medium">Next steps</h2>
             <ol className="mt-1">{steps.map((s) => <NextStep key={s.title} {...s} />)}</ol>
           </section>
         ) : (
           <section className="card p-5" aria-labelledby="today-h">
             <div className="flex items-baseline justify-between">
-              <h2 id="today-h" className="text-lg font-semibold">Today’s meals</h2>
-              <Link to="/plans" className="text-sm text-teal">Full week</Link>
+              <h2 id="today-h" className="text-lg font-medium">Today’s meals</h2>
+              <Link to="/plans" className="text-sm text-primary">Full week</Link>
             </div>
-            <ul className="mt-2 divide-y divide-line">
+            <ul className="mt-2 divide-y divide-outline-variant">
               {todays.map((m) => {
                 const rec = CAT.recipes.get(m.recipeId)!;
                 const t = aggregateRecipeNutrition(rec, CAT.ingredients, m.servings, effective!.swaps);
                 return (
                   <li key={m.id}>
-                    <Link to={`/recipes/${rec.id}?servings=${m.servings}`} className="flex items-center gap-3 py-3 hover:text-forest">
-                      <span className="w-20 shrink-0 text-sm text-muted">{SLOT_LABEL[m.slot]}</span>
+                    <Link to={`/recipes/${rec.id}?servings=${m.servings}`} className="flex items-center gap-3 py-3 hover:text-primary">
+                      <span className="w-20 shrink-0 text-sm text-on-surface-variant">{SLOT_LABEL[m.slot]}</span>
                       <span className="flex-1 font-medium">{rec.name}</span>
-                      <span className="num text-sm text-muted">{Math.round(t.energyKcal.value)} kcal</span>
+                      <span className="num text-sm text-on-surface-variant">{Math.round(t.energyKcal.value)} kcal</span>
                     </Link>
                   </li>
                 );
               })}
             </ul>
-            {plan && <p className="mt-2 text-xs text-muted">{OPTION_META[plan.optionKey].label} plan, week of {dateShort(plan.weekStart)}.</p>}
+            {plan && <p className="mt-2 text-xs text-on-surface-variant">{OPTION_META[plan.optionKey].label} plan, week of {dateShort(plan.weekStart)}.</p>}
           </section>
         )}
 
@@ -111,8 +111,8 @@ export function OverviewPage() {
           {pipe && pipe.result.basket.budgetInr != null && (
             <section className="card p-5">
               <div className="flex items-baseline justify-between">
-                <h2 className="font-semibold">This week’s basket</h2>
-                <Link to="/groceries" className="text-sm text-teal">Groceries</Link>
+                <h2 className="font-medium">This week’s basket</h2>
+                <Link to="/groceries" className="text-sm text-primary">Groceries</Link>
               </div>
               <RangeBar
                 ariaLabel={`Basket ${pipe.result.basket.totalInr} against budget ${pipe.result.basket.budgetInr}`}
@@ -123,17 +123,17 @@ export function OverviewPage() {
                 tone={pipe.result.basket.status === 'OVER_BUDGET' ? 'warn' : 'good'}
                 ticks={[{ at: pipe.result.basket.budgetInr, label: `Budget ${formatInr(pipe.result.basket.budgetInr)}` }]}
               />
-              <p className="text-sm text-muted">{pipe.result.basket.lines.length} simulated products after pantry deduction.</p>
+              <p className="text-sm text-on-surface-variant">{pipe.result.basket.lines.length} simulated products after pantry deduction.</p>
             </section>
           )}
           <section className="card p-5">
             <div className="flex items-baseline justify-between">
-              <h2 className="flex items-center gap-2 font-semibold"><Package className="h-4 w-4 text-teal" aria-hidden /> Pantry</h2>
-              <Link to="/pantry" className="text-sm text-teal">Manage</Link>
+              <h2 className="flex items-center gap-2 font-medium"><Package className="h-4 w-4 text-primary" aria-hidden /> Pantry</h2>
+              <Link to="/pantry" className="text-sm text-primary">Manage</Link>
             </div>
             {pantry.data?.length ? (
               <>
-                <p className="mt-1 text-sm text-muted">{pantry.data.length} items tracked.</p>
+                <p className="mt-1 text-sm text-on-surface-variant">{pantry.data.length} items tracked.</p>
                 {nextDue && (
                   <p className="mt-2 text-sm">
                     Next to run low: <strong>{nextDue.name}</strong> around {dateShort(nextDue.reorderOn!)} {nextDue.status !== 'ok' && <Tag tone="warn">soon</Tag>}
@@ -141,14 +141,14 @@ export function OverviewPage() {
                 )}
               </>
             ) : (
-              <p className="mt-1 text-sm text-muted">Nothing tracked yet. Adding staples you already own makes the basket cheaper.</p>
+              <p className="mt-1 text-sm text-on-surface-variant">Nothing tracked yet. Adding staples you already own makes the basket cheaper.</p>
             )}
           </section>
           {allDone && (
             <section className="card p-5">
-              <h2 className="font-semibold">Recent orders</h2>
-              <p className="mt-1 text-sm text-muted">{myOrders.length} simulated order{myOrders.length === 1 ? '' : 's'} for {profile.displayName}.</p>
-              <Link to="/orders" className="mt-2 inline-block text-sm text-teal">Order history</Link>
+              <h2 className="font-medium">Recent orders</h2>
+              <p className="mt-1 text-sm text-on-surface-variant">{myOrders.length} simulated order{myOrders.length === 1 ? '' : 's'} for {profile.displayName}.</p>
+              <Link to="/orders" className="mt-2 inline-block text-sm text-primary">Order history</Link>
             </section>
           )}
         </div>

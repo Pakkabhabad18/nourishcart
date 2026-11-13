@@ -11,7 +11,7 @@ import { Logo } from '../../components/Logo.tsx';
 
 export function PrivacyNotice() {
   return (
-    <div className="space-y-3 text-sm text-muted">
+    <div className="space-y-3 text-sm text-on-surface-variant">
       <p>
         <strong>What we collect:</strong> for each profile, date of birth, height, weight, activity, food pattern, allergies, food exclusions, goal and grocery budget. We do not ask for diagnoses, medication, government ID, exact location or payment details.
       </p>
@@ -58,21 +58,21 @@ export function WelcomePage() {
   }
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-canvas px-5 py-10">
+    <div className="grid min-h-dvh place-items-center bg-surface-container px-5 py-10">
       <form onSubmit={submit} className="w-full max-w-xl" noValidate>
         <Logo />
         <div className="card mt-6 p-6 sm:p-8">
-          <h1 className="text-2xl font-semibold">Before you add any personal details</h1>
-          <div className="mt-4 rounded-ctl bg-canvas p-4">
+          <h1 className="text-2xl font-normal">Before you add any personal details</h1>
+          <div className="mt-4 rounded-ctl bg-surface-container p-4">
             <PrivacyNotice />
           </div>
           <label className="mt-5 flex cursor-pointer items-start gap-3">
-            <input type="checkbox" className="mt-1 h-5 w-5 accent-forest" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+            <input type="checkbox" className="mt-1 h-5 w-5 accent-primary" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
             <span>I have read the notice and agree that NourishCart may process profile details for meal and grocery planning.</span>
           </label>
-          <hr className="my-6 border-line" />
-          <h2 className="text-lg font-semibold">Who are you planning for first?</h2>
-          <p className="mt-1 text-sm text-muted">You can add more adults later. Each person gets their own targets and budget.</p>
+          <hr className="my-6 border-outline-variant" />
+          <h2 className="text-lg font-medium">Who are you planning for first?</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">You can add more adults later. Each person gets their own targets and budget.</p>
           <div className="mt-4">
             <Field label="Profile name" htmlFor="pname" hint="A first name or nickname is enough.">
               <Input id="pname" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} autoComplete="given-name" />

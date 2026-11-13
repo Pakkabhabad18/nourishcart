@@ -130,7 +130,7 @@ test('golden demo journey', async ({ page, context }) => {
   await page.getByRole('link', { name: 'Pantry' }).first().click();
   await expect(page.getByText(/Reorder around/).first()).toBeVisible();
   await shot(page, '13-pantry');
-  await page.getByRole('link', { name: 'Overview' }).first().click();
+  await page.getByRole('link', { name: 'Home' }).first().click();
   await shot(page, '14-overview');
 
   // Second profile + isolation
@@ -163,12 +163,12 @@ test('mobile layout of the key screens @mobile', async ({ page }) => {
   await onboard(page);
   await expect(page.getByRole('heading', { name: 'Daily estimates for Demo Asha' })).toBeVisible();
   await shot(page, 'm02-nutrition');
-  await page.getByRole('link', { name: 'Plan' }).click();
+  await page.getByRole('link', { name: 'Plans', exact: true }).click();
   await page.getByRole('button', { name: 'Show me three plans' }).click();
   await shot(page, 'm03-compare');
   await page.getByRole('button', { name: 'Choose Budget Optimised' }).click();
   await shot(page, 'm04-week');
-  await page.getByRole('link', { name: 'Shop' }).click();
+  await page.getByRole('link', { name: 'Groceries', exact: true }).click();
   await shot(page, 'm05-groceries');
   // No horizontal overflow in the primary flow (NFR responsive)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);

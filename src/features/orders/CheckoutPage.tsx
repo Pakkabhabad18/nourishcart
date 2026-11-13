@@ -59,45 +59,45 @@ export function CheckoutPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link to="/groceries" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
+      <Link to="/groceries" className="mb-4 inline-flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-on-surface">
         <ArrowLeft className="h-4 w-4" aria-hidden /> Edit basket
       </Link>
       <PageHeader title="Review basket" description={<>For {profile.displayName}. Version {basket.version}. <SimulatedTag>Simulated order</SimulatedTag></>} />
       <section className="card overflow-hidden">
         <table className="w-full text-sm">
           <caption className="sr-only">Basket lines</caption>
-          <thead className="border-b border-line text-left text-muted">
+          <thead className="border-b border-outline-variant text-left text-on-surface-variant">
             <tr>
               <th className="px-5 py-3 font-medium">Product</th>
               <th className="px-3 py-3 text-right font-medium">Qty</th>
               <th className="px-5 py-3 text-right font-medium">Amount</th>
             </tr>
           </thead>
-          <tbody className="num divide-y divide-line">
+          <tbody className="num divide-y divide-outline-variant">
             {receipt.lines.map((l) => (
               <tr key={l.productId}>
                 <td className="px-5 py-2.5">
                   <span className="font-medium">{l.title}</span>
-                  <span className="block text-xs text-muted">{l.brand}, {formatInr(l.unitPriceInr)} each</span>
+                  <span className="block text-xs text-on-surface-variant">{l.brand}, {formatInr(l.unitPriceInr)} each</span>
                 </td>
                 <td className="px-3 py-2.5 text-right">{l.packs}</td>
                 <td className="px-5 py-2.5 text-right">{formatInr(l.lineTotalInr)}</td>
               </tr>
             ))}
           </tbody>
-          <tfoot className="num border-t border-line">
+          <tfoot className="num border-t border-outline-variant">
             <tr>
-              <td className="px-5 py-2 text-muted" colSpan={2}>Delivery and platform fees</td>
-              <td className="px-5 py-2 text-right text-muted">Unknown, not included</td>
+              <td className="px-5 py-2 text-on-surface-variant" colSpan={2}>Delivery and platform fees</td>
+              <td className="px-5 py-2 text-right text-on-surface-variant">Unknown, not included</td>
             </tr>
             <tr className="text-base">
-              <td className="px-5 py-3 font-semibold" colSpan={2}>Total</td>
-              <td className="px-5 py-3 text-right font-semibold">{formatInr(receipt.totalInr)}</td>
+              <td className="px-5 py-3 font-medium" colSpan={2}>Total</td>
+              <td className="px-5 py-3 text-right font-medium">{formatInr(receipt.totalInr)}</td>
             </tr>
             {basket.budgetInr != null && (
               <tr>
-                <td className="px-5 pb-3 text-muted" colSpan={2}>Budget ({basket.budgetMode})</td>
-                <td className={`px-5 pb-3 text-right ${over ? 'text-warn' : 'text-muted'}`}>{formatInr(basket.budgetInr)}</td>
+                <td className="px-5 pb-3 text-on-surface-variant" colSpan={2}>Budget ({basket.budgetMode})</td>
+                <td className={`px-5 pb-3 text-right ${over ? 'text-warning' : 'text-on-surface-variant'}`}>{formatInr(basket.budgetInr)}</td>
               </tr>
             )}
           </tfoot>
@@ -112,23 +112,23 @@ export function CheckoutPage() {
       <section className="card mt-4 p-5 sm:p-6">
         {!approved ? (
           <>
-            <h2 className="text-lg font-semibold">Step 1: approve this exact basket</h2>
-            <p className="mt-1 text-sm text-muted">Approval locks version {basket.version} and its total of {formatInr(basket.totalInr)}. Any later change to the basket needs a new approval.</p>
+            <h2 className="text-lg font-medium">Step 1: approve this exact basket</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">Approval locks version {basket.version} and its total of {formatInr(basket.totalInr)}. Any later change to the basket needs a new approval.</p>
             <Button className="mt-4" onClick={approve} loading={busy} disabled={!canApprove || !online}>
               Approve basket
             </Button>
           </>
         ) : (
           <>
-            <h2 className="text-lg font-semibold">Step 2: place the simulated order</h2>
+            <h2 className="text-lg font-medium">Step 2: place the simulated order</h2>
             <label className="mt-3 flex cursor-pointer items-start gap-3">
-              <input type="checkbox" className="mt-0.5 h-5 w-5 accent-forest" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
+              <input type="checkbox" className="mt-0.5 h-5 w-5 accent-primary" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
               <span>I understand this is a simulated order. No retailer is contacted, nothing is delivered and no payment is taken.</span>
             </label>
-            <details className="mt-3 text-sm text-muted">
+            <details className="mt-3 text-sm text-on-surface-variant">
               <summary className="cursor-pointer">Testing options</summary>
               <label className="mt-2 flex items-center gap-2">
-                <input type="checkbox" className="h-4 w-4 accent-forest" checked={failTest} onChange={(e) => setFailTest(e.target.checked)} />
+                <input type="checkbox" className="h-4 w-4 accent-primary" checked={failTest} onChange={(e) => setFailTest(e.target.checked)} />
                 Simulate a provider failure for this attempt
               </label>
             </details>

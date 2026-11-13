@@ -78,13 +78,13 @@ export function ProfilesPage() {
           {visible.map((p) => {
             const isActive = active?.id === p.id;
             return (
-              <li key={p.id} className={`card p-5 ${isActive ? 'ring-2 ring-forest/30' : ''}`}>
+              <li key={p.id} className={`card p-5 ${isActive ? 'ring-2 ring-primary/40' : ''}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="grid h-10 w-10 place-items-center rounded-full bg-mint font-semibold text-forest">{p.displayName.slice(0, 1).toUpperCase()}</span>
+                    <span className="grid h-10 w-10 place-items-center rounded-full bg-secondary-container font-medium text-primary">{p.displayName.slice(0, 1).toUpperCase()}</span>
                     <div>
-                      <h2 className="font-semibold">{p.displayName}</h2>
-                      <p className="text-sm text-muted">{p.dateOfBirth ? `${ageInYears(p.dateOfBirth)} years` : 'Age not set'}</p>
+                      <h2 className="font-medium">{p.displayName}</h2>
+                      <p className="text-sm text-on-surface-variant">{p.dateOfBirth ? `${ageInYears(p.dateOfBirth)} years` : 'Age not set'}</p>
                     </div>
                   </div>
                   {isActive ? <Tag tone="good">Active</Tag> : p.onboardingComplete ? null : <Tag tone="warn">Setup incomplete</Tag>}

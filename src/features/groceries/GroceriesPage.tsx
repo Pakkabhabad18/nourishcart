@@ -56,14 +56,14 @@ function HouseholdDemand({ selfId }: { selfId: string }) {
   const demand = buildGroceryDemand(sources, [], CAT);
   return (
     <div className="card overflow-hidden">
-      <p className="border-b border-line px-5 py-3 text-sm text-muted">
+      <p className="border-b border-outline-variant px-5 py-3 text-sm text-on-surface-variant">
         Combined demand for {sources.map((s) => s.profileName).join(', ')}. Each person keeps their own targets and budget (total of personal budgets: {formatInr(sources.reduce((s, x) => s + (x.budget ?? 0), 0))}). Ordering a combined basket is planned for a later version.
       </p>
-      <ul className="divide-y divide-line">
+      <ul className="divide-y divide-outline-variant">
         {demand.map((d) => (
           <li key={d.ingredientId} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
             <span className="font-medium">{d.name}</span>
-            <span className="num text-muted">
+            <span className="num text-on-surface-variant">
               {formatQty(d.requiredQty, d.unit)} = {d.sources.map((s) => `${s.profileName} ${formatQty(s.requiredQty, d.unit)}`).join(' + ')}
             </span>
           </li>
@@ -165,12 +165,12 @@ export function GroceriesPage() {
       <PageHeader
         title="Groceries for this week"
         description={<>Built from {profile.displayName}’s selected plan, minus what is already in the pantry. <SimulatedTag>Simulated catalogue</SimulatedTag></>}
-        actions={<Link to="/groceries/catalogue" className="inline-flex min-h-[44px] items-center rounded-ctl border border-line bg-surface px-4 font-medium hover:border-teal-300">Browse catalogue</Link>}
+        actions={<Link to="/groceries/catalogue" className="inline-flex min-h-[44px] items-center rounded-full border border-outline px-6 text-sm font-medium text-primary hover:bg-primary/[0.08]">Browse catalogue</Link>}
       />
 
       <section className="card p-5 sm:p-6" aria-labelledby="budget-h">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="budget-h" className="text-lg font-semibold">
+          <h2 id="budget-h" className="text-lg font-medium">
             Basket total <span className="num">{formatInr(basket.totalInr)}</span>
           </h2>
           {budget != null ? (
@@ -190,27 +190,27 @@ export function GroceriesPage() {
             ticks={[{ at: budget, label: `Budget ${formatInr(budget)}` }]}
           />
         )}
-        <p className="text-xs text-muted">{basket.feesNote} Prices last checked {new Date(CATALOGUE_SNAPSHOT_AT).toLocaleDateString('en-IN')} in the simulated catalogue.</p>
+        <p className="text-xs text-on-surface-variant">{basket.feesNote} Prices last checked {new Date(CATALOGUE_SNAPSHOT_AT).toLocaleDateString('en-IN')} in the simulated catalogue.</p>
       </section>
 
       {over && (
-        <section className="card mt-4 border-warn/40 p-5 sm:p-6" aria-labelledby="neg-h">
-          <h2 id="neg-h" className="text-lg font-semibold">Bring the basket under {formatInr(budget!)}</h2>
-          <p className="mt-1 text-sm text-muted">
+        <section className="card mt-4 border-warninging/40 p-5 sm:p-6" aria-labelledby="neg-h">
+          <h2 id="neg-h" className="text-lg font-medium">Bring the basket under {formatInr(budget!)}</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
             Biggest costs: {drivers.map((d) => `${d.name} (${formatInr(d.totalInr)}, ${d.sharePct}%)`).join(', ')}. Pick any changes below. Portions and nutrition checks never change silently.
           </p>
-          <ul className="mt-4 divide-y divide-line">
+          <ul className="mt-4 divide-y divide-outline-variant">
             {alternatives.slice(0, 8).map((a) => (
               <li key={a.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-muted">{KIND_LABEL[a.kind]}</p>
+                  <p className="text-xs text-on-surface-variant">{KIND_LABEL[a.kind]}</p>
                   <p className="font-medium">{a.title}</p>
-                  <p className="text-sm text-muted">{a.detail}</p>
-                  {a.nutritionNote && <p className={clsx('mt-0.5 text-sm', (a.proteinDeltaG ?? 0) < -5 ? 'text-warn' : 'text-muted')}>{a.nutritionNote}</p>}
-                  {a.blocked && <p className="mt-0.5 text-sm font-medium text-danger">{a.blockedReason}</p>}
+                  <p className="text-sm text-on-surface-variant">{a.detail}</p>
+                  {a.nutritionNote && <p className={clsx('mt-0.5 text-sm', (a.proteinDeltaG ?? 0) < -5 ? 'text-warning' : 'text-on-surface-variant')}>{a.nutritionNote}</p>}
+                  {a.blocked && <p className="mt-0.5 text-sm font-medium text-error">{a.blockedReason}</p>}
                 </div>
                 <div className="flex items-center gap-3 sm:flex-col sm:items-end">
-                  {a.savingsInr > 0 && <span className="num font-semibold text-forest">Save {formatInr(a.savingsInr)}</span>}
+                  {a.savingsInr > 0 && <span className="num font-medium text-primary">Save {formatInr(a.savingsInr)}</span>}
                   <Button size="sm" variant={a.kind === 'raise_budget' ? 'secondary' : 'primary'} disabled={a.blocked || !online || savePlan.isPending} onClick={() => accept(a)}>
                     {a.kind === 'raise_budget' ? 'Change budget' : 'Accept'}
                   </Button>
@@ -223,8 +223,8 @@ export function GroceriesPage() {
 
       {accepted.length > 0 && (
         <section className="card mt-4 p-5" aria-labelledby="acc-h">
-          <h2 id="acc-h" className="font-semibold">Changes you accepted</h2>
-          <ul className="mt-2 divide-y divide-line">
+          <h2 id="acc-h" className="font-medium">Changes you accepted</h2>
+          <ul className="mt-2 divide-y divide-outline-variant">
             {accepted.map((c) => (
               <li key={c.key} className="flex items-center justify-between gap-3 py-2 text-sm">
                 <span>{c.label}</span>
@@ -255,7 +255,7 @@ export function GroceriesPage() {
               {basket.unmatched.map((u) => <p key={u.ingredientId}>{u.name}: {u.reason}</p>)}
             </Notice>
           )}
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-outline-variant">
             {basket.lines.map((l) => {
               const ing = CAT.ingredients.get(l.ingredientId)!;
               const cands = eligibleProducts(l.ingredientId, CAT.products, ing, restrictionsOf(b));
@@ -269,23 +269,23 @@ export function GroceriesPage() {
                         const p = CAT.products.find((x) => x.id === pk.productId)!;
                         const up = unitPrice(p.priceInr, p.packQty, p.packUnit);
                         return (
-                          <p key={pk.productId} className="num text-sm text-muted">
+                          <p key={pk.productId} className="num text-sm text-on-surface-variant">
                             {pk.packs} × {p.brand} {p.title} at {formatInr(p.priceInr)} ({formatInr(up.value)}{up.label})
                           </p>
                         );
                       })}
-                      <p className="num text-xs text-muted">Need {formatQty(l.demandQty, l.unit)}, buying {formatQty(l.coveredQty, l.unit)}{l.leftoverQty > 0 ? `, ${formatQty(l.leftoverQty, l.unit)} left for later` : ''}</p>
+                      <p className="num text-xs text-on-surface-variant">Need {formatQty(l.demandQty, l.unit)}, buying {formatQty(l.coveredQty, l.unit)}{l.leftoverQty > 0 ? `, ${formatQty(l.leftoverQty, l.unit)} left for later` : ''}</p>
                     </div>
                     <div className="text-right">
-                      <p className="num font-semibold">{formatInr(l.lineTotalInr)}</p>
-                      <button className="mt-1 inline-flex items-center gap-1 text-xs text-teal" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : l.ingredientId)}>
+                      <p className="num font-medium">{formatInr(l.lineTotalInr)}</p>
+                      <button className="mt-1 inline-flex items-center gap-1 text-xs text-primary" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : l.ingredientId)}>
                         Why this <ChevronDown className={clsx('h-3.5 w-3.5 transition-transform', isOpen && 'rotate-180')} aria-hidden />
                       </button>
                     </div>
                   </div>
                   {isOpen && (
-                    <div className="mt-3 rounded-ctl bg-canvas p-3 text-sm">
-                      <ul className="list-disc space-y-0.5 pl-4 text-muted">
+                    <div className="mt-3 rounded-ctl bg-surface-container p-3 text-sm">
+                      <ul className="list-disc space-y-0.5 pl-4 text-on-surface-variant">
                         {l.reasons.map((r) => <li key={r}>{r}</li>)}
                         <li>Match score {l.matchScore} (versioned weights, not a nutrition claim)</li>
                       </ul>
@@ -326,7 +326,7 @@ export function GroceriesPage() {
         <div className="mt-3 card overflow-x-auto">
           <table className="w-full min-w-[520px] text-sm">
             <caption className="sr-only">Ingredient demand for the week</caption>
-            <thead className="border-b border-line text-left text-muted">
+            <thead className="border-b border-outline-variant text-left text-on-surface-variant">
               <tr>
                 <th className="px-5 py-3 font-medium">Ingredient</th>
                 <th className="px-3 py-3 text-right font-medium">Week needs</th>
@@ -334,18 +334,18 @@ export function GroceriesPage() {
                 <th className="px-5 py-3 text-right font-medium">To buy</th>
               </tr>
             </thead>
-            <tbody className="num divide-y divide-line">
+            <tbody className="num divide-y divide-outline-variant">
               {result.demand.map((d) => (
                 <tr key={d.ingredientId}>
-                  <td className="px-5 py-2.5">{d.name}{d.optional && <span className="text-muted"> (optional)</span>}</td>
+                  <td className="px-5 py-2.5">{d.name}{d.optional && <span className="text-on-surface-variant"> (optional)</span>}</td>
                   <td className="px-3 py-2.5 text-right">{formatQty(d.requiredQty, d.unit)}</td>
-                  <td className="px-3 py-2.5 text-right text-muted">{d.pantryQty > 0 ? `−${formatQty(d.pantryQty, d.unit)}` : ''}</td>
+                  <td className="px-3 py-2.5 text-right text-on-surface-variant">{d.pantryQty > 0 ? `−${formatQty(d.pantryQty, d.unit)}` : ''}</td>
                   <td className="px-5 py-2.5 text-right font-medium">{d.toBuyQty > 0 ? formatQty(d.toBuyQty, d.unit) : 'Covered'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="border-t border-line px-5 py-3 text-xs text-muted">
+          <p className="border-t border-outline-variant px-5 py-3 text-xs text-on-surface-variant">
             {buyLines.length} of {result.demand.length} ingredients need buying. Add staples you already have in <Link to="/pantry" className="link">Pantry</Link> to lower the basket.
           </p>
         </div>
@@ -353,9 +353,9 @@ export function GroceriesPage() {
 
       {tab === 'household' && <div className="mt-3"><HouseholdDemand selfId={profile.id} /></div>}
 
-      <div className="sticky bottom-[72px] mt-6 flex flex-col items-end gap-2 bg-canvas/90 py-3 backdrop-blur lg:bottom-0">
+      <div className="sticky bottom-[72px] mt-6 flex flex-col items-end gap-2 bg-surface/95 py-3 backdrop-blur lg:bottom-0">
         {hardBlocked && (
-          <p className="flex items-center gap-1.5 text-sm text-warn">
+          <p className="flex items-center gap-1.5 text-sm text-warning">
             <Info className="h-4 w-4" aria-hidden /> Accept changes above or raise the budget before reviewing.
           </p>
         )}

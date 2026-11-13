@@ -131,24 +131,24 @@ export function OnboardingPage() {
     }
   }
 
-  const err = (k: string) => (errors[k] ? <p id={`err-${k}`} tabIndex={-1} role="alert" className="mt-1.5 text-xs font-medium text-danger">{errors[k]}</p> : null);
+  const err = (k: string) => (errors[k] ? <p id={`err-${k}`} tabIndex={-1} role="alert" className="mt-1.5 text-xs font-medium text-error">{errors[k]}</p> : null);
   const filteredIngredients = INGREDIENTS.filter((i) => i.foodGroup !== 'condiment' && i.name.toLowerCase().includes(exclusionQuery.toLowerCase()));
 
   return (
     <div className="mx-auto max-w-2xl">
-      <button onClick={() => (step === 0 ? nav('/profiles') : setStep(step - 1))} className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
+      <button onClick={() => (step === 0 ? nav('/profiles') : setStep(step - 1))} className="mb-4 inline-flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-on-surface">
         <ArrowLeft className="h-4 w-4" aria-hidden /> {step === 0 ? 'Profiles' : 'Back'}
       </button>
       <div className="mb-6">
-        <p className="text-sm text-muted">
-          Setting up <strong className="text-ink">{b.profile.displayName || 'profile'}</strong>, step {step + 1} of {STEPS.length}
+        <p className="text-sm text-on-surface-variant">
+          Setting up <strong className="text-on-surface">{b.profile.displayName || 'profile'}</strong>, step {step + 1} of {STEPS.length}
         </p>
         <div className="mt-2 flex gap-1.5" aria-hidden>
           {STEPS.map((s, i) => (
-            <span key={s} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-forest' : 'bg-line'}`} />
+            <span key={s} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-primary' : 'bg-outline-variant'}`} />
           ))}
         </div>
-        <h1 className="mt-4 text-2xl font-semibold">{STEPS[step]}</h1>
+        <h1 className="mt-4 text-2xl font-normal">{STEPS[step]}</h1>
       </div>
 
       <div className="card space-y-6 p-5 sm:p-7">
@@ -166,7 +166,7 @@ export function OnboardingPage() {
             </div>
             <fieldset>
               <legend className="text-sm font-medium">Which reference equation fits this body best?</legend>
-              <p className="mt-1 text-xs text-muted">Energy equations differ for male and female bodies. If you prefer not to say, we show a wider range covering both.</p>
+              <p className="mt-1 text-xs text-on-surface-variant">Energy equations differ for male and female bodies. If you prefer not to say, we show a wider range covering both.</p>
               <div className="mt-3 flex flex-wrap gap-2" role="radiogroup">
                 {(['female', 'male', 'prefer_not_to_say'] as const).map((s) => (
                   <Chip key={s} role="radio" selected={b.profile.sex === s} onClick={() => set((d) => ((d.profile.sex = s), d))}>
@@ -197,7 +197,7 @@ export function OnboardingPage() {
                   <Input aria-label="Inches" inputMode="numeric" type="number" value={ftin.inches || ''} onChange={(e) => set((d) => ((d.profile.heightCm = round(ftInToCm(ftin.feet, Number(e.target.value) || 0), 1)), d))} placeholder="in" />
                 </div>
               )}
-              {b.profile.heightCm && heightUnit === 'ftin' && <p className="mt-1 text-xs text-muted">Saved as {b.profile.heightCm} cm.</p>}
+              {b.profile.heightCm && heightUnit === 'ftin' && <p className="mt-1 text-xs text-on-surface-variant">Saved as {b.profile.heightCm} cm.</p>}
               {err('height')}
             </div>
             <div>
@@ -217,7 +217,7 @@ export function OnboardingPage() {
                 onChange={(e) => set((d) => ((d.profile.weightKg = e.target.value === '' ? null : round(weightUnit === 'kg' ? Number(e.target.value) : lbToKg(Number(e.target.value)), 1)), d))}
                 invalid={!!errors.weight}
               />
-              {b.profile.weightKg != null && weightUnit === 'lb' && <p className="mt-1 text-xs text-muted">Saved as {b.profile.weightKg} kg.</p>}
+              {b.profile.weightKg != null && weightUnit === 'lb' && <p className="mt-1 text-xs text-on-surface-variant">Saved as {b.profile.weightKg} kg.</p>}
               {err('weight')}
             </div>
             <Notice>We use weight for energy and protein estimates. BMI is shown later for context only and never sets your targets.</Notice>
@@ -232,7 +232,7 @@ export function OnboardingPage() {
                 {OCCUPATION.map(([v, t, d]) => (
                   <button key={v} type="button" role="radio" aria-checked={b.activity.occupation === v} onClick={() => set((x) => ((x.activity.occupation = v), x))} className="chip h-auto flex-col items-start rounded-ctl px-4 py-3 text-left">
                     <span className="font-medium">{t}</span>
-                    <span className="text-xs font-normal text-muted">{d}</span>
+                    <span className="text-xs font-normal text-on-surface-variant">{d}</span>
                   </button>
                 ))}
               </div>
@@ -302,7 +302,7 @@ export function OnboardingPage() {
             </fieldset>
             <fieldset>
               <legend className="text-sm font-medium">Allergies and severe intolerances</legend>
-              <p className="mt-1 text-xs text-muted">These are strict: matching recipes and products are removed, never just ranked lower.</p>
+              <p className="mt-1 text-xs text-on-surface-variant">These are strict: matching recipes and products are removed, never just ranked lower.</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {(Object.keys(ALLERGEN_LABELS) as Allergen[]).map((a) => (
                   <Chip
@@ -322,14 +322,14 @@ export function OnboardingPage() {
                 ))}
               </div>
               <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm">
-                <input type="checkbox" className="h-5 w-5 accent-forest" checked={pref.allergiesConfirmed && pref.allergies.length === 0} onChange={(e) => set((x) => ((x.preferences.allergies = []), (x.preferences.allergiesConfirmed = e.target.checked), x))} />
+                <input type="checkbox" className="h-5 w-5 accent-primary" checked={pref.allergiesConfirmed && pref.allergies.length === 0} onChange={(e) => set((x) => ((x.preferences.allergies = []), (x.preferences.allergiesConfirmed = e.target.checked), x))} />
                 No allergies or severe intolerances
               </label>
               {err('allergies')}
             </fieldset>
             <fieldset>
               <legend className="text-sm font-medium">Foods to never include (optional)</legend>
-              <p className="mt-1 text-xs text-muted">Strict exclusions, for example a food you cannot stand or do not eat for any reason.</p>
+              <p className="mt-1 text-xs text-on-surface-variant">Strict exclusions, for example a food you cannot stand or do not eat for any reason.</p>
               <Input aria-label="Search foods" className="mt-3" placeholder="Search, e.g. okra" value={exclusionQuery} onChange={(e) => setExclusionQuery(e.target.value)} />
               <div className="mt-3 flex max-h-48 flex-wrap gap-2 overflow-y-auto">
                 {filteredIngredients.slice(0, exclusionQuery ? 30 : 14).map((i) => (
@@ -338,7 +338,7 @@ export function OnboardingPage() {
                   </Chip>
                 ))}
               </div>
-              {pref.hardExclusions.length > 0 && <p className="mt-2 text-xs text-muted">Excluding: {pref.hardExclusions.map((id) => INGREDIENTS.find((i) => i.id === id)?.name).join(', ')}</p>}
+              {pref.hardExclusions.length > 0 && <p className="mt-2 text-xs text-on-surface-variant">Excluding: {pref.hardExclusions.map((id) => INGREDIENTS.find((i) => i.id === id)?.name).join(', ')}</p>}
             </fieldset>
             <fieldset>
               <legend className="text-sm font-medium">Cuisines you enjoy (optional)</legend>
@@ -384,7 +384,7 @@ export function OnboardingPage() {
                 ).map(([v, t, d]) => (
                   <button key={v} type="button" role="radio" aria-checked={b.goals.goal === v} onClick={() => set((x) => ((x.goals.goal = v), x))} className="chip h-auto flex-col items-start rounded-ctl px-4 py-3 text-left">
                     <span className="font-medium">{t}</span>
-                    <span className="text-xs font-normal text-muted">{d}</span>
+                    <span className="text-xs font-normal text-on-surface-variant">{d}</span>
                   </button>
                 ))}
               </div>
@@ -393,7 +393,7 @@ export function OnboardingPage() {
             <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
               <Field label="Grocery budget for this person" htmlFor="budget" hint="Only for this profile. Household baskets never merge budgets silently.">
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">₹</span>
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">₹</span>
                   <Input id="budget" type="number" inputMode="numeric" className="pl-7" value={b.budget.amountInr ?? ''} onChange={(e) => set((x) => ((x.budget.amountInr = e.target.value === '' ? null : Number(e.target.value)), x))} invalid={!!errors.budget} />
                 </div>
               </Field>
@@ -427,13 +427,13 @@ export function OnboardingPage() {
 
         {step === 5 && (
           <>
-            <p className="text-muted">NourishCart builds plans for healthy adults. If any of these apply, we will not calculate a personal plan, and we suggest working with a doctor or registered dietitian instead.</p>
+            <p className="text-on-surface-variant">NourishCart builds plans for healthy adults. If any of these apply, we will not calculate a personal plan, and we suggest working with a doctor or registered dietitian instead.</p>
             <div className="space-y-2">
               {CLINICAL.map((c) => (
-                <label key={c.id} className="flex cursor-pointer items-start gap-3 rounded-ctl border border-line px-4 py-3 hover:bg-canvas">
+                <label key={c.id} className="flex cursor-pointer items-start gap-3 rounded-ctl border border-outline-variant px-4 py-3 hover:bg-on-surface/[0.06]">
                   <input
                     type="checkbox"
-                    className="mt-0.5 h-5 w-5 accent-forest"
+                    className="mt-0.5 h-5 w-5 accent-primary"
                     checked={pref.clinicalFlags.includes(c.id)}
                     onChange={() => set((x) => ((x.preferences.clinicalFlags = x.preferences.clinicalFlags.includes(c.id) ? x.preferences.clinicalFlags.filter((y) => y !== c.id) : [...x.preferences.clinicalFlags, c.id]), (x.preferences.noClinicalFlagsConfirmed = false), x))}
                   />
@@ -441,12 +441,12 @@ export function OnboardingPage() {
                 </label>
               ))}
             </div>
-            <label className="flex cursor-pointer items-center gap-3 rounded-ctl bg-mint px-4 py-3">
-              <input type="checkbox" className="h-5 w-5 accent-forest" checked={pref.noClinicalFlagsConfirmed} onChange={(e) => set((x) => ((x.preferences.noClinicalFlagsConfirmed = e.target.checked), (x.preferences.clinicalFlags = e.target.checked ? [] : x.preferences.clinicalFlags), x))} />
-              <span className="font-medium text-forest">None of these apply</span>
+            <label className="flex cursor-pointer items-center gap-3 rounded-ctl bg-secondary-container px-4 py-3">
+              <input type="checkbox" className="h-5 w-5 accent-primary" checked={pref.noClinicalFlagsConfirmed} onChange={(e) => set((x) => ((x.preferences.noClinicalFlagsConfirmed = e.target.checked), (x.preferences.clinicalFlags = e.target.checked ? [] : x.preferences.clinicalFlags), x))} />
+              <span className="font-medium text-primary">None of these apply</span>
             </label>
             {err('clinical')}
-            <p className="text-xs text-muted">We only store whether a personal plan is in scope, never which item you ticked.</p>
+            <p className="text-xs text-on-surface-variant">We only store whether a personal plan is in scope, never which item you ticked.</p>
           </>
         )}
 
@@ -463,7 +463,7 @@ export function OnboardingPage() {
               ['Budget', b.budget.amountInr ? `₹${b.budget.amountInr.toLocaleString('en-IN')} per ${b.budget.period === 'weekly' ? 'week' : 'month'} (${b.budget.mode})` : '—'],
             ].map(([k, v]) => (
               <div key={k}>
-                <dt className="text-sm text-muted">{k}</dt>
+                <dt className="text-sm text-on-surface-variant">{k}</dt>
                 <dd className="mt-0.5 font-medium">{v}</dd>
               </div>
             ))}
@@ -474,7 +474,7 @@ export function OnboardingPage() {
         )}
       </div>
 
-      <div className="sticky bottom-[72px] mt-6 flex justify-end gap-2 bg-canvas/90 py-3 backdrop-blur lg:bottom-0">
+      <div className="sticky bottom-[72px] mt-6 flex justify-end gap-2 bg-surface/95 py-3 backdrop-blur lg:bottom-0">
         {step > 0 && (
           <Button variant="secondary" onClick={() => setStep(step - 1)}>
             Back

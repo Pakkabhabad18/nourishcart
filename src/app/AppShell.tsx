@@ -1,23 +1,43 @@
-// Layout: desktop sidebar + top profile bar; mobile top bar + bottom tab bar (PRD 11.3).
+// Material Design 3 layout:
+//  - desktop (lg+): navigation rail (80 px) with pill-shaped active indicators
+//  - mobile: top app bar + bottom navigation bar (80 px) with 4 destinations + More
+// The profile switcher sits in the top app bar on every screen size.
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { CalendarDays, ChevronDown, Home, LineChart, Menu, Package, Receipt, Settings, ShoppingBasket, Users, WifiOff } from 'lucide-react';
+import { CalendarDays, ChevronDown, FlaskConical, Home, LineChart, Menu, Package, Receipt, Settings, ShoppingBasket, Users, WifiOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './context.tsx';
 import { useActiveProfile } from './hooks.ts';
 import { isDemo } from '../lib/store/index.ts';
-import { Logo } from '../components/Logo.tsx';
+import { Logo, LogoMark } from '../components/Logo.tsx';
 
 const NAV = [
-  { to: '/overview', label: 'Overview', short: 'Home', icon: Home, mobile: true },
-  { to: '/nutrition', label: 'Nutrition', short: 'Nutrition', icon: LineChart, mobile: false },
-  { to: '/plans', label: 'Meal plans', short: 'Plan', icon: CalendarDays, mobile: true },
-  { to: '/groceries', label: 'Groceries', short: 'Shop', icon: ShoppingBasket, mobile: true },
-  { to: '/pantry', label: 'Pantry', short: 'Pantry', icon: Package, mobile: true },
-  { to: '/orders', label: 'Orders', short: 'Orders', icon: Receipt, mobile: false },
-  { to: '/profiles', label: 'Profiles', short: 'Profiles', icon: Users, mobile: false },
-  { to: '/settings', label: 'Settings', short: 'Settings', icon: Settings, mobile: false },
+  { to: '/overview', label: 'Home', icon: Home, mobile: true },
+  { to: '/nutrition', label: 'Nutrition', icon: LineChart, mobile: false },
+  { to: '/plans', label: 'Plans', icon: CalendarDays, mobile: true },
+  { to: '/groceries', label: 'Groceries', icon: ShoppingBasket, mobile: true },
+  { to: '/pantry', label: 'Pantry', icon: Package, mobile: true },
+  { to: '/orders', label: 'Orders', icon: Receipt, mobile: false },
+  { to: '/profiles', label: 'Profiles', icon: Users, mobile: false },
+  { to: '/evaluation', label: 'Evaluation', icon: FlaskConical, mobile: false },
+  { to: '/settings', label: 'Settings', icon: Settings, mobile: false },
 ];
+
+/** One rail / bar destination: icon inside a pill indicator, label underneath. */
+function Destination({ to, label, icon: Icon, compact }: { to: string; label: string; icon: typeof Home; compact?: boolean }) {
+  return (
+    <NavLink to={to} className="group flex flex-col items-center gap-1 py-1 text-xs font-medium">
+      {({ isActive }) => (
+        <>
+          <span className={clsx('flex h-8 w-14 items-center justify-center rounded-full transition-colors', isActive ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant group-hover:bg-on-surface/[0.08]', compact && 'w-16')}>
+            <Icon className="h-5 w-5" strokeWidth={isActive ? 2.4 : 2} aria-hidden />
+          </span>
+          <span className={isActive ? 'text-on-surface' : 'text-on-surface-variant'}>{label}</span>
+        </>
+      )}
+    </NavLink>
+  );
+}
 
 function ProfileSwitcher() {
   const { profile, all } = useActiveProfile();
@@ -38,20 +58,17 @@ function ProfileSwitcher() {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex min-h-[44px] items-center gap-2 rounded-ctl border border-line bg-surface px-2.5 py-1.5 text-left hover:border-teal-300"
+        className="flex min-h-[44px] items-center gap-2 rounded-full bg-surface-container-high py-1 pl-1 pr-3 text-left hover:bg-surface-container-highest"
       >
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-mint text-sm font-semibold text-forest" aria-hidden>
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-sm font-medium text-on-primary" aria-hidden>
           {profile.displayName.slice(0, 1).toUpperCase()}
         </span>
-        <span className="hidden flex-col leading-tight sm:flex">
-          <span className="text-xs text-muted">Planning for</span>
-          <span className="text-sm font-medium">{profile.displayName}</span>
-        </span>
-        <span className="text-sm font-medium sm:hidden">{profile.displayName}</span>
-        <ChevronDown className="h-4 w-4 text-muted" aria-hidden />
+        <span className="text-sm font-medium">{profile.displayName}</span>
+        <ChevronDown className="h-4 w-4 text-on-surface-variant" aria-hidden />
       </button>
       {open && (
-        <div role="menu" className="card absolute right-0 z-40 mt-2 w-64 p-1.5 shadow-lg">
+        <div role="menu" className="absolute right-0 z-40 mt-2 w-64 rounded-xs bg-surface-container py-2 shadow-e2">
+          <p className="px-4 pb-1 pt-1 text-xs text-on-surface-variant">Planning for</p>
           {active.map((p) => (
             <button
               key={p.id}
@@ -61,15 +78,15 @@ function ProfileSwitcher() {
                 setActiveProfileId(p.id);
                 setOpen(false);
               }}
-              className={clsx('flex w-full items-center gap-2 rounded-ctl px-3 py-2.5 text-left text-sm hover:bg-canvas', p.id === profile.id && 'bg-mint font-medium text-forest')}
+              className={clsx('flex h-12 w-full items-center gap-3 px-4 text-left text-sm hover:bg-on-surface/[0.08]', p.id === profile.id && 'bg-secondary-container text-on-secondary-container')}
             >
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-surface text-xs ring-1 ring-line">{p.displayName.slice(0, 1).toUpperCase()}</span>
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-primary-container text-xs text-on-primary-container">{p.displayName.slice(0, 1).toUpperCase()}</span>
               <span className="flex-1 truncate">{p.displayName}</span>
-              {!p.onboardingComplete && <span className="text-xs text-warn">Setup</span>}
+              {!p.onboardingComplete && <span className="text-xs text-warning">Setup</span>}
             </button>
           ))}
-          <div className="my-1 border-t border-line" />
-          <button role="menuitem" onClick={() => (setOpen(false), nav('/profiles'))} className="w-full rounded-ctl px-3 py-2.5 text-left text-sm text-forest hover:bg-canvas">
+          <div className="my-1 h-px bg-outline-variant" />
+          <button role="menuitem" onClick={() => (setOpen(false), nav('/profiles'))} className="flex h-12 w-full items-center px-4 text-left text-sm hover:bg-on-surface/[0.08]">
             Manage profiles
           </button>
         </div>
@@ -84,78 +101,66 @@ export function AppShell() {
   const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => setMoreOpen(false), [loc.pathname]);
   return (
-    <div className="min-h-dvh lg:pl-64">
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-ctl focus:bg-surface focus:px-3 focus:py-2">
+    <div className="min-h-dvh bg-surface lg:pl-20">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-surface-container-high focus:px-4 focus:py-2">
         Skip to content
       </a>
-      {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-line bg-surface lg:flex">
-        <div className="px-5 py-5">
-          <Logo />
-        </div>
-        <nav aria-label="Main" className="flex-1 space-y-0.5 px-3">
+      {/* Navigation rail (desktop) */}
+      <aside className="fixed inset-y-0 left-0 hidden w-20 flex-col items-center bg-surface-container-low py-4 lg:flex">
+        <NavLink to="/overview" aria-label="NourishCart home" className="mb-6">
+          <LogoMark className="h-9 w-9" />
+        </NavLink>
+        <nav aria-label="Main" className="flex flex-1 flex-col items-center gap-3">
           {NAV.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              className={({ isActive }) => clsx('flex min-h-[42px] items-center gap-3 rounded-ctl px-3 text-[0.9375rem] transition-colors', isActive ? 'bg-mint font-medium text-forest' : 'text-ink/80 hover:bg-canvas')}
-            >
-              <n.icon className="h-[18px] w-[18px]" aria-hidden />
-              {n.label}
-            </NavLink>
+            <Destination key={n.to} {...n} />
           ))}
         </nav>
-        <p className="px-5 pb-5 text-xs leading-relaxed text-muted">General wellness planning for healthy adults. Not medical advice. Groceries and orders are simulated.</p>
       </aside>
 
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-line bg-canvas/90 backdrop-blur">
+      {/* Top app bar */}
+      <header className="sticky top-0 z-30 bg-surface">
         {isDemo && (
-          <div className="bg-warn-bg px-4 py-1.5 text-center text-xs text-warn">
+          <div className="bg-warning-container px-4 py-1.5 text-center text-xs text-on-warning-container">
             Demo mode: data stays in this browser and sign-in codes appear on screen. No email is sent and nothing is purchased.
           </div>
         )}
         {!online && (
-          <div role="status" className="flex items-center justify-center gap-2 bg-ink px-4 py-1.5 text-xs text-white">
+          <div role="status" className="flex items-center justify-center gap-2 bg-inverse-surface px-4 py-1.5 text-xs text-inverse-on-surface">
             <WifiOff className="h-3.5 w-3.5" aria-hidden /> You are offline. You can look around, but changes and checkout need a connection.
           </div>
         )}
         <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-          <div className="lg:hidden">
-            <Logo compact />
-          </div>
-          <div className="hidden lg:block" />
+          <Logo compact />
           <ProfileSwitcher />
         </div>
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">
+      <main id="main" className="mx-auto w-full max-w-6xl px-4 pb-32 pt-4 sm:px-6 lg:px-8 lg:pb-12">
         <Outlet />
       </main>
 
-      {/* Mobile bottom navigation */}
-      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
-        <ul className="grid grid-cols-5">
+      {/* Navigation bar (mobile) */}
+      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 bg-surface-container pb-[env(safe-area-inset-bottom)] lg:hidden">
+        <ul className="grid h-20 grid-cols-5 items-center">
           {NAV.filter((n) => n.mobile).map((n) => (
             <li key={n.to}>
-              <NavLink to={n.to} className={({ isActive }) => clsx('flex min-h-[58px] flex-col items-center justify-center gap-0.5 text-[11px]', isActive ? 'font-medium text-forest' : 'text-muted')}>
-                <n.icon className="h-5 w-5" aria-hidden />
-                {n.short}
-              </NavLink>
+              <Destination {...n} compact />
             </li>
           ))}
           <li>
-            <button onClick={() => setMoreOpen((o) => !o)} aria-expanded={moreOpen} className={clsx('flex min-h-[58px] w-full flex-col items-center justify-center gap-0.5 text-[11px]', moreOpen ? 'text-forest' : 'text-muted')}>
-              <Menu className="h-5 w-5" aria-hidden />
-              More
+            <button onClick={() => setMoreOpen((o) => !o)} aria-expanded={moreOpen} className="group flex w-full flex-col items-center gap-1 py-1 text-xs font-medium">
+              <span className={clsx('flex h-8 w-16 items-center justify-center rounded-full', moreOpen ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant')}>
+                <Menu className="h-5 w-5" aria-hidden />
+              </span>
+              <span className={moreOpen ? 'text-on-surface' : 'text-on-surface-variant'}>More</span>
             </button>
           </li>
         </ul>
         {moreOpen && (
-          <div className="absolute bottom-full right-2 mb-2 w-56 rounded-card border border-line bg-surface p-1.5 shadow-lg">
+          <div className="absolute bottom-full right-2 mb-2 w-60 rounded-xs bg-surface-container py-2 shadow-e2">
             {NAV.filter((n) => !n.mobile).map((n) => (
-              <NavLink key={n.to} to={n.to} className="flex min-h-[44px] items-center gap-3 rounded-ctl px-3 text-sm hover:bg-canvas">
-                <n.icon className="h-[18px] w-[18px] text-muted" aria-hidden /> {n.label}
+              <NavLink key={n.to} to={n.to} className="flex h-12 items-center gap-3 px-4 text-sm hover:bg-on-surface/[0.08]">
+                <n.icon className="h-5 w-5 text-on-surface-variant" aria-hidden /> {n.label}
               </NavLink>
             ))}
           </div>

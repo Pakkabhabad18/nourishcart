@@ -1,29 +1,36 @@
-@import '@fontsource-variable/inter';
+@import '@fontsource-variable/roboto-flex';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Material Design 3 base. Colour roles come from src/styles/m3-tokens.json. */
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
-  body { @apply bg-canvas text-ink font-sans text-base antialiased; font-feature-settings: 'cv11', 'ss01'; }
-  /* Numbers line up in tables, totals and charts. */
+  body { @apply bg-surface text-on-surface font-sans text-base antialiased; }
   .num { font-variant-numeric: tabular-nums; }
-  :focus-visible { outline: 2px solid #2D7A69; outline-offset: 2px; border-radius: 6px; }
-  h1, h2, h3 { @apply text-ink; }
+  :focus-visible { outline: 2px solid theme('colors.primary'); outline-offset: 2px; border-radius: 8px; }
+  h1, h2, h3 { @apply text-on-surface; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
 }
 
 @layer components {
-  .card { @apply bg-surface border border-line rounded-card; }
-  .field-input { @apply w-full rounded-ctl border border-line bg-surface px-3 py-2.5 text-base text-ink placeholder:text-muted/70 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20 disabled:bg-canvas; }
-  .field-input[aria-invalid='true'] { @apply border-danger focus:ring-danger/20; }
-  .chip { @apply inline-flex min-h-[40px] items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm text-ink transition-colors hover:border-teal-300 cursor-pointer select-none; }
-  .chip[aria-pressed='true'], .chip[aria-checked='true'] { @apply border-forest bg-mint text-forest font-medium; }
-  .link { @apply text-teal underline decoration-teal/30 underline-offset-2 hover:decoration-teal; }
+  /* M3 elevated card: surface-container-low + elevation 1 */
+  .card { @apply rounded-card bg-surface-container-low shadow-e1; }
+  /* M3 outlined text field */
+  .field-input { @apply w-full rounded-xs border border-outline bg-transparent px-4 py-3 text-base text-on-surface placeholder:text-on-surface-variant/70 hover:border-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40; }
+  .field-input[aria-invalid='true'] { @apply border-error focus:border-error focus:ring-error; }
+  /* M3 filter chip: 32 px tall (44 px touch area), 8 px corners, check mark when selected */
+  .chip { @apply relative inline-flex min-h-[40px] cursor-pointer select-none items-center gap-2 rounded-lg border border-outline bg-transparent px-4 py-1.5 text-sm font-medium text-on-surface-variant transition-colors hover:bg-on-surface/[0.08]; }
+  .chip[aria-pressed='true'], .chip[aria-checked='true'], .chip[aria-selected='true'] { @apply border-transparent bg-secondary-container text-on-secondary-container; }
+  .chip[aria-checked='true']::before, .chip[aria-pressed='true']::before, .chip[aria-selected='true']::before { content: ''; @apply -ml-1 h-[18px] w-[18px] shrink-0 bg-current; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center/contain no-repeat; }
+  .link { @apply font-medium text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary; }
 }
 
-/* One orchestrated motion moment: the range marker settling into place. */
+/* One orchestrated motion moment: the estimate marker settling (M3 emphasized easing). */
 @keyframes settle { from { transform: translateX(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
-.range-marker { animation: settle 420ms cubic-bezier(.2,.7,.2,1) both; }
+.range-marker { animation: settle 500ms cubic-bezier(0.2, 0, 0, 1) both; }
+/* Listening pulse for the microphone button */
+@keyframes listen { 0% { box-shadow: 0 0 0 0 rgba(0, 91, 191, 0.45); } 100% { box-shadow: 0 0 0 22px rgba(0, 91, 191, 0); } }
+.mic-live { animation: listen 1.2s cubic-bezier(0.2, 0, 0, 1) infinite; }

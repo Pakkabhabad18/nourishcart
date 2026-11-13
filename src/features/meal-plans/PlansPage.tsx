@@ -42,48 +42,48 @@ function Compare({ plans, bundle, onChoose, choosing }: { plans: StoredPlan[]; b
         return (
           <article key={p.id} className="card flex flex-col p-5" aria-labelledby={`opt-${p.id}`}>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 id={`opt-${p.id}`} className="text-lg font-semibold">{meta.label}</h2>
+              <h2 id={`opt-${p.id}`} className="text-lg font-medium">{meta.label}</h2>
               {basket.totalInr === minCost && <Tag tone="good">Lowest basket cost</Tag>}
               {ev.distinctRecipes === maxVariety && <Tag>Most variety</Tag>}
             </div>
-            <p className="mt-1 text-sm text-muted">{meta.emphasis}</p>
+            <p className="mt-1 text-sm text-on-surface-variant">{meta.emphasis}</p>
             <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <div>
-                <dt className="text-muted">Energy, daily average</dt>
+                <dt className="text-on-surface-variant">Energy, daily average</dt>
                 <dd className="num font-medium">{ev.dailyAverage.energyKcal.toLocaleString('en-IN')} kcal</dd>
               </div>
               <div>
-                <dt className="text-muted">Protein, daily average</dt>
-                <dd className="num font-medium">{ev.dailyAverage.proteinG} g <span className="font-normal text-muted">(EAR {t.proteinEarG} g)</span></dd>
+                <dt className="text-on-surface-variant">Protein, daily average</dt>
+                <dd className="num font-medium">{ev.dailyAverage.proteinG} g <span className="font-normal text-on-surface-variant">(EAR {t.proteinEarG} g)</span></dd>
               </div>
               <div>
-                <dt className="text-muted">Carbs / fat / fibre</dt>
+                <dt className="text-on-surface-variant">Carbs / fat / fibre</dt>
                 <dd className="num font-medium">{ev.dailyAverage.carbsG} / {ev.dailyAverage.fatG} / {ev.dailyAverage.fibreG} g</dd>
               </div>
               <div>
-                <dt className="text-muted">Iron / calcium</dt>
+                <dt className="text-on-surface-variant">Iron / calcium</dt>
                 <dd className="num font-medium">≈{ev.dailyAverage.ironMg} mg / ≈{ev.dailyAverage.calciumMg} mg</dd>
               </div>
               <div>
-                <dt className="text-muted">Simulated basket</dt>
-                <dd className="num font-medium">{formatInr(basket.totalInr)} <span className="font-normal text-muted">this week</span></dd>
+                <dt className="text-on-surface-variant">Simulated basket</dt>
+                <dd className="num font-medium">{formatInr(basket.totalInr)} <span className="font-normal text-on-surface-variant">this week</span></dd>
               </div>
               <div>
-                <dt className="text-muted">Food used</dt>
+                <dt className="text-on-surface-variant">Food used</dt>
                 <dd className="num font-medium">{formatInr(ev.dayCostInr)}/day</dd>
               </div>
               <div>
-                <dt className="text-muted">Different dishes</dt>
+                <dt className="text-on-surface-variant">Different dishes</dt>
                 <dd className="num font-medium">{ev.distinctRecipes} in the week</dd>
               </div>
               <div>
-                <dt className="text-muted">Average prep</dt>
+                <dt className="text-on-surface-variant">Average prep</dt>
                 <dd className="num font-medium">{ev.avgPrepMinutes} min per meal</dd>
               </div>
             </dl>
-            <p className="mt-4 text-sm"><span className="text-muted">Includes </span>{dishes.join(', ')}{p.draft.meals.length > 5 ? ' and more' : ''}.</p>
+            <p className="mt-4 text-sm"><span className="text-on-surface-variant">Includes </span>{dishes.join(', ')}{p.draft.meals.length > 5 ? ' and more' : ''}.</p>
             {!ev.valid && <Notice tone="warn" className="mt-3">{ev.issues[0]}</Notice>}
-            {basket.status === 'OVER_BUDGET' && <p className="mt-3 text-sm text-warn">The first basket is {formatInr(basket.overBudgetByInr)} over budget. You can pick cheaper options before approving.</p>}
+            {basket.status === 'OVER_BUDGET' && <p className="mt-3 text-sm text-warning">The first basket is {formatInr(basket.overBudgetByInr)} over budget. You can pick cheaper options before approving.</p>}
             <div className="mt-auto pt-5">
               <Button className="w-full" onClick={() => onChoose(p)} loading={choosing === p.id}>
                 Choose {meta.label}
@@ -92,7 +92,7 @@ function Compare({ plans, bundle, onChoose, choosing }: { plans: StoredPlan[]; b
           </article>
         );
       })}
-      <p className="text-xs text-muted lg:col-span-3">
+      <p className="text-xs text-on-surface-variant lg:col-span-3">
         Food used is the cost of the ingredients the week needs. The basket is what the first shop costs after rounding to whole packs, so it is higher when staples like oil and dal last beyond the week. Micronutrients are approximate: sample data and no cooking-loss factors. All three plans meet the same allergy, food-pattern, energy (±{ENERGY_TOLERANCE * 100}%) and protein checks.
       </p>
     </div>
@@ -105,23 +105,23 @@ function MealCard({ meal, plan, onReplace, onServings, disabled }: { meal: Plann
   return (
     <li className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-muted">{SLOT_LABEL[meal.slot]}</p>
-        <Link to={`/recipes/${r.id}?servings=${meal.servings}`} className="mt-0.5 block font-semibold hover:text-forest">
+        <p className="text-sm text-on-surface-variant">{SLOT_LABEL[meal.slot]}</p>
+        <Link to={`/recipes/${r.id}?servings=${meal.servings}`} className="mt-0.5 block font-medium hover:text-primary">
           {r.name}
         </Link>
-        <p className="num mt-1 flex flex-wrap gap-x-3 text-sm text-muted">
+        <p className="num mt-1 flex flex-wrap gap-x-3 text-sm text-on-surface-variant">
           <span>{Math.round(t.energyKcal.value)} kcal</span>
           <span>{Math.round(t.proteinG.value)} g protein</span>
           <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" aria-hidden />{r.prepMinutes} min</span>
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex items-center rounded-ctl border border-line" role="group" aria-label={`Servings for ${r.name}`}>
-          <button className="grid h-10 w-10 place-items-center text-muted hover:text-ink disabled:opacity-40" aria-label="Fewer servings" disabled={disabled || meal.servings <= SERVING_MIN} onClick={() => onServings(roundServings(meal.servings - SERVING_STEP))}>
+        <div className="flex items-center rounded-ctl border border-outline-variant" role="group" aria-label={`Servings for ${r.name}`}>
+          <button className="grid h-10 w-10 place-items-center text-on-surface-variant hover:text-on-surface disabled:opacity-40" aria-label="Fewer servings" disabled={disabled || meal.servings <= SERVING_MIN} onClick={() => onServings(roundServings(meal.servings - SERVING_STEP))}>
             <Minus className="h-4 w-4" />
           </button>
           <span className="num w-[92px] whitespace-nowrap text-center text-sm" aria-live="polite">{servingsLabel(meal.servings)}</span>
-          <button className="grid h-10 w-10 place-items-center text-muted hover:text-ink disabled:opacity-40" aria-label="More servings" disabled={disabled || meal.servings >= SERVING_MAX} onClick={() => onServings(roundServings(meal.servings + SERVING_STEP))}>
+          <button className="grid h-10 w-10 place-items-center text-on-surface-variant hover:text-on-surface disabled:opacity-40" aria-label="More servings" disabled={disabled || meal.servings >= SERVING_MAX} onClick={() => onServings(roundServings(meal.servings + SERVING_STEP))}>
             <Plus className="h-4 w-4" />
           </button>
         </div>
@@ -176,12 +176,12 @@ function Week({ plan, bundle }: { plan: StoredPlan; bundle: ProfileBundle }) {
                 role="tab"
                 aria-selected={day === d.day}
                 onClick={() => setDay(d.day)}
-                className={clsx('flex w-full flex-col items-center rounded-ctl px-0.5 py-2.5 text-xs sm:text-sm', day === d.day ? 'bg-forest text-white' : 'hover:bg-canvas')}
+                className={clsx('flex w-full flex-col items-center rounded-ctl px-0.5 py-2.5 text-xs sm:text-sm', day === d.day ? 'bg-primary text-on-primary' : 'hover:bg-on-surface/[0.06]')}
               >
                 <span className="font-medium">{dayName(d.day)}</span>
                 {d.day === todayIndex() && <span className="sr-only">(today)</span>}
-                <span className={clsx('num text-[11px] sm:text-xs', day === d.day ? 'text-white/80' : 'text-muted')}>{Math.round(d.totals.energyKcal.value)}</span>
-                <span className={clsx('mt-1 h-1.5 w-1.5 rounded-full', d.energyOk && d.proteinOk ? (day === d.day ? 'bg-mint' : 'bg-teal') : 'bg-warn')} aria-label={d.energyOk && d.proteinOk ? 'Within targets' : 'Outside targets'} />
+                <span className={clsx('num text-[11px] sm:text-xs', day === d.day ? 'text-on-primary/80' : 'text-on-surface-variant')}>{Math.round(d.totals.energyKcal.value)}</span>
+                <span className={clsx('mt-1 h-1.5 w-1.5 rounded-full', d.energyOk && d.proteinOk ? (day === d.day ? 'bg-secondary-container' : 'bg-primary') : 'bg-warning')} aria-label={d.energyOk && d.proteinOk ? 'Within targets' : 'Outside targets'} />
               </button>
             </li>
           ))}
@@ -190,7 +190,7 @@ function Week({ plan, bundle }: { plan: StoredPlan; bundle: ProfileBundle }) {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <section aria-labelledby="day-h">
-          <h2 id="day-h" className="mb-3 text-xl font-semibold">{dayLong(day)}</h2>
+          <h2 id="day-h" className="mb-3 text-xl font-normal">{dayLong(day)}</h2>
           <ul className="space-y-3">
             {meals.map((m) => (
               <MealCard key={m.id} meal={m} plan={effective} onReplace={() => setReplacing(m)} onServings={(s) => setServings(m, s)} disabled={!online || savePlan.isPending} />
@@ -199,7 +199,7 @@ function Week({ plan, bundle }: { plan: StoredPlan; bundle: ProfileBundle }) {
         </section>
         <aside className="space-y-4">
           <section className="card p-5">
-            <h3 className="font-semibold">Day totals</h3>
+            <h3 className="font-medium">Day totals</h3>
             <RangeBar
               ariaLabel={`Day energy ${Math.round(dEv.totals.energyKcal.value)} kcal against target ${t.energyKcal}`}
               min={t.energyKcal * 0.7}
@@ -211,21 +211,21 @@ function Week({ plan, bundle }: { plan: StoredPlan; bundle: ProfileBundle }) {
               ticks={[{ at: t.energyKcal, label: 'estimate' }]}
             />
             <dl className="num grid grid-cols-2 gap-y-2 text-sm">
-              <dt className="text-muted">Protein</dt>
-              <dd className={clsx('text-right font-medium', !dEv.proteinOk && 'text-warn')}>{Math.round(dEv.totals.proteinG.value)} g <span className="font-normal text-muted">/ EAR {t.proteinEarG}</span></dd>
-              <dt className="text-muted">Carbohydrate</dt>
+              <dt className="text-on-surface-variant">Protein</dt>
+              <dd className={clsx('text-right font-medium', !dEv.proteinOk && 'text-warning')}>{Math.round(dEv.totals.proteinG.value)} g <span className="font-normal text-on-surface-variant">/ EAR {t.proteinEarG}</span></dd>
+              <dt className="text-on-surface-variant">Carbohydrate</dt>
               <dd className="text-right font-medium">{Math.round(dEv.totals.carbsG.value)} g</dd>
-              <dt className="text-muted">Fat</dt>
+              <dt className="text-on-surface-variant">Fat</dt>
               <dd className="text-right font-medium">{Math.round(dEv.totals.fatG.value)} g</dd>
-              <dt className="text-muted">Fibre</dt>
+              <dt className="text-on-surface-variant">Fibre</dt>
               <dd className="text-right font-medium">{dEv.totals.fibreG.status === 'complete' ? '' : '≥'}{Math.round(dEv.totals.fibreG.value)} g</dd>
-              <dt className="text-muted">Iron</dt>
+              <dt className="text-on-surface-variant">Iron</dt>
               <dd className="text-right font-medium">≈{dEv.totals.ironMg.value} mg</dd>
-              <dt className="text-muted">Food cost</dt>
+              <dt className="text-on-surface-variant">Food cost</dt>
               <dd className="text-right font-medium">{formatInr(dEv.costInr)}</dd>
             </dl>
             {(!dEv.energyOk || !dEv.proteinOk) && <Notice tone="warn" className="mt-3">This day is outside the plan checks. Adjust servings or replace a meal.</Notice>}
-            <p className="mt-3 text-xs text-muted">≥ means some ingredients have no value in the sample data, so the true total may be higher. ≈ marks micronutrients without cooking-loss factors.</p>
+            <p className="mt-3 text-xs text-on-surface-variant">≥ means some ingredients have no value in the sample data, so the true total may be higher. ≈ marks micronutrients without cooking-loss factors.</p>
           </section>
           {Object.keys(effective.draft.swaps).length > 0 && (
             <Notice title="Ingredient swaps from your basket choices">
@@ -234,22 +234,22 @@ function Week({ plan, bundle }: { plan: StoredPlan; bundle: ProfileBundle }) {
               ))}
             </Notice>
           )}
-          <Link to="/groceries" className="flex min-h-[48px] items-center justify-center rounded-ctl bg-forest px-4 font-medium text-white hover:bg-forest-700">
+          <Link to="/groceries" className="flex min-h-[48px] items-center justify-center rounded-full bg-primary px-4 font-medium text-on-primary hover:brightness-110">
             Build this week’s groceries
           </Link>
         </aside>
       </div>
 
       <Sheet open={!!replacing} onClose={() => setReplacing(null)} title={replacing ? `Replace ${SLOT_LABEL[replacing.slot].toLowerCase()} on ${dayLong(replacing.day)}` : ''} wide>
-        <p className="mb-3 text-sm text-muted">Only this meal changes. Servings are set to keep the day’s energy close. Allergens and excluded foods are already filtered out.</p>
-        <ul className="divide-y divide-line">
+        <p className="mb-3 text-sm text-on-surface-variant">Only this meal changes. Servings are set to keep the day’s energy close. Allergens and excluded foods are already filtered out.</p>
+        <ul className="divide-y divide-outline-variant">
           {candidates.map((c) => (
             <li key={c.recipe.id} className="flex items-center gap-3 py-3">
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{c.recipe.name}</p>
-                <p className="num text-sm text-muted">
+                <p className="num text-sm text-on-surface-variant">
                   {servingsLabel(c.servings)}, {c.recipe.prepMinutes} min;{' '}
-                  <span className={c.deltaProteinG < 0 ? 'text-warn' : ''}>{c.deltaProteinG >= 0 ? '+' : ''}{c.deltaProteinG} g protein</span>,{' '}
+                  <span className={c.deltaProteinG < 0 ? 'text-warning' : ''}>{c.deltaProteinG >= 0 ? '+' : ''}{c.deltaProteinG} g protein</span>,{' '}
                   {c.deltaKcal >= 0 ? '+' : ''}{c.deltaKcal} kcal, {c.deltaCostInr >= 0 ? '+' : '−'}₹{Math.abs(c.deltaCostInr)}
                 </p>
               </div>

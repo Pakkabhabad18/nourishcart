@@ -43,13 +43,13 @@ function ScheduleCard({ profileId, name }: { profileId: string; name: string }) 
   return (
     <section className="card p-5">
       <div className="flex items-start gap-3">
-        <CalendarClock className="mt-0.5 h-5 w-5 text-teal" aria-hidden />
+        <CalendarClock className="mt-0.5 h-5 w-5 text-primary" aria-hidden />
         <div className="flex-1">
-          <h2 className="font-semibold">Scheduled basket</h2>
+          <h2 className="font-medium">Scheduled basket</h2>
           {r?.enabled ? (
-            <p className="mt-1 text-sm text-muted">Every {dayLong(r.weekday)} a draft basket for {name} is prepared{r.maxSpendInr ? ` (up to ₹${r.maxSpendInr})` : ''}. You review and approve it; nothing is ordered automatically.</p>
+            <p className="mt-1 text-sm text-on-surface-variant">Every {dayLong(r.weekday)} a draft basket for {name} is prepared{r.maxSpendInr ? ` (up to ₹${r.maxSpendInr})` : ''}. You review and approve it; nothing is ordered automatically.</p>
           ) : (
-            <p className="mt-1 text-sm text-muted">Have a draft basket waiting on a set day each week. It always waits for your approval.</p>
+            <p className="mt-1 text-sm text-on-surface-variant">Have a draft basket waiting on a set day each week. It always waits for your approval.</p>
           )}
         </div>
       </div>
@@ -71,7 +71,7 @@ function ScheduleCard({ profileId, name }: { profileId: string; name: string }) 
             <Input id="max" type="number" inputMode="numeric" value={max} onChange={(e) => setMax(e.target.value === '' ? '' : Number(e.target.value))} />
           </Field>
           <label className="flex cursor-pointer items-start gap-3 text-sm">
-            <input type="checkbox" className="mt-0.5 h-5 w-5 accent-forest" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+            <input type="checkbox" className="mt-0.5 h-5 w-5 accent-primary" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             I want NourishCart to prepare a draft basket on this day. I understand it will not order anything without my approval.
           </label>
         </div>
@@ -158,7 +158,7 @@ export function PantryPage() {
                 {due.map((d) => d.name).join(', ')}. <Link to="/groceries" className="link">Prepare this week’s basket</Link>. Nothing is ordered automatically.
               </Notice>
             )}
-            <ul className="card divide-y divide-line">
+            <ul className="card divide-y divide-outline-variant">
               {(est ?? []).map((e) => {
                 const item = items.find((i) => i.id === e.itemId)!;
                 return (
@@ -166,16 +166,16 @@ export function PantryPage() {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <p className="font-medium">{e.name}</p>
-                        <p className="num text-sm text-muted">
+                        <p className="num text-sm text-on-surface-variant">
                           About {formatQty(e.estimatedRemaining, e.unit)} left{item.confidence === 'estimated' ? ' (estimated)' : ''}
                           {e.dailyConsumption != null && `, using ${formatQty(e.dailyConsumption, e.unit)}/day in the plan`}
                         </p>
                         {e.reorderOn && (
                           <p className="text-sm">
-                            Reorder around <strong>{dateShort(e.reorderOn)}</strong> <span className="text-muted">(between {dateShort(e.lowerBound!)} and {dateShort(e.upperBound!)}, {e.confidence} confidence)</span>
+                            Reorder around <strong>{dateShort(e.reorderOn)}</strong> <span className="text-on-surface-variant">(between {dateShort(e.lowerBound!)} and {dateShort(e.upperBound!)}, {e.confidence} confidence)</span>
                           </p>
                         )}
-                        {item.expiryAt && <p className="text-xs text-muted">Best before {dateShort(item.expiryAt)} (entered by you)</p>}
+                        {item.expiryAt && <p className="text-xs text-on-surface-variant">Best before {dateShort(item.expiryAt)} (entered by you)</p>}
                       </div>
                       {statusTag(e)}
                     </div>
@@ -185,7 +185,7 @@ export function PantryPage() {
                       {(e.status === 'due_soon' || e.status === 'out') && <Button size="sm" variant="ghost" onClick={() => snooze(item)} disabled={!online}>Snooze 3 days</Button>}
                       <Button size="sm" variant="ghost" icon={<Trash2 className="h-3.5 w-3.5" aria-hidden />} onClick={() => remove(item)} disabled={!online}>Remove</Button>
                     </div>
-                    <details className="mt-2 text-xs text-muted">
+                    <details className="mt-2 text-xs text-on-surface-variant">
                       <summary className="cursor-pointer">Assumptions</summary>
                       <ul className="mt-1 list-disc pl-4">{e.assumptions.map((a) => <li key={a}>{a}</li>)}</ul>
                     </details>
