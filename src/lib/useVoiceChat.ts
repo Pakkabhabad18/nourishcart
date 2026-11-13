@@ -1,10 +1,13 @@
-// Two-way voice for the setup conversation, using only the browser's built-in speech:
-//   speak(text)  -> reads a line aloud (speechSynthesis), resolves when it has finished
+// Two-way voice for the setup conversation:
+//   speak(text)  -> reads a line aloud (Sarvam Bulbul v4 voice if set up, else the browser's
+//                   speechSynthesis), resolves when it has finished
 //   listen()     -> listens for one answer (SpeechRecognition), resolves with the words
 // The microphone is never on while the app is talking, so it doesn't hear itself.
-// Chrome/Edge/Safari process speech with the browser vendor's service; nothing is sent to
-// NourishCart's servers. Firefox has no speech recognition, so the page falls back to typing.
+// Listening uses the browser's speech service (Chrome/Edge/Safari); only Nutrion's own
+// questions go to /api/speak to be voiced. Firefox has no speech recognition, so the page
+// falls back to typing.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchSpeech } from './useSpeaker.ts';
 
 interface RecognitionResult { isFinal: boolean; 0: { transcript: string } }
 interface RecognitionEvent { resultIndex: number; results: ArrayLike<RecognitionResult> }
@@ -48,30 +51,63 @@ export function useVoiceChat(lang = 'en-IN') {
     if (canSpeak) window.speechSynthesis.getVoices();
   }, [canSpeak]);
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  /** Plays Sarvam Bulbul v4 audio for `text` if the voice service is set up; false if not. */
+  const speakNatural = useCallback(async (text: string): Promise<boolean> => {
+    const urls = await fetchSpeech(text, 'en');
+    if (!urls) return false;
+    setState('speaking');
+    for (const src of urls) {
+      const ok = await new Promise<boolean>((resolve) => {
+        const a = new Audio(src);
+        audioRef.current = a;
+        a.onended = () => resolve(true);
+        a.onerror = () => resolve(false);
+        a.onpause = () => a.ended || resolve(false); // cancel() pauses it: stop the sequence
+        a.play().catch(() => resolve(false));
+      });
+      if (!ok) break;
+    }
+    audioRef.current = null;
+    setState((st) => (st === 'speaking' ? 'idle' : st));
+    return true;
+  }, []);
+
   const speak = useCallback(
     (text: string) =>
       new Promise<void>((resolve) => {
-        if (!canSpeak) return resolve();
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        const v = pickVoice();
-        if (v) u.voice = v;
-        u.lang = v?.lang ?? lang;
-        u.rate = 1.02;
-        // Some browsers never fire `end`; don't wait forever (roughly 70 ms per character).
-        const guard = window.setTimeout(done, 1500 + text.length * 70);
-        function done() {
-          window.clearTimeout(guard);
-          setState((s) => (s === 'speaking' ? 'idle' : s));
-          resolve();
-        }
-        u.onend = done;
-        u.onerror = done;
-        setState('speaking');
-        window.speechSynthesis.speak(u);
+        // Natural voice first; the browser's voice is the fallback.
+        void speakNatural(text).then((done) => {
+          if (done) return resolve();
+          speakBrowser(text, resolve);
+        });
       }),
-    [canSpeak, lang],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [speakNatural],
   );
+
+  /** The browser's own voice, used when the natural voice isn't available. */
+  function speakBrowser(text: string, resolve: () => void) {
+    if (!canSpeak) return resolve();
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = pickVoice();
+    if (v) u.voice = v;
+    u.lang = v?.lang ?? lang;
+    u.rate = 1.02;
+    // Some browsers never fire `end`; don't wait forever (roughly 70 ms per character).
+    const guard = window.setTimeout(done, 1500 + text.length * 70);
+    function done() {
+      window.clearTimeout(guard);
+      setState((st) => (st === 'speaking' ? 'idle' : st));
+      resolve();
+    }
+    u.onend = done;
+    u.onerror = done;
+    setState('speaking');
+    window.speechSynthesis.speak(u);
+  }
 
   /** Listens for one answer. Resolves with '' on silence, a blocked mic, or cancel. */
   const listen = useCallback(
@@ -116,6 +152,7 @@ export function useVoiceChat(lang = 'en-IN') {
 
   /** Stop talking and listening now (e.g. the person started typing). */
   const cancel = useCallback(() => {
+    audioRef.current?.pause();
     if (canSpeak) window.speechSynthesis.cancel();
     rec.current?.stop();
     setState('idle');

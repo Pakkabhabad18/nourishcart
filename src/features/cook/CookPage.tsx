@@ -3,9 +3,11 @@
 // checkTranslation() makes sure every quantity survived, otherwise the English note is shown.
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, MessageCircle, Volume2 } from 'lucide-react';
+import { Copy, MessageCircle, Pause, Play, Square, Volume2 } from 'lucide-react';
 import { useActiveProfile, useSelectedPlan } from '../../app/hooks.ts';
 import { useApp } from '../../app/context.tsx';
+import { useSpeaker } from '../../lib/useSpeaker.ts';
+import { Nutrion } from '../../components/Nutrion.tsx';
 import { Button, Chip, EmptyState, Notice, PageHeader, Spinner } from '../../components/ui.tsx';
 import { CAT } from '../../lib/catalog.ts';
 import { buildMenu, checkTranslation, englishNote, LANGUAGE_NAMES, SPEECH_LANG, type CookLanguage } from '../../domain/cook/note.ts';
@@ -15,6 +17,7 @@ import { useBundle } from '../../app/hooks.ts';
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export function CookPage() {
+  const speaker = useSpeaker();
   const nav = useNavigate();
   const { toast } = useApp();
   const { profile } = useActiveProfile();
@@ -67,17 +70,6 @@ export function CookPage() {
     }
   }
 
-  function speak() {
-    if (!text || !('speechSynthesis' in window)) return toast('This browser cannot read text aloud.');
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = SPEECH_LANG[shownLang];
-    const voice = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(SPEECH_LANG[shownLang].slice(0, 2)));
-    if (voice) u.voice = voice;
-    else if (shownLang !== 'en') toast(`No ${LANGUAGE_NAMES[shownLang]} voice on this device; it may sound wrong. Try Chrome on Android.`);
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-  }
-
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader title="Menu for my cook" description="The day's dishes and amounts in Telugu, Hindi or English. Play it aloud or send on WhatsApp." />
@@ -86,7 +78,7 @@ export function CookPage() {
           <p className="text-sm font-medium">Day</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {DAY_NAMES.map((d, i) => (
-              <Chip key={d} role="radio" selected={day === i} onClick={() => { setDay(i); setText(null); }}>{d.slice(0, 3)}</Chip>
+              <Chip key={d} role="radio" selected={day === i} onClick={() => { setDay(i); setText(null); speaker.stop(); }}>{d.slice(0, 3)}</Chip>
             ))}
           </div>
         </div>
@@ -94,7 +86,7 @@ export function CookPage() {
           <p className="text-sm font-medium">Language</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {(Object.keys(LANGUAGE_NAMES) as CookLanguage[]).map((l) => (
-              <Chip key={l} role="radio" selected={lang === l} onClick={() => { setLang(l); setText(null); }}>{LANGUAGE_NAMES[l]}</Chip>
+              <Chip key={l} role="radio" selected={lang === l} onClick={() => { setLang(l); setText(null); speaker.stop(); }}>{LANGUAGE_NAMES[l]}</Chip>
             ))}
           </div>
         </div>
@@ -107,8 +99,22 @@ export function CookPage() {
         <section className="card p-5">
           <p className="whitespace-pre-line leading-relaxed" lang={SPEECH_LANG[shownLang]}>{text}</p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Button variant="tonal" icon={<Volume2 className="h-4 w-4" aria-hidden />} onClick={speak}>Read aloud</Button>
-            <a className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-secondary-container px-5 text-sm font-medium text-on-secondary-container" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
+            {/* Player: Play / Pause / Resume / Stop. Natural Indian voice when available. */}
+            {speaker.state === 'idle' ? (
+              <Button variant="tonal" icon={<Volume2 className="h-4 w-4" aria-hidden />} onClick={() => speaker.play(text, shownLang)}>Read aloud</Button>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary-container p-1">
+                {speaker.state === 'loading' ? (
+                  <span className="flex items-center gap-2 px-3 text-sm text-on-primary-container"><Nutrion mood="talking" size={28} /> Getting the voice…</span>
+                ) : speaker.state === 'playing' ? (
+                  <Button size="sm" variant="tonal" icon={<Pause className="h-4 w-4" aria-hidden />} onClick={speaker.pause}>Pause</Button>
+                ) : (
+                  <Button size="sm" variant="tonal" icon={<Play className="h-4 w-4" aria-hidden />} onClick={speaker.resume}>Resume</Button>
+                )}
+                <Button size="sm" variant="ghost" icon={<Square className="h-4 w-4" aria-hidden />} onClick={speaker.stop}>Stop</Button>
+              </span>
+            )}
+            <a className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-leaf px-5 text-sm font-semibold text-white" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
               <MessageCircle className="h-4 w-4" aria-hidden /> Send on WhatsApp
             </a>
             <Button variant="ghost" icon={<Copy className="h-4 w-4" aria-hidden />} onClick={async () => { try { await navigator.clipboard.writeText(text); toast('Copied'); } catch { toast('Copy failed'); } }}>Copy</Button>

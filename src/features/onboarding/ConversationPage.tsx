@@ -17,6 +17,7 @@ import { answer, emptyConversation, nextQuestion, progress, QUESTIONS, reopen, s
 import { validateProfileForNutrition } from '../../domain/nutrition/eligibility.ts';
 import { INGREDIENT_MAP } from '../../data/ingredients.ts';
 import { useVoiceChat } from '../../lib/useVoiceChat.ts';
+import { Nutrion, type NutrionMood } from '../../components/Nutrion.tsx';
 import { AI_CONSENT_KEY, readWithAi } from '../../lib/aiIntake.ts';
 
 type Msg = { from: 'app' | 'me'; text: string };
@@ -170,15 +171,14 @@ export function ConversationPage() {
   if (q.error || !q.data) return <ErrorState error={q.error ?? new Error('Profile not found')} />;
 
   const p = progress(conv);
+  const mood: NutrionMood = mode === 'summary' ? 'happy' : thinking ? 'thinking' : voice.state === 'speaking' ? 'talking' : voice.state === 'listening' ? 'listening' : 'idle';
 
   if (mode === 'start') {
     return (
       <div className="mx-auto max-w-md pt-6 text-center">
-        <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-primary text-on-primary">
-          <Mic className="h-9 w-9" aria-hidden />
-        </span>
-        <h1 className="mt-6 text-2xl sm:text-3xl">Let's set up {name}</h1>
-        <p className="mt-2 text-on-surface-variant">I'll ask about 12 short questions, one at a time. Takes about two minutes.</p>
+        <Nutrion mood="happy" size={120} className="mx-auto" />
+        <h1 className="mt-4 text-3xl">Hi {name}, I'm Nutrion!</h1>
+        <p className="mt-2 text-on-surface-variant">Let's set you up. I'll ask about 12 short questions, one at a time. Takes about two minutes.</p>
         <div className="mt-8 flex flex-col gap-3">
           {voice.canListen && (
             <Button size="lg" icon={<Mic className="h-5 w-5" aria-hidden />} onClick={() => begin(true)}>
@@ -222,6 +222,7 @@ export function ConversationPage() {
       {mode === 'chat' && (
       <div className="sticky top-16 z-10 -mx-4 bg-surface px-4 pb-3 pt-1">
         <div className="flex items-center gap-3">
+          <Nutrion mood={mood} size={44} />
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-container-highest" role="progressbar" aria-valuemin={0} aria-valuemax={p.total} aria-valuenow={p.done} aria-label="Questions answered">
             <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${(p.done / p.total) * 100}%` }} />
           </div>
@@ -239,17 +240,18 @@ export function ConversationPage() {
       </div>
       )}
 
-      {mode === 'summary' && <h1 className="mb-1 text-2xl">Check your answers</h1>}
-      {mode === 'summary' && <p className="mb-4 text-on-surface-variant">Tap the pencil to change anything.</p>}
+      {mode === 'summary' && <Nutrion mood="happy" size={72} className="mx-auto mb-2" />}
+      {mode === 'summary' && <h1 className="mb-1 text-center text-2xl">Check your answers</h1>}
+      {mode === 'summary' && <p className="mb-4 text-center text-on-surface-variant">Tap the pencil to change anything.</p>}
       {/* Chat (hidden once everything is answered, so the summary is the focus) */}
       <ol hidden={mode === 'summary'} className="flex flex-col gap-3 pb-4" aria-live="polite">
         {msgs.map((m, i) => (
-          <li key={i} className={clsx('max-w-[85%] rounded-[20px] px-4 py-2.5', m.from === 'app' ? 'self-start rounded-bl-md bg-surface-container-high' : 'self-end rounded-br-md bg-primary text-on-primary')}>
+          <li key={i} className={clsx('rise max-w-[85%] rounded-[20px] px-4 py-2.5', m.from === 'app' ? 'self-start rounded-bl-md bg-primary-container text-on-primary-container' : 'self-end rounded-br-md bg-primary text-on-primary')}>
             {m.text}
           </li>
         ))}
         {listening && voice.interim && <li className="max-w-[85%] self-end rounded-[20px] rounded-br-md bg-primary/60 px-4 py-2.5 text-on-primary">{voice.interim}</li>}
-        {thinking && <li className="self-start text-sm text-on-surface-variant">Reading that…</li>}
+        {thinking && <li className="self-start text-sm text-on-surface-variant">Nutrion is thinking…</li>}
       </ol>
 
       {mode === 'summary' && draft && (
