@@ -12,7 +12,8 @@ echo "1/4 Linking this folder to Supabase project $REF"
 npx supabase link --project-ref "$REF"
 
 echo "2/4 Creating tables, security rules and sample food data (migrations + seed.sql)"
-npx supabase db push --include-seed
+# --linked: newer CLI versions push to the local stack unless told to use the linked project
+npx supabase db push --linked --include-seed
 
 echo "3/4 Deploying server functions (targets, plan options, checkout, account deletion)"
 npm run sync:functions
