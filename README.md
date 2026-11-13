@@ -14,14 +14,17 @@ Working end to end in demo mode and against a local Supabase stack. See [BUILD_S
 | Area | State |
 |---|---|
 | Email OTP sign-in | Working locally with Supabase + Mailpit (tested). Hosted: Gmail app-password SMTP steps ready (AUTH_AND_SMTP_SETUP.md §3), needs the team to enter the password in Supabase. |
-| Onboarding | Speak or type a description once; the app fills the profile, quotes the words it used and asks only what is missing. Step-by-step form still available. |
+| Onboarding | Speak or type a description once (optional AI reader on Groq, checked by rules); the app fills the profile, quotes the words it used and asks only what is missing. Step-by-step form still available. |
 | Profiles, nutrition estimates | Working. Energy method is provisional and unreviewed. |
 | Look and feel | Material Design 3 (Google's design kit), colours generated from one seed with Material Color Utilities |
 | Three plans, weekly planner, meal replacement | Working |
 | Groceries, budget negotiation, simulated checkout, orders | Working |
 | Pantry, replenishment, scheduled draft basket | Working |
-| Store ordering | Swiggy Instamart cart filled automatically (sandbox until Builders Club access), plus an Instamart/Zepto shopping checklist |
-| Evaluation | 25 gates, 384 synthetic people, independent checker; shown in the app under Evaluation (EVALUATION.md) |
+| Price comparison | Zepto vs Instamart for the whole basket, read in the person's own browser by the NourishCart Shopper extension; AI (Gemini) reads the pages, our checks verify every price; optional "add to my cart" that stops before checkout |
+| Label scan | Photo of a packet → AI copies the label → our word lists say who in the household it suits, quoting the label |
+| Cook note | The day's menu with amounts in Telugu or Hindi (AI translation, every quantity checked), read aloud or sent on WhatsApp |
+| Store ordering (sandbox) | Swiggy Instamart cart via the official Builders Club tool flow, on a sandbox until access is granted |
+| Evaluation | 31 gates (no key needed) + 5 live-model evaluations; shown in the app under Evaluation (EVALUATION.md) |
 
 ## Connect the live site to a real backend (team, once)
 
