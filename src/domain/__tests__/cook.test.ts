@@ -1,7 +1,7 @@
 // Cook note: the menu comes from the plan, and a translation is only used if every quantity survived.
 import { buildMenu, checkTranslation, englishNote } from '../cook/note.ts';
 import { generatePlanOptions } from '../planning/plan.ts';
-import { calculateTargets } from '../nutrition/targets.ts';
+import { calculateTargets, planTargetsFrom } from '../nutrition/targets.ts';
 import { CAT } from '../../lib/catalog.ts';
 import { goldenBundle } from '../../test/fixtures.ts';
 
@@ -10,7 +10,7 @@ describe('cook note', () => {
     const b = goldenBundle();
     const t = calculateTargets(b);
     if (!t.ok) throw new Error('not eligible');
-    const p = generatePlanOptions(b, { energyKcal: t.record.planningEnergyKcal, proteinEarG: t.record.protein.earG, proteinRdaG: t.record.protein.rdaG }, CAT);
+    const p = generatePlanOptions(b, planTargetsFrom(t.record), CAT);
     const menu = buildMenu(p.plans[0], 0, CAT);
     expect(menu.length).toBe(p.plans[0].meals.filter((m) => m.day === 0).length);
     const note = englishNote(menu, 'Monday');

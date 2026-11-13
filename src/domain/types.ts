@@ -76,9 +76,26 @@ export interface ProfileBudget {
   mode: BudgetMode;
 }
 
+/** Body goal: decides whether the energy target sits below, at or above maintenance. */
+export type BodyGoal = 'lose' | 'maintain' | 'gain';
+/** Nutrients a person wants their week to be richer in (for example after a blood test). */
+export type FocusNutrient = 'iron' | 'calcium' | 'b12' | 'vitamin_d' | 'folate' | 'zinc';
+
+/** Numbers the person typed in themselves. null = use the suggested value. */
+export interface CustomTargets {
+  kcal: number | null;
+  proteinG: number | null;
+  carbsG: number | null;
+  fatG: number | null;
+  fibreG: number | null;
+}
+
 export interface Goals {
   profileId: string;
   goal: Goal | null;
+  bodyGoal: BodyGoal | null;
+  custom: CustomTargets;
+  focusNutrients: FocusNutrient[];
 }
 
 /** Everything the engines need for one profile, assembled by the store. */

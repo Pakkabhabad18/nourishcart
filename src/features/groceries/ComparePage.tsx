@@ -2,21 +2,23 @@
 //
 // 1. The NourishCart Shopper extension opens each store's own search page for every item,
 //    in the person's own browser (their location and login), and copies the visible text.
-// 2. AI (Gemini) reads the products off each page. Every product is checked against the page
+// 2. An AI model reads the products off each page. Every product is checked against the page
 //    text, so nothing invented or planted by a page gets through (listings.ts).
 // 3. Deterministic code picks the cheapest safe product per item and store and totals three
 //    options: all from Zepto, all from Instamart, or the cheapest store per item (compare.ts).
-// Nothing is added to any cart and nothing is bought from this screen.
+// 4. Only after the person confirms, the extension clicks Add on the chosen products in their
+//    own store tab. Nothing is ever paid for from here; checkout happens in the store's app.
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, ExternalLink, Puzzle, Scale } from 'lucide-react';
 import { useActiveProfile, useBundle, useGroceryPipeline, usePantry, useSelectedPlan } from '../../app/hooks.ts';
-import { Button, EmptyState, ErrorState, Notice, PageHeader, Spinner, Stat, Tag } from '../../components/ui.tsx';
+import { Button, EmptyState, ErrorState, Notice, PageHeader, Spinner, Tag } from '../../components/ui.tsx';
 import { CAT } from '../../lib/catalog.ts';
 import { formatInr } from '../../lib/format.ts';
 import { searchQueries } from '../../domain/commerce/instamart.ts';
 import { compareStores, STORE_NAMES, type CompareLine, type Comparison, type StoreId } from '../../domain/commerce/compare.ts';
 import type { Listing, PageInput, PageState } from '../../domain/commerce/listings.ts';
+import { markCartFilled } from '../../lib/cartFilled.ts';
 import { aiReadListings, detectShopper, fillStoreCart, readStorePages, STORE_SEARCH, type FillStatus, type ReadJob } from '../../lib/shopper.ts';
 import { STORE_PAGES } from '../../eval/datasets/storePages.ts';
 
@@ -46,13 +48,13 @@ export function ComparePage() {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [result, setResult] = useState<Comparison | null>(null);
   const [problems, setProblems] = useState<Record<StoreId, { item: string; state: PageState }[]>>({ zepto: [], instamart: [] });
-  const [model, setModel] = useState<string | null>(null);
   const [checksRejected, setChecksRejected] = useState(0);
   const [sample, setSample] = useState(false);
   // Cart filling: which store the person is confirming, and what happened per item.
   const [confirmStore, setConfirmStore] = useState<StoreId | null>(null);
   const [filling, setFilling] = useState<StoreId | null>(null);
   const [fillResults, setFillResults] = useState<Record<string, FillStatus>>({});
+  const [mode, setMode] = useState<'single' | 'split'>('single');
 
   useEffect(() => {
     detectShopper().then((v) => setShopper(v ?? 'missing'));
@@ -62,7 +64,7 @@ export function ComparePage() {
   if (isLoading || bundle.isLoading || pantry.isLoading) return <Spinner label="Preparing your basket" />;
   if (bundle.error) return <ErrorState error={bundle.error} />;
   if (!plan || !pipe || !bundle.data)
-    return <EmptyState title="Choose a meal plan first" action={<Button onClick={() => nav('/plans')}>Go to meal plans</Button>}>The comparison uses this week's grocery basket.</EmptyState>;
+    return <EmptyState title="Pick your meals first" action={<Button onClick={() => nav('/plans')}>Pick meals</Button>}>We compare the shopping list for this week's meals.</EmptyState>;
 
   const b = bundle.data;
   const rules = { dietPattern: b.preferences.dietPattern!, allergies: b.preferences.allergies, hardExclusions: b.preferences.hardExclusions };
@@ -85,7 +87,6 @@ export function ComparePage() {
       rejected += p.rejected.filter((r) => r.title !== '*').length;
       if (p.state !== 'ok' && p.state !== 'no_results') probs[store].push({ item: lines.find((l) => l.ingredientId === ingredientId)?.name ?? ingredientId, state: p.state });
     }
-    setModel(ai.model);
     setChecksRejected(rejected);
     setProblems(probs);
     setResult(compareStores(lines, listings, CAT.ingredients, rules));
@@ -125,100 +126,172 @@ export function ComparePage() {
 
   const busy = phase.kind === 'reading' || phase.kind === 'ai' || filling !== null;
 
-  /** Items where this store is the cheapest choice (the split option). */
-  const itemsFor = (s: StoreId) => (result ? result.lines.filter((l) => l.cheapest === s).map((l) => ({ line: l.line, pick: l.best[s]! })) : []);
+  /**
+   * Items to put in a store's cart. 'single' = everything that store has (one delivery);
+   * 'split' = only the items where this store is the cheaper one.
+   */
+  const itemsFor = (s: StoreId, m: 'single' | 'split' = mode) =>
+    result ? result.lines.filter((l) => (m === 'single' ? !!l.best[s] : l.cheapest === s)).map((l) => ({ line: l.line, pick: l.best[s]! })) : [];
 
   async function fill(s: StoreId) {
     setConfirmStore(null);
     setFilling(s);
     const items = itemsFor(s).map(({ line, pick }) => ({ id: line.ingredientId, store: s, url: STORE_SEARCH[s](searchQueries(line)[0]), title: pick.title, price: pick.priceInr, packs: pick.packs }));
-    await fillStoreCart(items, (id, status) => setFillResults((r) => ({ ...r, [`${s}:${id}`]: status })));
+    let added = 0;
+    await fillStoreCart(items, (id, status) => {
+      if (status === 'added' || status === 'already_in_cart') added++;
+      setFillResults((r) => ({ ...r, [`${s}:${id}`]: status }));
+    });
     setFilling(null);
+    // Remembered in this browser so Today can show the week's groceries as done.
+    if (added > 0) markCartFilled(plan!.id);
   }
   const best = result ? STORES.filter((s) => result.totals[s].found === result.lines.length).sort((a, c) => result.totals[a].costInr - result.totals[c].costInr)[0] : undefined;
 
+  const ready = shopper !== 'checking' && shopper !== 'missing';
+  const saving = best && result ? result.totals[best].costInr - result.split.costInr : 0;
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-5">
       <Link to="/groceries" className="inline-flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-on-surface">
-        <ArrowLeft className="h-4 w-4" aria-hidden /> Groceries
+        <ArrowLeft className="h-4 w-4" aria-hidden /> Shopping list
       </Link>
-      <PageHeader title="Compare prices" description={`Checks today's prices for your ${basketLines.length} grocery items on Zepto and Swiggy Instamart, using your own browser.`} />
+      <PageHeader title="Compare stores" description={`Today's Zepto and Instamart prices for your ${basketLines.length} items, in your delivery area.`} />
 
-      <section className="card p-5">
-        {shopper === 'checking' && <p className="text-sm text-on-surface-variant">Looking for the NourishCart Shopper extension…</p>}
-        {shopper === 'missing' && (
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <Puzzle className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-              <div>
-                <h2 className="font-medium">Add the NourishCart Shopper extension (Chrome or Edge, on a computer)</h2>
-                <p className="text-sm text-on-surface-variant">It opens each store's search page in the background of your own browser, so prices match your delivery area. It only reads search results: it never logs in, adds to cart or pays.</p>
+      {!result && (
+        <section className="card p-5">
+          {shopper === 'checking' && <p className="text-sm text-on-surface-variant">Checking for the NourishCart helper…</p>}
+          {shopper === 'missing' && (
+            <>
+              <div className="flex items-start gap-3">
+                <Puzzle className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+                <div>
+                  <h2 className="font-medium">One-time setup on a computer</h2>
+                  <p className="text-sm text-on-surface-variant">A small Chrome or Edge add-on checks the stores in your own browser, so prices match your area.</p>
+                </div>
               </div>
-            </div>
-            <ol className="list-decimal space-y-1 pl-10 text-sm">
-              <li>
-                <a className="text-primary hover:underline" href="/nourishcart-shopper.zip" download>
-                  Download the extension <Download className="inline h-3.5 w-3.5" aria-hidden />
-                </a>{' '}
-                and unzip it.
-              </li>
-              <li>
-                Open <code>chrome://extensions</code>, turn on <strong>Developer mode</strong>, click <strong>Load unpacked</strong> and choose the unzipped folder.
-              </li>
-              <li>Open zepto.com and swiggy.com/instamart once and set your delivery location.</li>
-              <li>Come back here and reload the page.</li>
-            </ol>
-          </div>
-        )}
-        {shopper !== 'checking' && shopper !== 'missing' && (
-          <p className="text-sm">
-            <Tag tone="good">Extension ready</Tag> Version {shopper}. Make sure your delivery location is set on both stores so prices are right for you.
-          </p>
-        )}
+              <ol className="mt-3 list-decimal space-y-1.5 pl-10 text-sm">
+                <li>
+                  <a className="text-primary hover:underline" href="/nourishcart-shopper.zip" download>
+                    Download the helper <Download className="inline h-3.5 w-3.5" aria-hidden />
+                  </a>{' '}
+                  and unzip it.
+                </li>
+                <li>Go to <code>chrome://extensions</code>, switch on Developer mode, click Load unpacked and pick the folder.</li>
+                <li>Open zepto.com and swiggy.com/instamart once, sign in and set your address. Then reload this page.</li>
+              </ol>
+            </>
+          )}
+          {ready && <p className="text-sm"><Tag tone="good">Helper ready</Tag> Make sure you're signed in on both stores with your address set.</p>}
 
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Button icon={<Scale className="h-4 w-4" aria-hidden />} onClick={runLive} loading={busy && !sample} disabled={busy || shopper === 'missing' || shopper === 'checking'}>
-            Compare {basketLines.length} items now
-          </Button>
-          <Button variant="secondary" onClick={runSample} loading={busy && sample} disabled={busy}>
-            Try it on saved store pages
-          </Button>
-        </div>
-        {phase.kind === 'reading' && <Progress label={`Reading store pages in your browser: ${phase.done} of ${phase.total}`} value={phase.done / Math.max(1, phase.total)} />}
-        {phase.kind === 'ai' && <Progress label={`AI is reading the products: ${phase.done} of ${phase.total} batches`} value={phase.done / Math.max(1, phase.total)} />}
-        {phase.kind === 'error' && <Notice className="mt-4" tone="danger">{phase.message}</Notice>}
-      </section>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {ready && (
+              <Button size="lg" icon={<Scale className="h-4 w-4" aria-hidden />} onClick={runLive} loading={busy && !sample} disabled={busy}>
+                Compare {basketLines.length} items
+              </Button>
+            )}
+            <Button variant={ready ? 'ghost' : 'secondary'} onClick={runSample} loading={busy && sample} disabled={busy}>
+              See an example
+            </Button>
+          </div>
+          {phase.kind === 'reading' && <Progress label={`Checking store pages: ${phase.done} of ${phase.total}`} value={phase.done / Math.max(1, phase.total)} />}
+          {phase.kind === 'ai' && <Progress label={`Reading products: ${phase.done} of ${phase.total}`} value={phase.done / Math.max(1, phase.total)} />}
+          {phase.kind === 'error' && <Notice className="mt-4" tone="danger">{phase.message}</Notice>}
+        </section>
+      )}
 
       {result && (
         <>
-          {sample && <Notice tone="info">Saved pages for toor dal and paneer, captured from Zepto and Instamart on 13 Nov 2026. Instamart asked for a login on the paneer page, so that one is shown as a problem.</Notice>}
+          {sample && <Notice>Example using saved Zepto and Instamart pages for toor dal and paneer (13 Nov 2026). Instamart asked for a login on one page, so you can see how that's handled.</Notice>}
           {STORES.map((s) =>
             problems[s].length ? (
               <Notice key={s} tone="warn" title={`${STORE_NAMES[s]} ${STATE_TEXT[problems[s][0].state as Exclude<PageState, 'ok'>]} for ${problems[s].length} item${problems[s].length === 1 ? '' : 's'}`}>
-                Open {STORE_NAMES[s]} in this browser, sign in or set your location, then compare again. Affected: {problems[s].map((p) => p.item).join(', ')}.
+                Open {STORE_NAMES[s]}, sign in or set your address, then compare again.
               </Notice>
             ) : null,
           )}
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            {STORES.map((s) => (
-              <Stat key={s} label={`Everything from ${STORE_NAMES[s]}`} value={formatInr(result.totals[s].costInr)} sub={`${result.totals[s].found} of ${result.lines.length} items found${best === s ? ' · cheapest single store' : ''}`} />
-            ))}
-            <Stat label="Cheapest store for each item" value={formatInr(result.split.costInr)} sub={`${result.split.found} of ${result.lines.length} items; two deliveries`} />
-          </div>
-          <p className="text-xs text-on-surface-variant">
-            Item prices only. Delivery, handling and small-cart fees depend on your cart and membership, and each store shows them at checkout. {sample ? 'Prices come from the saved pages' : 'Prices were read just now from your browser'}{model ? ` by AI (${model})` : ''}; {checksRejected} AI reading{checksRejected === 1 ? ' was' : 's were'} thrown out by our checks.
-          </p>
+          {/* The answer first: which store, how much, one button. */}
+          <section className="card p-5">
+            {best ? (
+              <>
+                <p className="text-sm text-on-surface-variant">Cheapest for everything</p>
+                <p className="mt-0.5 text-2xl">
+                  {STORE_NAMES[best]} <span className="num">{formatInr(result.totals[best].costInr)}</span>
+                </p>
+                <p className="num text-sm text-on-surface-variant">
+                  {STORES.filter((x) => x !== best).map((x) => `${STORE_NAMES[x]} ${result.totals[x].found === result.lines.length ? formatInr(result.totals[x].costInr) : `has ${result.totals[x].found} of ${result.lines.length}`}`).join(' · ')}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm">Neither store has every item. Splitting across both covers {result.split.found} of {result.lines.length} for {formatInr(result.split.costInr)}.</p>
+            )}
 
-          <section className="card overflow-hidden">
+            {!sample && ready && (
+              <>
+                <div className="mt-4 flex flex-wrap gap-2" role="radiogroup" aria-label="How to order">
+                  {best && (
+                    <button role="radio" aria-checked={mode === 'single'} className="chip" onClick={() => setMode('single')}>
+                      One store
+                    </button>
+                  )}
+                  <button role="radio" aria-checked={mode === 'split' || !best} className="chip" onClick={() => setMode('split')}>
+                    Split across both{saving > 0 ? `, save ${formatInr(saving)}` : ''}
+                  </button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {(mode === 'single' && best ? [best] : STORES.filter((x) => itemsFor(x, 'split').length)).map((x) => (
+                    <Button key={x} size="lg" onClick={() => setConfirmStore(x)} disabled={busy} loading={filling === x}>
+                      Fill my {STORE_NAMES[x]} cart ({itemsFor(x).length})
+                    </Button>
+                  ))}
+                </div>
+              </>
+            )}
+            {confirmStore && (
+              <Notice className="mt-4" tone="warn" title={`Add ${itemsFor(confirmStore).length} items to your ${STORE_NAMES[confirmStore]} cart?`}>
+                <ul className="mt-1 list-disc pl-5">
+                  {itemsFor(confirmStore).map(({ line, pick }) => (
+                    <li key={line.ingredientId}>
+                      {pick.title}
+                      {pick.packs > 1 ? ` × ${pick.packs}` : ''} ({formatInr(pick.costInr)})
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2">Store tabs open one by one. Nothing is paid; you check out in {STORE_NAMES[confirmStore]} yourself.</p>
+                <div className="mt-3 flex gap-3">
+                  <Button onClick={() => fill(confirmStore)}>Yes, add them</Button>
+                  <Button variant="ghost" onClick={() => setConfirmStore(null)}>Cancel</Button>
+                </div>
+              </Notice>
+            )}
+            {Object.keys(fillResults).length > 0 && (
+              <ul className="mt-4 space-y-1 text-sm" aria-live="polite">
+                {Object.entries(fillResults).map(([k, st]) => {
+                  const [st0, id] = k.split(':') as [StoreId, string];
+                  const l = result.lines.find((x) => x.line.ingredientId === id);
+                  const text: Record<FillStatus, string> = { added: 'added', already_in_cart: 'already in your cart', not_found: "couldn't find this exact product, please add it yourself", needs_login_or_location: 'sign in or set your address on the store, then try again', not_allowed: 'not allowed', error: 'something went wrong' };
+                  return (
+                    <li key={k}>
+                      <Tag tone={st === 'added' || st === 'already_in_cart' ? 'good' : 'warn'}>{STORE_NAMES[st0]}</Tag> {l?.best[st0]?.title ?? id}: {text[st]}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {Object.values(fillResults).some((x) => x === 'added' || x === 'already_in_cart') && !filling && (
+              <p className="mt-3 text-sm font-medium">Done. Open the store app to check the cart and pay.</p>
+            )}
+            <p className="mt-4 text-xs text-on-surface-variant">Item prices only; each store adds its own delivery fees at checkout. {checksRejected > 0 ? `${checksRejected} product readings didn't match the page and were ignored.` : ''}</p>
+          </section>
+
+          <details className="card overflow-hidden">
+            <summary className="cursor-pointer px-5 py-4 font-medium">Item by item</summary>
             <table className="w-full text-sm">
               <thead className="bg-surface-container text-left text-on-surface-variant">
                 <tr>
                   <th className="px-4 py-2 font-medium">Item</th>
-                  {STORES.map((s) => (
-                    <th key={s} className="px-4 py-2 font-medium">
-                      {STORE_NAMES[s]}
-                    </th>
+                  {STORES.map((x) => (
+                    <th key={x} className="px-4 py-2 font-medium">{STORE_NAMES[x]}</th>
                   ))}
                 </tr>
               </thead>
@@ -229,39 +302,30 @@ export function ComparePage() {
                       <span className="font-medium">{r.line.name}</span>
                       <span className="block text-xs text-on-surface-variant">need {fmtQty(r.line.demandQty, r.line.unit)}</span>
                     </td>
-                    {STORES.map((s) => {
-                      const p = r.best[s];
-                      const refused = r.refused[s] ?? [];
+                    {STORES.map((x) => {
+                      const pk = r.best[x];
+                      const refused = r.refused[x] ?? [];
                       return (
-                        <td key={s} className={`px-4 py-3 ${r.cheapest === s ? 'bg-secondary-container/40' : ''}`}>
-                          {p ? (
+                        <td key={x} className={`px-4 py-3 ${r.cheapest === x ? 'bg-secondary-container/40' : ''}`}>
+                          {pk ? (
                             <>
-                              <span className="font-medium">{formatInr(p.costInr)}</span> {r.cheapest === s && <Tag tone="good">Cheapest</Tag>}
-                              <span className="block">
-                                {p.title}
-                                {p.packs > 1 ? ` × ${p.packs}` : ''}
-                              </span>
-                              <span className="block text-xs text-on-surface-variant">
-                                {p.pack} · {formatInr(Math.round(p.unitPriceInr))}/{unitLabel(r.line.unit)}
-                                {p.mrpInr ? ` · MRP ${formatInr(p.mrpInr)}` : ''}
-                                {p.sponsored ? ' · ad' : ''}
-                              </span>
+                              <span className="num font-medium">{formatInr(pk.costInr)}</span>
+                              <span className="block">{pk.title}{pk.packs > 1 ? ` × ${pk.packs}` : ''}</span>
+                              <span className="block text-xs text-on-surface-variant">{pk.pack}, {formatInr(Math.round(pk.unitPriceInr))}/{unitLabel(r.line.unit)}</span>
                             </>
                           ) : (
                             <span className="text-on-surface-variant">Not found</span>
                           )}
                           <span className="mt-1 flex flex-wrap gap-x-3 text-xs">
-                            <a className="inline-flex items-center gap-1 text-primary hover:underline" href={STORE_SEARCH[s](searchQueries(r.line)[0])} target="_blank" rel="noreferrer">
+                            <a className="inline-flex items-center gap-1 text-primary hover:underline" href={STORE_SEARCH[x](searchQueries(r.line)[0])} target="_blank" rel="noreferrer">
                               Open <ExternalLink className="h-3 w-3" aria-hidden />
                             </a>
                             {refused.length > 0 && (
                               <details>
-                                <summary className="cursor-pointer text-on-surface-variant">{refused.length} left out</summary>
+                                <summary className="cursor-pointer text-on-surface-variant">{refused.length} skipped</summary>
                                 <ul className="mt-1 list-disc pl-4 text-on-surface-variant">
-                                  {refused.slice(0, 8).map((x, i) => (
-                                    <li key={i}>
-                                      {x.title}: {x.reason}
-                                    </li>
+                                  {refused.slice(0, 8).map((y, i) => (
+                                    <li key={i}>{y.title}: {y.reason}</li>
                                   ))}
                                 </ul>
                               </details>
@@ -274,54 +338,9 @@ export function ComparePage() {
                 ))}
               </tbody>
             </table>
-          </section>
-          {!sample && shopper !== 'missing' && shopper !== 'checking' && (
-            <section className="card p-5">
-              <h2 className="text-lg font-medium">Put the cheapest picks in your carts</h2>
-              <p className="mt-1 text-sm text-on-surface-variant">
-                The extension opens each store's search page in front of you and clicks Add on the exact product chosen above, after checking its name and price on the card. It stops there: you review the cart and pay in the store's own app or site.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-3">
-                {STORES.filter((s) => itemsFor(s).length).map((s) => (
-                  <Button key={s} variant="tonal" onClick={() => setConfirmStore(s)} disabled={busy} loading={filling === s}>
-                    Add {itemsFor(s).length} item{itemsFor(s).length === 1 ? '' : 's'} to my {STORE_NAMES[s]} cart
-                  </Button>
-                ))}
-              </div>
-              {confirmStore && (
-                <Notice className="mt-4" tone="warn" title={`Add ${itemsFor(confirmStore).length} items to your ${STORE_NAMES[confirmStore]} cart?`}>
-                  <ul className="mt-1 list-disc pl-5">
-                    {itemsFor(confirmStore).map(({ line, pick }) => (
-                      <li key={line.ingredientId}>
-                        {pick.title}
-                        {pick.packs > 1 ? ` × ${pick.packs}` : ''} ({formatInr(pick.costInr)})
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-2">Tabs will open one by one while it works. Nothing is ordered or paid.</p>
-                  <div className="mt-3 flex gap-3">
-                    <Button onClick={() => fill(confirmStore)}>Yes, add them</Button>
-                    <Button variant="ghost" onClick={() => setConfirmStore(null)}>Cancel</Button>
-                  </div>
-                </Notice>
-              )}
-              {Object.keys(fillResults).length > 0 && (
-                <ul className="mt-4 space-y-1 text-sm" aria-live="polite">
-                  {Object.entries(fillResults).map(([k, st]) => {
-                    const [s, id] = k.split(':') as [StoreId, string];
-                    const l = result.lines.find((x) => x.line.ingredientId === id);
-                    const text: Record<FillStatus, string> = { added: 'added', already_in_cart: 'already in your cart', not_found: "couldn't find that exact product on the page, add it yourself", needs_login_or_location: 'the store asked you to log in or set your location; do that, then try again', not_allowed: 'not allowed', error: 'something went wrong' };
-                    return (
-                      <li key={k}>
-                        <Tag tone={st === 'added' || st === 'already_in_cart' ? 'good' : 'warn'}>{STORE_NAMES[s]}</Tag> {l?.best[s]?.title ?? id}: {text[st]}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
-          )}
-          {result.missingEverywhere.length > 0 && <Notice tone="info">Not found on either store: {result.missingEverywhere.join(', ')}. Search for these yourself or pick a substitute.</Notice>}
+          </details>
+          {result.missingEverywhere.length > 0 && <Notice>Not on either store: {result.missingEverywhere.join(', ')}.</Notice>}
+          <Button variant="ghost" onClick={() => { setResult(null); setPhase({ kind: 'idle' }); setFillResults({}); }}>Compare again</Button>
         </>
       )}
     </div>

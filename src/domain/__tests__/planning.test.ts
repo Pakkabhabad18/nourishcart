@@ -1,14 +1,14 @@
 // Recipe aggregation, missing data, allergy filtering, plan generation/validation and replacement.
 import { aggregateLines, aggregateRecipeNutrition, calculateNutrientCoverage } from '../recipes/aggregate.ts';
 import { recipeRejection, productRejection } from '../diet.ts';
-import { calculateTargets } from '../nutrition/targets.ts';
+import { calculateTargets, planTargetsFrom } from '../nutrition/targets.ts';
 import { eligibleRecipes, evaluatePlan, generatePlanOptions, replaceMeal, replacementCandidates, restrictionsOf, validatePlanAgainstTargets, type PlanTargets } from '../planning/plan.ts';
 import { CAT, goldenBundle, NOW } from '../../test/fixtures.ts';
 
 function targetsFor(b = goldenBundle()): PlanTargets {
   const t = calculateTargets(b, NOW);
   if (!t.ok) throw new Error('not eligible');
-  return { energyKcal: t.record.planningEnergyKcal, proteinEarG: t.record.protein.earG, proteinRdaG: t.record.protein.rdaG };
+  return planTargetsFrom(t.record);
 }
 
 describe('recipe aggregation', () => {

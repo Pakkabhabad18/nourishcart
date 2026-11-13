@@ -4,6 +4,8 @@ import type { ProfileBundle, Sex } from '../types.ts';
 import { validateProfileForNutrition, type EligibilityResult } from './eligibility.ts';
 import { estimateEnergyRequirement, type EnergyEstimate } from './energy.ts';
 import { estimateProteinRequirement, type ProteinEstimate } from './protein.ts';
+import { personalTargets, BODY_GOAL_LABEL, type PersonalTargets } from './personal.ts';
+import type { PlanTargets } from '../planning/plan.ts';
 import { CALCULATOR_ID, CALCULATOR_VERSION, ICMR_REFERENCE_ENERGY, METHODS } from './methods.ts';
 
 export interface MacroRanges {
@@ -43,9 +45,12 @@ export interface CalculationRecord {
   activityMappingId: string;
   energy: EnergyEstimate;
   planningEnergyKcal: number;
-  goalAdjustmentKcal: 0;
+  /** planningEnergyKcal minus maintenance: negative for fat loss, positive for muscle gain. */
+  goalAdjustmentKcal: number;
   protein: ProteinEstimate;
   macros: MacroRanges;
+  /** The person's targets (goal + their own numbers, inside safety limits). Older records may lack it. */
+  personal?: PersonalTargets;
   referenceContext: {
     label: string;
     rows: { work: string; kcal: number }[];
@@ -71,6 +76,7 @@ export function calculateTargets(b: ProfileBundle, now: Date = new Date()): Targ
   const heightCm = p.heightCm as number;
   const energy = estimateEnergyRequirement({ sex, ageYears: eligibility.ageYears, weightKg, activity: b.activity });
   const protein = estimateProteinRequirement(weightKg, b.goals.goal);
+  const personal = personalTargets({ maintenanceKcal: energy.teeKcal, bmrKcal: energy.bmrKcal, weightKg, sex, earG: protein.earG, goals: b.goals });
   const bmi = Math.round((weightKg / (heightCm / 100) ** 2) * 10) / 10;
 
   const limitations = [
@@ -78,11 +84,12 @@ export function calculateTargets(b: ProfileBundle, now: Date = new Date()): Targ
     'Activity is self-reported; the activity mapping is a product assumption inside FAO lifestyle bands.',
     ...energy.notes,
   ];
-  if (b.goals.goal === 'weight_management') {
+  if (personal.bodyGoal !== 'maintain') {
     limitations.push(
-      'For weight management, plans stay close to your estimated maintenance energy. Any intentional deficit or surplus should be agreed with a qualified professional.',
+      `${BODY_GOAL_LABEL[personal.bodyGoal]}: plans use ${personal.kcal.value} kcal against an estimated maintenance of ${personal.maintenanceKcal} kcal. We never go more than 20% below maintenance or below your resting energy. Check with a doctor before a long diet.`,
     );
   }
+  limitations.push(...personal.notes);
   const refSex = sex === 'prefer_not_to_say' ? null : sex;
   const referenceContext = refSex
     ? {
@@ -117,10 +124,11 @@ export function calculateTargets(b: ProfileBundle, now: Date = new Date()): Targ
     coefficientSetId: 'fao2004.table5_2.schofield',
     activityMappingId: `${METHODS.activity.id}@${METHODS.activity.version}`,
     energy,
-    planningEnergyKcal: energy.teeKcal,
-    goalAdjustmentKcal: 0,
+    planningEnergyKcal: personal.kcal.value,
+    goalAdjustmentKcal: personal.kcal.value - energy.teeKcal,
     protein,
     macros: estimateMacroRanges(),
+    personal,
     referenceContext,
     bmi,
     confidence: sex === 'prefer_not_to_say' ? 'low' : 'medium',
@@ -133,4 +141,19 @@ export function calculateTargets(b: ProfileBundle, now: Date = new Date()): Targ
     ],
   };
   return { ok: true, record, eligibility };
+}
+
+/**
+ * The numbers the meal planner works with. The EAR stays the hard protein floor; the
+ * person's protein, carb, fat and fibre targets and focus nutrients steer the choice of
+ * meals and are reported back, but a plan is never rejected for missing a soft aim.
+ */
+export function planTargetsFrom(record: CalculationRecord): PlanTargets {
+  const p = record.personal;
+  return {
+    energyKcal: record.planningEnergyKcal,
+    proteinEarG: record.protein.earG,
+    proteinRdaG: record.protein.rdaG,
+    ...(p ? { proteinTargetG: p.proteinG.value, carbsG: p.carbsG.value, fatG: p.fatG.value, fibreG: p.fibreG.value, focus: p.focusNutrients } : {}),
+  };
 }

@@ -4,7 +4,7 @@ import { bestCombination, optimiseBasket } from '../grocery/optimise.ts';
 import { mergePatch } from '../grocery/negotiate.ts';
 import { simulateCheckout, idempotencyKeyFor, canTransitionOrder, canTransitionBasket, type StoredBasket } from '../orders/checkout.ts';
 import { applyOrderToPantry, estimateReplenishment, plannedDailyConsumption, clampQuantity, type PantryItem } from '../inventory/pantry.ts';
-import { calculateTargets } from '../nutrition/targets.ts';
+import { calculateTargets, planTargetsFrom } from '../nutrition/targets.ts';
 import { generatePlanOptions, restrictionsOf, type PlanDraft } from '../planning/plan.ts';
 import { negotiate, runPipeline } from '../pipeline.ts';
 import { simulatedProvider, PROVIDERS } from '../commerce/adapter.ts';
@@ -13,7 +13,7 @@ import { CAT, goldenBundle, NOW } from '../../test/fixtures.ts';
 const b = goldenBundle();
 const t = calculateTargets(b, NOW);
 if (!t.ok) throw new Error('golden not eligible');
-const targets = { energyKcal: t.record.planningEnergyKcal, proteinEarG: t.record.protein.earG, proteinRdaG: t.record.protein.rdaG };
+const targets = planTargetsFrom(t.record);
 const plans = generatePlanOptions(b, targets, CAT).plans;
 const tiny: PlanDraft = { optionKey: 'budget', swaps: {}, meals: [{ id: 'd0-lunch', day: 0, slot: 'lunch', recipeId: 'dal_rice', recipeVersion: 1, servings: 1 }, { id: 'd1-lunch', day: 1, slot: 'lunch', recipeId: 'dal_rice', recipeVersion: 1, servings: 2 }] };
 

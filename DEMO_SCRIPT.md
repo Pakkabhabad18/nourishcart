@@ -1,38 +1,42 @@
 # Demo script (about 8 minutes)
 
 The idea to say first: **the AI suggests, our code checks, and we measure both.**
-Every AI feature below has a check that runs on every answer, and a score on the Evaluation page.
+Every AI feature below has a check that runs on every answer, and a score under **How we test** (account menu, top right).
 
-Before the demo: on the laptop, install the NourishCart Shopper extension (Groceries → Compare prices → Download), set a delivery location on zepto.com and swiggy.com/instamart, and log in to Instamart. Have one packet of biscuits or namkeen ready.
+Before the demo: on the laptop, install the NourishCart Shopper helper (Shop → Compare Zepto and Instamart → Download the helper), sign in on zepto.com and swiggy.com/instamart with a delivery address. Have one packet of biscuits or namkeen ready. Use Chrome so voice works.
 
-## 1. Onboarding by voice (1.5 min)
-1. Sign in on https://nourishcart.vercel.app (the code appears on screen in demo mode).
-2. Tick **Let AI read my description**, tap the mic and say something messy, e.g.:
-   "I'm thirty two, guy, around five eleven, seventy eight kilos, drive a cab all day, don't work out, eat everything, allergic to prawns, want to lose weight, about six thousand a month, no health problems."
-3. Point at **Read by AI, checked by NourishCart**, the **AI** tags and the quoted words beside each field. Say: if the AI claims something that isn't in what I said, it's rejected; it can never make the diet or allergies looser.
+## 1. Setup by conversation (2 min)
+1. Sign in on https://nourishcart.vercel.app with your email; the 6-digit code arrives by email.
+2. Type your name, tick the box, **Continue** → **Talk with me**.
+3. The app asks out loud, one question at a time. Answer naturally. Try one long answer to show it skips what you already said, e.g. "I'm thirty two, male, five eleven, seventy eight kilos, desk job".
+4. Say one unclear answer ("umm") to show it asks again with an example instead of guessing.
+5. On **Check your answers**, tap the pencil next to Goal and change it, then **Looks right**.
 
-## 2. Plan and groceries (1 min)
-Save → targets → **Show me three plans** → choose one → **Build this week's groceries**.
+Say: "no allergies" and "no health conditions" are only accepted as answers to those exact questions; a "no" to anything else never counts.
 
-## 3. Price comparison (2 min)
-1. **Compare prices on Zepto and Instamart** → **Compare N items now**. Tabs open in the background of this browser.
-2. Show the totals (Zepto only, Instamart only, cheapest per item) and open a "left out" list. Sponsored green moong and chana dal were refused for toor dal.
-3. Say: the AI reads the store pages; every product name and price must really be on that product's card, so a page can't plant a ₹1 price.
-4. Optional: **Add N items to my Zepto cart** → confirm → watch it click Add → open Zepto's cart. Nothing is paid.
+## 2. Personal targets (1 min)
+**Your daily targets**: goal, calories (you burn about X, we plan Y), protein, carbs, fat, fibre. **Edit numbers** → type a very low calorie number → **Save targets** → it's adjusted to the safe floor with a one-line reason. Pick **Iron**: the tip says which foods, and meals lean towards them.
 
-No extension (phone)? Use **Try it on saved store pages**.
+## 3. Meals and shopping list (1 min)
+**See meal plans** (made automatically) → three cards: groceries cost, protein against your target, number of dishes → **Choose this plan** → **Shop for this week**.
 
-## 4. Label scan (1 min)
-**Scan** → photograph the packet. Show each person's verdict and the quoted label words.
+## 4. Compare stores and fill the cart (2 min)
+1. **Compare Zepto and Instamart** → **Compare N items**. Store pages open in the background of this browser.
+2. The answer comes first: cheapest store and total. Open **Item by item** to show refused products (e.g. sponsored green moong for toor dal).
+3. **Fill my Zepto cart** → confirm the list → watch it click Add → open Zepto's cart. Nothing is paid.
 
-## 5. Cook note (30 s)
-Plans → **Menu for the cook** → Telugu → **Make the note** → **Read aloud** / **Send on WhatsApp**. Every quantity is checked against the English.
+No helper (phone)? Use **See an example**.
 
-## 6. Evaluation (2 min) — the most important part
-Open **Evaluation**:
+## 5. Label scan (30 s)
+**Scan** → photograph the packet. Each person's verdict with the quoted label words.
+
+## 6. Cook note (30 s)
+Meals → **Menu for my cook** → Telugu → **Make the note** → **Read aloud** / **Send on WhatsApp**.
+
+## 7. How we test (2 min), the most important part
 - 384 made-up people, 28,000+ meals re-checked by an independent checker: 0 diet, allergy or exclusion violations.
-- Onboarding AI: on descriptions it never saw, details captured rise from 55–70% (rules) to ~95%, with 0 unsafe errors. A held-out batch was written before the prompt fix, so the test stayed clean.
-- Store pages: 43/43 products read, 0 wrong prices, not fooled by planted text; 0 of 54 fake answers survive the checks.
-- Labels: 0 "fine when it wasn't" in 264 verdicts.
-- Cook note: 12/12 translations kept every quantity.
-- "What this does not prove": sample data, few real store pages, no delivery fees.
+- Personal targets: 720 targets including absurd typed numbers, 0 outside the safety limits; asking for iron raised it for 30 of 30 people.
+- Setup conversation: 0 unsafe results in 24 conversations. On 8 conversations it had never seen, it first got 71% of fields and finished 3 of 8 without help; that's the honest number, and why missed answers are asked again with options.
+- Store pages: 43/43 products read, 0 wrong prices, 0 of 54 fake answers survive the checks.
+- Labels: 0 "fine when it wasn't" in 264 verdicts. Cook note: 12/12 translations kept every quantity.
+- "What this does not prove": sample nutrition data, few real store pages, no delivery fees.

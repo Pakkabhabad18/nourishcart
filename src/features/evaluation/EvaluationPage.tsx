@@ -19,14 +19,15 @@ interface ReaderScore { precision: number; recall: number; f1: number; critical:
 interface LlmSet { cases: number; rules: ReaderScore; ai: ReaderScore; combined: ReaderScore; rejected: number; latencyMsMedian: number }
 type LlmReport = { status: 'not_run' } | { generatedAt: string; model: string; provider: string; promptVersion: string; dev: LlmSet; held: LlmSet; held2?: LlmSet };
 
-const GROUP_ORDER: Gate['group'][] = ['Safety', 'Nutrition', 'Grocery', 'Scope', 'Reliability', 'Voice intake', 'Store matching', 'Shopping agent', 'Label scan'];
+const GROUP_ORDER: Gate['group'][] = ['Safety', 'Nutrition', 'Personal targets', 'Grocery', 'Scope', 'Reliability', 'Voice intake', 'Store matching', 'Shopping agent', 'Label scan'];
 const GROUP_NOTE: Record<Gate['group'], string> = {
   Safety: 'Hard rules. A single failure fails the whole evaluation.',
   Nutrition: 'Each planned day is checked against the person’s own energy range and protein floor.',
+  'Personal targets': 'Goal, typed-in numbers and nutrients to boost. Safety limits hold whatever is typed, and the plans actually move towards what was asked.',
   Grocery: 'The basket must cover the plan and be honest about the budget.',
   Scope: 'People we should not plan for (under 18, pregnancy, kidney disease and so on) must be refused.',
   Reliability: 'Same input gives the same answer; options are genuinely different.',
-  'Voice intake': 'How well spoken or typed descriptions are turned into profile fields.',
+  'Voice intake': 'How well spoken or typed answers are turned into profile fields, including the question-by-question setup conversation.',
   'Store matching': 'Whether real store product titles are mapped to the right ingredient, or safely refused.',
   'Label scan': 'Packaged-food labels: the AI copies the label, our word lists decide who it suits. Missing an allergen is the costliest error.',
   'Shopping agent': 'Price comparison on real Zepto and Instamart pages: the AI reads the pages, and these checks make sure nothing it reports is invented, unsafe or overpriced.',
@@ -165,7 +166,7 @@ export function EvaluationPage() {
             <Stat label="Product cards read" value={`${listingsSaved.cardsFound}/${listingsSaved.cardsTotal}`} sub={`${listingsSaved.wrongPrice} wrong prices`} />
             <Stat label="Ad and sold-out flags" value={listingsSaved.flagErrors === 0 ? 'All right' : `${listingsSaved.flagErrors} wrong`} />
             <Stat label="Fooled by planted text" value={`${listingsSaved.fooledByPlantedText} of ${listingsSaved.plantedCases}`} />
-            <Stat label="Login wall spotted" value={listingsSaved.pageStateErrors === 0 ? 'Yes' : 'No'} sub={`model ${listingsSaved.model}, ${(listingsSaved.latencyMsMedian / 1000).toFixed(0)} s per page`} />
+            <Stat label="Login wall spotted" value={listingsSaved.pageStateErrors === 0 ? 'Yes' : 'No'} sub={`${(listingsSaved.latencyMsMedian / 1000).toFixed(0)} s per page`} />
           </div>
         ) : (
           <Notice className="mt-3">Not run yet.</Notice>
@@ -178,7 +179,7 @@ export function EvaluationPage() {
           A translation is only shown if every quantity in the English menu appears in it unchanged and no number is added; otherwise the cook gets the English note. Run with <code>npm run eval:cook</code>.
         </p>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Stat label="Menus translated" value={cookSaved.notes} sub={`model ${cookSaved.model}`} />
+          <Stat label="Menus translated" value={cookSaved.notes}  />
           <Stat label="All quantities kept" value={pct(cookSaved.keptRate)} sub={`${cookSaved.quantitiesKept} of ${cookSaved.notes}`} />
           <Stat label="Wrong quantity shown" value={0} sub="blocked by the check" />
         </div>
@@ -193,7 +194,7 @@ export function EvaluationPage() {
           <Stat label="Verdicts agreeing" value={pct(labelsSaved.agreement)} sub={`${labelsSaved.verdicts} person × label pairs`} />
           <Stat label="Said “fine” when not" value={labelsSaved.criticalSafeErrors} sub="the costly mistake" />
           <Stat label="Over-cautious" value={labelsSaved.overCautious} sub="said avoid when fine" />
-          <Stat label="Cut-off label spotted" value={labelsSaved.cutoffDetected} sub={`model ${labelsSaved.model}, ${(labelsSaved.latencyMsMedian / 1000).toFixed(1)} s`} />
+          <Stat label="Cut-off label spotted" value={labelsSaved.cutoffDetected} sub={`${(labelsSaved.latencyMsMedian / 1000).toFixed(1)} s per photo`} />
         </div>
       </section>
 
@@ -229,7 +230,7 @@ function AiReaderSection({ report, heldRules }: { report: LlmReport; heldRules?:
       {sets ? (
         <>
           <p className="mt-2 text-xs text-on-surface-variant">
-            Model {ran!.model} on {ran!.provider}, prompt {ran!.promptVersion}, run {new Date(ran!.generatedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}.
+            Prompt {ran!.promptVersion}, run {new Date(ran!.generatedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}.
           </p>
           {sets.map(([name, s]) => (
             <div key={name} className="mt-4">
@@ -257,7 +258,7 @@ function AiReaderSection({ report, heldRules }: { report: LlmReport; heldRules?:
                 </tbody>
               </table>
               <p className="mt-1 text-xs text-on-surface-variant">
-                {s.rejected} AI suggestions rejected by the checks (quoted words not in what was said, or values outside the allowed list). Median model time {(s.latencyMsMedian / 1000).toFixed(1)} s.
+                {s.rejected} AI suggestions rejected by the checks (quoted words not in what was said, or values outside the allowed list). Median AI time {(s.latencyMsMedian / 1000).toFixed(1)} s.
               </p>
             </div>
           ))}

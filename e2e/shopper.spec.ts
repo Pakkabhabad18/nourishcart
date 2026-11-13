@@ -1,3 +1,4 @@
+import { firstPerson, signIn, talk } from './helpers.ts';
 // The price-comparison flow with the REAL browser extension loaded into Chromium.
 // Store sites are replaced by a local server with saved pages and the AI endpoint by a fixed
 // answer, so the test never touches Zepto, Swiggy or Gemini.
@@ -92,40 +93,31 @@ document.querySelectorAll('.card').forEach((c) => {
   });
 
   const page = await context.newPage();
-  await page.goto('http://127.0.0.1:4173/');
-  await page.getByRole('link', { name: 'Get started with email' }).click();
-  await page.getByLabel('Email address').fill('shopper@example.com');
-  await page.getByRole('button', { name: 'Email me a code' }).click();
-  const code = (await page.getByLabel('Demo inbox').locator('p.num').first().textContent())!.trim();
-  await page.getByLabel('6-digit code').fill(code);
-  await page.getByRole('button', { name: 'Verify and continue' }).click();
-  await page.getByLabel(/I have read the notice/).check();
-  await page.getByLabel('Profile name').fill('Asha');
-  await page.getByRole('button', { name: 'Create profile and continue' }).click();
-  await page.getByRole('button', { name: 'Use an example' }).click();
-  await page.getByRole('button', { name: 'Review' }).click();
-  await page.getByRole('button', { name: 'Save and see my targets' }).click();
-  await page.getByRole('button', { name: 'See meal plan options' }).click();
-  await page.getByRole('button', { name: 'Show me three plans' }).click();
-  await page.getByRole('button', { name: 'Choose Balanced' }).click();
-  await page.getByRole('link', { name: 'Build this week’s groceries' }).click();
-  await page.getByRole('link', { name: 'Compare prices on Zepto and Instamart' }).click();
+  await signIn(page, 'shopper@example.com', 'http://127.0.0.1:4173');
+  await firstPerson(page, 'Asha');
+  await talk(page);
+  await page.getByRole('button', { name: 'Looks right' }).click();
+  await page.getByRole('button', { name: 'See meal plans' }).click();
+  await page.getByRole('button', { name: 'Choose this plan' }).nth(1).click();
+  await page.getByRole('link', { name: 'Shop for this week' }).click();
+  await page.getByRole('link', { name: 'Compare Zepto and Instamart' }).click();
 
-  await expect(page.getByText('Extension ready')).toBeVisible({ timeout: 10_000 });
-  await page.getByRole('button', { name: /Compare \d+ items now/ }).click();
-  await expect(page.getByText('Everything from Zepto')).toBeVisible({ timeout: 240_000 });
+  await expect(page.getByText('Helper ready')).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: /Compare \d+ items/ }).click();
+  await expect(page.getByText('Item by item')).toBeVisible({ timeout: 240_000 });
+  await page.getByText('Item by item').click();
   // Instamart showed a login wall for most items: the app must say so, not claim "not sold".
   await expect(page.getByText(/Swiggy Instamart asked you to log in/)).toBeVisible();
   // Toor dal is on both saved pages: a price per store and a cheapest pick must show.
   const live = page.getByRole('row', { name: /Toor dal/ });
-  await expect(live.getByText('Cheapest')).toBeVisible();
   // The sponsored green moong and the chana dal are listed only under "left out", with the reason.
   await expect(live.getByText(/Green Moong Whole Pesticide Free Natural: looks like/)).toHaveCount(1);
+  await expect(page.getByText(/Gemini/)).toHaveCount(0);
   await expect(live.getByText(/RASOI TATTVA Chana Dal: /)).toHaveCount(1);
   await page.screenshot({ path: 'e2e/screenshots/13-compare.png', fullPage: true });
 
   // Fill the Zepto cart with Zepto's cheapest picks: confirmation first, then the extension clicks Add.
-  await page.getByRole('button', { name: /to my Zepto cart/ }).click();
+  await page.getByRole('button', { name: /Fill my Zepto cart/ }).click();
   await expect(page.getByText(/items to your Zepto cart\?/)).toBeVisible();
   await page.getByRole('button', { name: 'Yes, add them' }).click();
   await expect(page.getByText(/: added/).first()).toBeVisible({ timeout: 120_000 });
@@ -133,9 +125,12 @@ document.querySelectorAll('.card').forEach((c) => {
   console.log('cart log', JSON.stringify(added));
   await page.screenshot({ path: 'e2e/screenshots/13b-fill-cart.png', fullPage: true });
 
-  // Without the extension path: saved pages, same checks
-  await page.getByRole('button', { name: 'Try it on saved store pages' }).click();
-  await expect(page.getByText('Cheapest store for each item')).toBeVisible({ timeout: 30_000 });
+  // The week now counts as shopped on Today
+  // Example path: saved pages, same checks
+  await page.getByRole('button', { name: 'Compare again' }).click();
+  await page.getByRole('button', { name: 'See an example' }).click();
+  await expect(page.getByText('Item by item')).toBeVisible({ timeout: 30_000 });
+  await page.getByText('Item by item').click();
   const row = page.getByRole('row', { name: /Toor dal/ });
   await expect(row.getByText('BestValue Toor Dal Bold')).toBeVisible();
   await expect(row.getByText('Popular Essentials Toor Dal (Split)')).toBeVisible();

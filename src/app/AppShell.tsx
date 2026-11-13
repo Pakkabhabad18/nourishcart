@@ -1,27 +1,33 @@
 // Material Design 3 layout:
-//  - desktop (lg+): navigation rail (80 px) with pill-shaped active indicators
-//  - mobile: top app bar + bottom navigation bar (80 px) with 4 destinations + More
-// The profile switcher sits in the top app bar on every screen size.
+//  - desktop (lg+): navigation rail with the four main destinations
+//  - phone: top app bar + bottom bar with the same four destinations, no "More" button
+// The account menu (top right) switches person and holds the secondary pages.
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { CalendarDays, ChevronDown, FlaskConical, Home, LineChart, Menu, Package, Receipt, Settings, ShoppingBasket, Users, WifiOff, ScanLine } from 'lucide-react';
+import { CalendarDays, ChevronDown, FlaskConical, Home, LineChart, Package, Receipt, Settings, ShoppingBasket, Users, WifiOff, ScanLine } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './context.tsx';
 import { useActiveProfile } from './hooks.ts';
-import { isDemo } from '../lib/store/index.ts';
 import { Logo, LogoMark } from '../components/Logo.tsx';
 
+// Four main destinations follow the weekly loop: see today, plan the week, shop, check a packet.
+// Everything else (targets, pantry, orders, household, settings) lives in the account menu
+// at the top right, so the bottom bar never needs a "More" button.
 const NAV = [
-  { to: '/overview', label: 'Home', icon: Home, mobile: true },
-  { to: '/nutrition', label: 'Nutrition', icon: LineChart, mobile: false },
-  { to: '/plans', label: 'Plans', icon: CalendarDays, mobile: true },
-  { to: '/groceries', label: 'Groceries', icon: ShoppingBasket, mobile: true },
-  { to: '/scan', label: 'Scan', icon: ScanLine, mobile: true },
-  { to: '/pantry', label: 'Pantry', icon: Package, mobile: true },
-  { to: '/orders', label: 'Orders', icon: Receipt, mobile: false },
-  { to: '/profiles', label: 'Profiles', icon: Users, mobile: false },
-  { to: '/evaluation', label: 'Evaluation', icon: FlaskConical, mobile: false },
-  { to: '/settings', label: 'Settings', icon: Settings, mobile: false },
+  { to: '/overview', label: 'Today', icon: Home },
+  { to: '/plans', label: 'Meals', icon: CalendarDays },
+  { to: '/groceries', label: 'Shop', icon: ShoppingBasket },
+  { to: '/scan', label: 'Scan', icon: ScanLine },
+];
+
+// Secondary pages, reached from the account menu on every screen size.
+const MENU = [
+  { to: '/nutrition', label: 'My targets', icon: LineChart },
+  { to: '/pantry', label: 'Pantry', icon: Package },
+  { to: '/orders', label: 'Orders', icon: Receipt },
+  { to: '/profiles', label: 'Household', icon: Users },
+  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/evaluation', label: 'How we test', icon: FlaskConical },
 ];
 
 /** One rail / bar destination: icon inside a pill indicator, label underneath. */
@@ -87,9 +93,11 @@ function ProfileSwitcher() {
             </button>
           ))}
           <div className="my-1 h-px bg-outline-variant" />
-          <button role="menuitem" onClick={() => (setOpen(false), nav('/profiles'))} className="flex h-12 w-full items-center px-4 text-left text-sm hover:bg-on-surface/[0.08]">
-            Manage profiles
-          </button>
+          {MENU.map((m) => (
+            <button key={m.to} role="menuitem" onClick={() => (setOpen(false), nav(m.to))} className="flex h-12 w-full items-center gap-3 px-4 text-left text-sm hover:bg-on-surface/[0.08]">
+              <m.icon className="h-5 w-5 text-on-surface-variant" aria-hidden /> {m.label}
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -99,35 +107,32 @@ function ProfileSwitcher() {
 export function AppShell() {
   const { online } = useApp();
   const loc = useLocation();
-  const [moreOpen, setMoreOpen] = useState(false);
-  useEffect(() => setMoreOpen(false), [loc.pathname]);
+  // Scroll to top on page change so a new screen never opens half-way down.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [loc.pathname]);
   return (
-    <div className="min-h-dvh bg-surface lg:pl-20">
+    <div className="min-h-dvh bg-surface lg:pl-24">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-surface-container-high focus:px-4 focus:py-2">
         Skip to content
       </a>
-      {/* Navigation rail (desktop) */}
-      <aside className="fixed inset-y-0 left-0 hidden w-20 flex-col items-center bg-surface-container-low py-4 lg:flex">
+      {/* Navigation rail (desktop): the same four destinations as the phone bar. */}
+      <aside className="fixed inset-y-0 left-0 hidden w-24 flex-col items-center bg-surface-container-low py-4 lg:flex">
         <NavLink to="/overview" aria-label="NourishCart home" className="mb-6">
           <LogoMark className="h-9 w-9" />
         </NavLink>
-        <nav aria-label="Main" className="flex flex-1 flex-col items-center gap-3">
+        <nav aria-label="Main" className="flex flex-1 flex-col items-center gap-4">
           {NAV.map((n) => (
             <Destination key={n.to} {...n} />
           ))}
         </nav>
       </aside>
 
-      {/* Top app bar */}
+      {/* Top app bar: logo and the account menu. Only the offline notice can appear above it. */}
       <header className="sticky top-0 z-30 bg-surface">
-        {isDemo && (
-          <div className="bg-warning-container px-4 py-1.5 text-center text-xs text-on-warning-container">
-            Demo mode: data stays in this browser and sign-in codes appear on screen. No email is sent and nothing is purchased.
-          </div>
-        )}
         {!online && (
           <div role="status" className="flex items-center justify-center gap-2 bg-inverse-surface px-4 py-1.5 text-xs text-inverse-on-surface">
-            <WifiOff className="h-3.5 w-3.5" aria-hidden /> You are offline. You can look around, but changes and checkout need a connection.
+            <WifiOff className="h-3.5 w-3.5" aria-hidden /> You're offline. Changes will need a connection.
           </div>
         )}
         <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
@@ -136,36 +141,19 @@ export function AppShell() {
         </div>
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-6xl px-4 pb-32 pt-4 sm:px-6 lg:px-8 lg:pb-12">
+      <main id="main" className="mx-auto w-full max-w-3xl px-4 pb-32 pt-2 sm:px-6 lg:px-8 lg:pb-12">
         <Outlet />
       </main>
 
-      {/* Navigation bar (mobile) */}
+      {/* Navigation bar (phone): four tabs, no overflow menu. */}
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 bg-surface-container pb-[env(safe-area-inset-bottom)] lg:hidden">
-        <ul className="grid h-20 grid-cols-5 items-center">
-          {NAV.filter((n) => n.mobile).map((n) => (
+        <ul className="grid h-20 grid-cols-4 items-center">
+          {NAV.map((n) => (
             <li key={n.to}>
               <Destination {...n} compact />
             </li>
           ))}
-          <li>
-            <button onClick={() => setMoreOpen((o) => !o)} aria-expanded={moreOpen} className="group flex w-full flex-col items-center gap-1 py-1 text-xs font-medium">
-              <span className={clsx('flex h-8 w-16 items-center justify-center rounded-full', moreOpen ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant')}>
-                <Menu className="h-5 w-5" aria-hidden />
-              </span>
-              <span className={moreOpen ? 'text-on-surface' : 'text-on-surface-variant'}>More</span>
-            </button>
-          </li>
         </ul>
-        {moreOpen && (
-          <div className="absolute bottom-full right-2 mb-2 w-60 rounded-xs bg-surface-container py-2 shadow-e2">
-            {NAV.filter((n) => !n.mobile).map((n) => (
-              <NavLink key={n.to} to={n.to} className="flex h-12 items-center gap-3 px-4 text-sm hover:bg-on-surface/[0.08]">
-                <n.icon className="h-5 w-5 text-on-surface-variant" aria-hidden /> {n.label}
-              </NavLink>
-            ))}
-          </div>
-        )}
       </nav>
     </div>
   );

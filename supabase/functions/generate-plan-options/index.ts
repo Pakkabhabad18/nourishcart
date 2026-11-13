@@ -1,6 +1,6 @@
 // POST { profileId } -> three validated plan options, persisted as "proposed".
 import { fail, isUuid, loadBundle, ok, withAuth } from '../_shared/http.ts';
-import { calculateTargets } from '../_shared/core/domain/nutrition/targets.ts';
+import { calculateTargets, planTargetsFrom } from '../_shared/core/domain/nutrition/targets.ts';
 import { generatePlanOptions, PLANNER_VERSION } from '../_shared/core/domain/planning/plan.ts';
 import { calculationToRow, planToRow, DATA_VERSION, weekStartOf, type StoredPlan } from '../_shared/core/domain/persistence/mappers.ts';
 import { RECIPE_MAP } from '../_shared/core/data/recipes.ts';
@@ -18,7 +18,7 @@ Deno.serve((req) =>
     const runId = crypto.randomUUID();
     const now = new Date().toISOString();
     await adminDb.from('calculation_runs').insert(calculationToRow({ id: runId, profileId: bundle.profile.id, ownerUserId: user.id, record: t.record, createdAt: now }));
-    const targets = { energyKcal: t.record.planningEnergyKcal, proteinEarG: t.record.protein.earG, proteinRdaG: t.record.protein.rdaG };
+    const targets = planTargetsFrom(t.record);
     const gen = generatePlanOptions(bundle, targets, { recipes: RECIPE_MAP, ingredients: INGREDIENT_MAP, products: CATALOGUE });
     if (!gen.ok) return ok({ ok: false, reasons: gen.reasons }, requestId, PLANNER_VERSION);
     // Older unselected proposals are archived so the comparison always shows one fresh set.

@@ -14,10 +14,22 @@ import { HELDOUT, HELDOUT_2 } from './datasets/heldout.ts';
 import { runShoppingEval, type ShoppingReport } from './shopping.ts';
 import { runLabelEval, type LabelEvalReport } from './labelsEval.ts';
 import type { CollectedBasket } from './recommendations.ts';
+import { runPersonalEval, type PersonalReport } from './personal.ts';
+import { runConversationEval, type ConversationReport } from './conversationEval.ts';
+import { CONVERSATIONS_HELDOUT } from './datasets/conversations.ts';
+import { CONVERSATION_VERSION } from '../domain/intake/conversation.ts';
+import { PERSONAL_TARGETS_VERSION } from '../domain/nutrition/personal.ts';
+
+/**
+ * The held-out conversations were scored once before any fix (14 Nov 2026). That first score
+ * is the honest one; the batch was then used to widen everyday vocabulary, so today's score
+ * on it is no longer held-out.
+ */
+export const CONVERSATION_HELDOUT_FIRST_RUN = { conversations: 8, finished: 3, fieldsChecked: 112, fieldsCorrect: 80, unsafe: 0 };
 
 export interface Gate {
   id: string;
-  group: 'Safety' | 'Nutrition' | 'Grocery' | 'Scope' | 'Voice intake' | 'Store matching' | 'Shopping agent' | 'Label scan' | 'Reliability';
+  group: 'Safety' | 'Nutrition' | 'Personal targets' | 'Grocery' | 'Scope' | 'Voice intake' | 'Store matching' | 'Shopping agent' | 'Label scan' | 'Reliability';
   name: string;
   measured: string;
   threshold: string;
@@ -37,6 +49,10 @@ export interface EvalReport {
   cart: CartReport;
   shopping: ShoppingReport;
   labels: LabelEvalReport;
+  personal: PersonalReport;
+  conversation: ConversationReport;
+  conversationHeldout: ConversationReport;
+  conversationHeldoutFirstRun: typeof CONVERSATION_HELDOUT_FIRST_RUN;
   gates: Gate[];
   passed: boolean;
 }
@@ -47,7 +63,7 @@ export function ruleOfThree(n: number): number {
 }
 const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
 
-export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: MatchingReport, cart: CartReport, held?: ExtractionReport, shop?: ShoppingReport, lab?: LabelEvalReport): Gate[] {
+export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: MatchingReport, cart: CartReport, held?: ExtractionReport, shop?: ShoppingReport, lab?: LabelEvalReport, pt?: PersonalReport, cv?: ConversationReport, cvh?: ConversationReport): Gate[] {
   const g: Gate[] = [];
   const add = (x: Gate) => g.push(x);
   const meals = rec.mealsChecked;
@@ -83,6 +99,19 @@ export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: 
     add({ id: 'A3', group: 'Shopping agent', name: 'No chosen product breaks diet or allergy rules (hand labels, every diet x allergy set)', measured: `${shop.unsafePicks} of ${shop.picksChecked} picks`, threshold: '0', pass: shop.unsafePicks === 0, critical: true });
     add({ id: 'A4', group: 'Shopping agent', name: 'Chosen product and pack count are the cheapest way to cover the need (brute force)', measured: `${shop.cheapestMismatches} of ${shop.cheapestChecks} differ`, threshold: '0', pass: shop.cheapestMismatches === 0, critical: false });
   }
+  if (pt) {
+    add({ id: 'T1', group: 'Personal targets', name: 'Calories never below the floor (sex floor or resting energy) or past the 20% cut / 15% surplus caps, whatever is typed', measured: `${pt.kcalViolations} of ${pt.typedNumbersTried} targets`, threshold: '0', pass: pt.kcalViolations === 0, critical: true });
+    add({ id: 'T2', group: 'Personal targets', name: 'Protein target never below the EAR floor or above 2 g/kg', measured: `${pt.proteinViolations} of ${pt.typedNumbersTried} targets`, threshold: '0', pass: pt.proteinViolations === 0, critical: true });
+    add({ id: 'T3', group: 'Personal targets', name: 'Plans made for a goal still pass every day\'s calorie and protein checks', measured: `${pt.plansValid}/${pt.plansMade} plans, ${pt.generationFailures} people without a plan`, threshold: '100%', pass: pt.plansValid === pt.plansMade && pt.generationFailures === 0, critical: false });
+    add({ id: 'T4', group: 'Personal targets', name: '"Best for your goal" reaches at least 90% of the protein target', measured: pct(pt.goalPlansReachProtein / Math.max(1, pt.goalPlans)), threshold: '≥ 75%', pass: pt.goalPlansReachProtein / Math.max(1, pt.goalPlans) >= 0.75, critical: false });
+    const f = pt.focusChecks;
+    add({ id: 'T5', group: 'Personal targets', name: 'Asking for more iron or calcium raises it in the plan (same person, with vs without)', measured: f.map((x) => `${x.nutrient} ${x.raised}/${x.people}, +${x.meanUpliftPct}%`).join('; '), threshold: '≥ 80% raised', pass: f.every((x) => x.raised / Math.max(1, x.people) >= 0.8), critical: false });
+  }
+  if (cv) {
+    add({ id: 'V5', group: 'Voice intake', name: 'Setup conversation: no stated allergy lost, no false "no allergies", every doctor-managed condition out of scope', measured: `${cv.unsafe.length + (cvh?.unsafe.length ?? 0)} in ${cv.conversations + (cvh?.conversations ?? 0)} conversations`, threshold: '0', pass: cv.unsafe.length + (cvh?.unsafe.length ?? 0) === 0, critical: true });
+    add({ id: 'V6', group: 'Voice intake', name: 'Setup conversation: fields correct (14 per person)', measured: `${pct(cv.fieldsCorrect / Math.max(1, cv.fieldsChecked))} dev; held-out first run ${pct(CONVERSATION_HELDOUT_FIRST_RUN.fieldsCorrect / CONVERSATION_HELDOUT_FIRST_RUN.fieldsChecked)}`, threshold: '≥ 95% dev', pass: cv.fieldsCorrect / Math.max(1, cv.fieldsChecked) >= 0.95, critical: false });
+    add({ id: 'V7', group: 'Voice intake', name: 'Setup conversation finished without tap-to-answer help', measured: `${cv.finished}/${cv.conversations} dev; held-out first run ${CONVERSATION_HELDOUT_FIRST_RUN.finished}/${CONVERSATION_HELDOUT_FIRST_RUN.conversations}`, threshold: '≥ 90% dev', pass: cv.finished / Math.max(1, cv.conversations) >= 0.9, critical: false });
+  }
   if (lab) {
     add({ id: 'L1', group: 'Label scan', name: 'Ingredient word lists find exactly the hand-labelled allergens and animal ingredients', measured: `${lab.labels - lab.factMismatches.length}/${lab.labels} labels exact${lab.factMismatches.length ? ` (wrong: ${lab.factMismatches.join(', ')})` : ''}`, threshold: '100%', pass: lab.factMismatches.length === 0, critical: true });
     add({ id: 'L2', group: 'Label scan', name: 'An unreadable or cut-off label never says "fine" for anyone', measured: `${lab.unreadableSafe} of ${lab.unreadableChecked}`, threshold: '0', pass: lab.unreadableSafe === 0, critical: true });
@@ -99,11 +128,14 @@ export async function runFullEvaluation(cat: Catalog, mode: 'full' | 'quick' = '
   const cart = await runCartEval(baskets, cat.ingredients);
   const shopping = runShoppingEval(cat.ingredients);
   const labels = runLabelEval();
-  const gates = buildGates(recommendation, extraction, matching, cart, extractionHeldout, shopping, labels);
+  const personal = runPersonalEval(cat, mode === 'full' ? 60 : 24);
+  const conversation = runConversationEval();
+  const conversationHeldout = runConversationEval(CONVERSATIONS_HELDOUT);
+  const gates = buildGates(recommendation, extraction, matching, cart, extractionHeldout, shopping, labels, personal, conversation, conversationHeldout);
   return {
     generatedAt: new Date().toISOString(),
     mode,
-    versions: { planner: PLANNER_VERSION, optimiser: OPTIMISER_CONFIG.version, extractor: EXTRACTOR_VERSION, matcher: MATCHER_VERSION, data: DATA_VERSION, energyMethod: `${METHODS.energy.id}@${METHODS.energy.version}` },
+    versions: { personalTargets: PERSONAL_TARGETS_VERSION, conversation: CONVERSATION_VERSION, planner: PLANNER_VERSION, optimiser: OPTIMISER_CONFIG.version, extractor: EXTRACTOR_VERSION, matcher: MATCHER_VERSION, data: DATA_VERSION, energyMethod: `${METHODS.energy.id}@${METHODS.energy.version}` },
     recommendation,
     extraction,
     extractionHeldout,
@@ -111,6 +143,10 @@ export async function runFullEvaluation(cat: Catalog, mode: 'full' | 'quick' = '
     cart,
     shopping,
     labels,
+    personal,
+    conversation,
+    conversationHeldout,
+    conversationHeldoutFirstRun: CONVERSATION_HELDOUT_FIRST_RUN,
     gates,
     passed: gates.every((x) => x.pass),
   };

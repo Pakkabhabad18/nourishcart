@@ -1,6 +1,6 @@
 // Label scan: photograph a packet's ingredients panel and see, for each person in the
 // household, whether it's safe for them.
-//   photo -> resized in the browser -> /api/label (Gemini only transcribes the label)
+//   photo -> resized in the browser -> /api/label (an AI model only copies the label text)
 //   -> src/domain/labels/check.ts decides per person with fixed word lists
 // The words that caused each warning are quoted, and an unreadable label is never "safe".
 import { useRef, useState } from 'react';
@@ -44,7 +44,6 @@ export function ScanPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reading, setReading] = useState<LabelReading | null>(null);
-  const [model, setModel] = useState<string | null>(null);
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -55,10 +54,9 @@ export function ScanPage() {
       const img = await prepare(file);
       setPreview(img.preview);
       const r = await fetch('/api/label', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: img.data, mime: 'image/jpeg' }) });
-      const j = (await r.json().catch(() => ({}))) as { content?: string; model?: string; error?: string };
+      const j = (await r.json().catch(() => ({}))) as { content?: string; error?: string };
       if (!r.ok || typeof j.content !== 'string') throw new Error(r.status === 503 ? 'The label reader is busy or not set up. Try again in a minute.' : (j.error ?? 'The label reader failed.'));
       setReading(parseLabelAnswer(j.content));
-      setModel(j.model ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
@@ -69,20 +67,22 @@ export function ScanPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader title="Scan a label" description="Photograph the ingredients panel of any packet. We'll tell you who in your household it suits." />
+      <PageHeader title="Scan a packet" description="Photo of the ingredients. We'll say who at home it suits." />
 
       <section className="card p-5">
-        <input ref={input} type="file" accept="image/*" capture="environment" className="sr-only" id="label-photo" onChange={(e) => onFile(e.target.files?.[0])} />
+        {/* Camera on phones; the second input (no capture) opens the gallery or files. */}
+        <input ref={input} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} />
+        <input type="file" accept="image/*" className="sr-only" id="label-photo" onChange={(e) => onFile(e.target.files?.[0])} />
         <div className="flex flex-wrap items-center gap-3">
           <Button size="lg" icon={<Camera className="h-5 w-5" aria-hidden />} loading={busy} onClick={() => input.current?.click()}>
-            {busy ? 'Reading the label…' : preview ? 'Scan another' : 'Take or choose a photo'}
+            {busy ? 'Reading the label…' : preview ? 'Scan another' : 'Take a photo'}
           </Button>
           <label htmlFor="label-photo" className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-primary hover:underline">
-            <ImageUp className="h-4 w-4" aria-hidden /> Upload from files
+            <ImageUp className="h-4 w-4" aria-hidden /> Choose from gallery
           </label>
         </div>
         <p className="mt-3 text-sm text-on-surface-variant">
-          Fill the frame with the ingredients and allergen text, in good light. The photo goes to an AI model (Gemini) only to copy the text; nothing about your household is sent. Our own rules make the decision.
+          Get the ingredients and allergy text in the frame, in good light. Only the photo is sent, to read the text. Our own rules decide.
         </p>
         {error && <Notice className="mt-4" tone="danger">{error}</Notice>}
       </section>
@@ -95,9 +95,9 @@ export function ScanPage() {
               <div className="min-w-0 flex-1">
                 <h2 className="text-lg font-medium">{reading.productName || 'Packet'}</h2>
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  Read by AI ({model}). Veg mark: {reading.vegMark === 'green' ? 'green (vegetarian)' : reading.vegMark === 'brown' ? 'brown (non-vegetarian)' : reading.vegMark === 'none' ? 'none seen' : 'unclear'}.
+                  Veg mark: {reading.vegMark === 'green' ? 'green (vegetarian)' : reading.vegMark === 'brown' ? 'brown (non-vegetarian)' : reading.vegMark === 'none' ? 'none seen' : 'unclear'}.
                 </p>
-                {!reading.readable && <Notice className="mt-2" tone="warn">The ingredients list looks cut off or hard to read, so nobody is marked as fine. Retake the photo closer and straighter.</Notice>}
+                {!reading.readable && <Notice className="mt-2" tone="warn">Part of the ingredients list is cut off or blurry, so we can't say it's safe for anyone. Try a closer, straighter photo.</Notice>}
                 <details className="mt-2 text-sm">
                   <summary className="cursor-pointer text-primary">What the label says</summary>
                   <p className="mt-1"><strong>Ingredients:</strong> {reading.ingredientsText || 'not visible'}</p>
@@ -109,7 +109,7 @@ export function ScanPage() {
           </section>
 
           <section className="card divide-y divide-outline-variant overflow-hidden">
-            {household.length === 0 && <p className="p-5 text-sm">Add a profile with diet and allergies to get a verdict.</p>}
+            {household.length === 0 && <p className="p-5 text-sm">Finish setting up to get an answer for each person.</p>}
             {household.map((p) => {
               const v = verdictFor(reading, p);
               const ui = VERDICT_UI[v.verdict];
@@ -140,7 +140,7 @@ export function ScanPage() {
               );
             })}
           </section>
-          <p className="text-xs text-on-surface-variant">A check, not a guarantee: recipes change and photos can miss small print. For a serious allergy, always read the pack yourself.</p>
+          <p className="text-xs text-on-surface-variant">A quick check, not a guarantee. With a serious allergy, always read the pack yourself.</p>
         </>
       )}
     </div>

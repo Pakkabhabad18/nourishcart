@@ -1,6 +1,6 @@
 // Row <-> domain mappers for the Supabase tables. Shared by the browser store and the
 // Edge Functions so both read and write the same shapes.
-import type { ActivityAssessment, Allergen, ClinicalFlag, ProfileBundle, Profile } from '../types.ts';
+import type { ActivityAssessment, Allergen, BodyGoal, ClinicalFlag, FocusNutrient, ProfileBundle, Profile } from '../types.ts';
 import type { PantryItem } from '../inventory/pantry.ts';
 import type { StoredBasket, SimulatedOrder } from '../orders/checkout.ts';
 import type { PlanDraft, PlanTargets, OptionKey } from '../planning/plan.ts';
@@ -77,6 +77,14 @@ export interface PreferencesRow {
   max_cook_minutes: number;
   grocery_tier: ProfileBundle['preferences']['groceryTier'];
   clinical_scope: 'none_confirmed' | 'out_of_scope' | null;
+  // Added by migration 20261114000001_nutrition_targets.
+  body_goal?: BodyGoal | null;
+  target_kcal?: number | null;
+  target_protein_g?: number | null;
+  target_carbs_g?: number | null;
+  target_fat_g?: number | null;
+  target_fibre_g?: number | null;
+  focus_nutrients?: string[] | null;
 }
 
 export interface ActivityRow {
@@ -132,7 +140,19 @@ export function bundleFromRows(p: ProfileRow, pref: PreferencesRow | null, act: 
       intensity: act?.intensity ?? null,
     },
     budget: { profileId: p.id, amountInr: num(bud?.amount_inr ?? null), period: bud?.period ?? 'weekly', mode: bud?.mode ?? 'hard' },
-    goals: { profileId: p.id, goal: pref?.goal ?? null },
+    goals: {
+      profileId: p.id,
+      goal: pref?.goal ?? null,
+      bodyGoal: pref?.body_goal ?? null,
+      custom: {
+        kcal: pref?.target_kcal ?? null,
+        proteinG: pref?.target_protein_g ?? null,
+        carbsG: pref?.target_carbs_g ?? null,
+        fatG: pref?.target_fat_g ?? null,
+        fibreG: pref?.target_fibre_g ?? null,
+      },
+      focusNutrients: (pref?.focus_nutrients ?? []) as FocusNutrient[],
+    },
   };
 }
 
@@ -155,6 +175,13 @@ export function bundleToRows(b: ProfileBundle): { preferences: PreferencesRow; a
       max_cook_minutes: pr.maxCookMinutes,
       grocery_tier: pr.groceryTier,
       clinical_scope: pr.clinicalFlags.length > 0 ? 'out_of_scope' : pr.noClinicalFlagsConfirmed ? 'none_confirmed' : null,
+      body_goal: b.goals.bodyGoal,
+      target_kcal: b.goals.custom.kcal,
+      target_protein_g: b.goals.custom.proteinG,
+      target_carbs_g: b.goals.custom.carbsG,
+      target_fat_g: b.goals.custom.fatG,
+      target_fibre_g: b.goals.custom.fibreG,
+      focus_nutrients: b.goals.focusNutrients,
     },
     activity: {
       profile_id: b.profile.id,

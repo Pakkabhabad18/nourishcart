@@ -1,9 +1,10 @@
 // Recommendation safety and quality evaluation.
 // Runs many synthetic users through the full pipeline (targets -> three plans -> grocery
 // basket -> budget alternatives) and checks every output against the independent oracle.
+import { NO_CUSTOM_TARGETS } from '../domain/nutrition/personal.ts';
 import type { Allergen, DietPattern, Goal, ProfileBundle } from '../domain/types.ts';
 import type { BasketLine } from '../domain/grocery/optimise.ts';
-import { calculateTargets } from '../domain/nutrition/targets.ts';
+import { calculateTargets, planTargetsFrom } from '../domain/nutrition/targets.ts';
 import { aggregateRecipeNutrition } from '../domain/recipes/aggregate.ts';
 import { evaluatePlan, generatePlanOptions, ENERGY_TOLERANCE, type Catalog, type PlanDraft } from '../domain/planning/plan.ts';
 import { negotiate, runPipeline } from '../domain/pipeline.ts';
@@ -41,7 +42,7 @@ export function makeProfile(i: number, diet: DietPattern, allergies: Allergen[],
     },
     activity: { profileId: id, questionnaireVersion: 'aq-1', occupation: pick(['sedentary', 'light', 'moderate', 'heavy'] as const), movement: pick(['low', 'medium', 'high'] as const), workoutsPerWeek: workouts, workoutType: workouts ? 'mixed' : 'none', workoutMinutes: workouts ? pick([30, 45, 60]) : 0, intensity: workouts ? pick(['light', 'moderate', 'vigorous'] as const) : null },
     budget: { profileId: id, amountInr: pick([700, 1000, 1500, 2500, 4000]), period: 'weekly', mode: 'hard' },
-    goals: { profileId: id, goal: pick(GOALS) },
+    goals: { profileId: id, goal: pick(GOALS), bodyGoal: null, custom: NO_CUSTOM_TARGETS, focusNutrients: [] },
   };
 }
 
@@ -133,7 +134,7 @@ export function runRecommendationEval(cat: Catalog, opts: { perCombination?: num
             r.infeasibleWithoutReasons++;
             continue;
           }
-          const targets = { energyKcal: t.record.planningEnergyKcal, proteinEarG: t.record.protein.earG, proteinRdaG: t.record.protein.rdaG };
+          const targets = planTargetsFrom(t.record);
           const gen = generatePlanOptions(b, targets, cat);
           if (!gen.ok) {
             if (gen.reasons.length > 0) r.infeasibleWithReasons++;

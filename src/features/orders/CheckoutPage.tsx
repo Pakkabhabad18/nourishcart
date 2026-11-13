@@ -28,7 +28,7 @@ export function CheckoutPage() {
   if (basketQ.error) return <ErrorState error={basketQ.error} />;
   const basket = basketQ.data;
   if (!basket)
-    return <EmptyState title="No basket to review" action={<Button onClick={() => nav('/groceries')}>Go to groceries</Button>}>Build a basket from your meal plan first.</EmptyState>;
+    return <EmptyState title="Nothing to check out yet" action={<Button onClick={() => nav('/groceries')}>Shopping list</Button>}>Start from your shopping list.</EmptyState>;
 
   const receipt = recomputeLines(basket.lines, CAT.products);
   const over = basket.budgetInr != null && basket.totalInr > basket.budgetInr;
@@ -62,7 +62,7 @@ export function CheckoutPage() {
       <Link to="/groceries" className="mb-4 inline-flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-on-surface">
         <ArrowLeft className="h-4 w-4" aria-hidden /> Edit basket
       </Link>
-      <PageHeader title="Review basket" description={<>For {profile.displayName}. Version {basket.version}. <SimulatedTag>Simulated order</SimulatedTag></>} />
+      <PageHeader title="Practice checkout" description={<>A test run of ordering. Nothing is bought. <SimulatedTag>Practice</SimulatedTag></>} />
       <section className="card overflow-hidden">
         <table className="w-full text-sm">
           <caption className="sr-only">Basket lines</caption>
@@ -112,18 +112,18 @@ export function CheckoutPage() {
       <section className="card mt-4 p-5 sm:p-6">
         {!approved ? (
           <>
-            <h2 className="text-lg font-medium">Step 1: approve this exact basket</h2>
-            <p className="mt-1 text-sm text-on-surface-variant">Approval locks version {basket.version} and its total of {formatInr(basket.totalInr)}. Any later change to the basket needs a new approval.</p>
+            <h2 className="text-lg font-medium">1. Approve this list</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">Locks the total at {formatInr(basket.totalInr)}. Changing the list later needs a new approval.</p>
             <Button className="mt-4" onClick={approve} loading={busy} disabled={!canApprove || !online}>
-              Approve basket
+              Approve list
             </Button>
           </>
         ) : (
           <>
-            <h2 className="text-lg font-medium">Step 2: place the simulated order</h2>
+            <h2 className="text-lg font-medium">2. Place the practice order</h2>
             <label className="mt-3 flex cursor-pointer items-start gap-3">
               <input type="checkbox" className="mt-0.5 h-5 w-5 accent-primary" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
-              <span>I understand this is a simulated order. No retailer is contacted, nothing is delivered and no payment is taken.</span>
+              <span>I understand this is practice: no store is contacted and nothing is paid.</span>
             </label>
             <details className="mt-3 text-sm text-on-surface-variant">
               <summary className="cursor-pointer">Testing options</summary>
@@ -133,7 +133,7 @@ export function CheckoutPage() {
               </label>
             </details>
             <Button size="lg" className="mt-4 w-full sm:w-auto" icon={<ShieldCheck className="h-5 w-5" aria-hidden />} onClick={placeOrder} loading={busy} disabled={!confirmed || !online}>
-              Place simulated order for {formatInr(basket.totalInr)}
+              Place practice order for {formatInr(basket.totalInr)}
             </Button>
           </>
         )}
@@ -142,10 +142,10 @@ export function CheckoutPage() {
       {approved && (
         <section className="card mt-4 flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-medium">Order from Swiggy Instamart or Zepto instead</h2>
-            <p className="text-sm text-on-surface-variant">Build the cart automatically on Instamart, or open each item on Instamart or Zepto with a shopping checklist.</p>
+            <h2 className="text-lg font-medium">Order for real instead</h2>
+            <p className="text-sm text-on-surface-variant">Compare Zepto and Instamart and fill your cart there.</p>
           </div>
-          <Button variant="tonal" onClick={() => nav('/checkout/store')}>Order from a store</Button>
+          <Button variant="tonal" onClick={() => nav('/groceries/compare')}>Compare stores</Button>
         </section>
       )}
     </div>

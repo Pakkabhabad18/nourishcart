@@ -14,17 +14,18 @@ Working end to end in demo mode and against a local Supabase stack. See [BUILD_S
 | Area | State |
 |---|---|
 | Email OTP sign-in | Working locally with Supabase + Mailpit (tested). Hosted: Gmail app-password SMTP steps ready (AUTH_AND_SMTP_SETUP.md §3), needs the team to enter the password in Supabase. |
-| Onboarding | Speak or type a description once (optional AI reader on Groq, checked by rules); the app fills the profile, quotes the words it used and asks only what is missing. Step-by-step form still available. |
+| Onboarding | A spoken conversation: the app asks one question at a time out loud and listens (or you type or tap). A long answer fills several questions at once. Optional AI reader for answers it can't understand, checked by rules. Form still available. |
+| Personal targets | Goal (lose fat / stay / build muscle), your own calories, protein, carbs, fat and fibre within safety limits, and nutrients to get more of (iron, calcium, B12, vitamin D, folate, zinc) |
 | Profiles, nutrition estimates | Working. Energy method is provisional and unreviewed. |
 | Look and feel | Material Design 3 (Google's design kit), colours generated from one seed with Material Color Utilities |
 | Three plans, weekly planner, meal replacement | Working |
 | Groceries, budget negotiation, simulated checkout, orders | Working |
 | Pantry, replenishment, scheduled draft basket | Working |
-| Price comparison | Zepto vs Instamart for the whole basket, read in the person's own browser by the NourishCart Shopper extension; AI (Gemini) reads the pages, our checks verify every price; optional "add to my cart" that stops before checkout |
+| Price comparison and cart | Zepto vs Instamart for the whole list, read in the person's own browser by the NourishCart Shopper extension; AI reads the pages, our checks verify every price; "Fill my cart" adds the picks and stops before checkout |
 | Label scan | Photo of a packet → AI copies the label → our word lists say who in the household it suits, quoting the label |
 | Cook note | The day's menu with amounts in Telugu or Hindi (AI translation, every quantity checked), read aloud or sent on WhatsApp |
 | Store ordering (sandbox) | Swiggy Instamart cart via the official Builders Club tool flow, on a sandbox until access is granted |
-| Evaluation | 31 gates (no key needed) + 5 live-model evaluations; shown in the app under Evaluation (EVALUATION.md) |
+| Evaluation | 40 gates (no key needed) + 5 live-model evaluations; shown in the app under How we test (EVALUATION.md) |
 
 ## Connect the live site to a real backend (team, once)
 

@@ -1,10 +1,11 @@
 // Meal planning engine (PRD 8). Deterministic: same inputs -> same plans.
 // Order of operations follows PRD 8.3: hard filters first, then scoring, then
 // day assembly, portion scaling, validation and explanation.
-import type { GroceryTier, Ingredient, MealSlot, ProfileBundle, Recipe, CatalogueProduct } from '../types.ts';
+import type { FocusNutrient, GroceryTier, Ingredient, MealSlot, ProfileBundle, Recipe, CatalogueProduct } from '../types.ts';
 import { recipeRejection, type Restrictions } from '../diet.ts';
 import { aggregateRecipeNutrition, addTotals, emptyTotals, type NutrientTotals } from '../recipes/aggregate.ts';
 import { round } from '../units.ts';
+import { FOCUS_SOURCES } from '../nutrition/personal.ts';
 
 export const PLANNER_VERSION = 'planner-1.0.0';
 export const DAYS = 7;
@@ -16,9 +17,9 @@ export const ENERGY_TOLERANCE = 0.1;
 
 export type OptionKey = 'budget' | 'balanced' | 'goal';
 export const OPTION_META: Record<OptionKey, { label: string; emphasis: string }> = {
-  budget: { label: 'Budget Optimised', emphasis: 'Lowest grocery spend and waste, using affordable staples. Repeats a few dishes to allow batch cooking.' },
-  balanced: { label: 'Balanced', emphasis: 'More variety across the week and more food groups each day, at a practical cost.' },
-  goal: { label: 'Goal Aligned', emphasis: 'Leans towards your selected goal and the foods you like, within the same safety rules.' },
+  budget: { label: 'Lowest cost', emphasis: 'Cheap staples, some dishes repeat so you can cook in batches.' },
+  balanced: { label: 'Most variety', emphasis: 'A different mix of foods each day.' },
+  goal: { label: 'Best for your goal', emphasis: 'Leans towards your protein target and the nutrients you asked for.' },
 };
 
 export interface PlannedMeal {
@@ -44,8 +45,15 @@ export interface PlanDraft {
 
 export interface PlanTargets {
   energyKcal: number;
+  /** Hard floor: every day must reach it. */
   proteinEarG: number;
   proteinRdaG: number;
+  // Soft aims from the person's targets (optional so older saved plans still load).
+  proteinTargetG?: number;
+  carbsG?: number;
+  fatG?: number;
+  fibreG?: number;
+  focus?: FocusNutrient[];
 }
 
 export interface Catalog {
@@ -68,7 +76,7 @@ export function ingredientUnitCost(ingredientId: string, tier: GroceryTier, prod
   return Math.min(...pool.map((p) => p.priceInr / p.packQty));
 }
 
-function swappedLines(recipe: Recipe, servings: number, swaps: Record<string, IngredientSwap>) {
+export function swappedLines(recipe: Recipe, servings: number, swaps: Record<string, IngredientSwap>) {
   return recipe.ingredients.map((ri) => {
     const s = swaps[ri.ingredientId];
     return s
@@ -111,6 +119,8 @@ interface RecipeFacts {
   kcal: number;
   protein: number;
   fibre: number;
+  ironMg: number;
+  calciumMg: number;
   cost: number;
   groups: Set<string>;
 }
@@ -118,7 +128,7 @@ interface RecipeFacts {
 function factsFor(recipe: Recipe, cat: Catalog, tier: GroceryTier): RecipeFacts {
   const t = aggregateRecipeNutrition(recipe, cat.ingredients, 1);
   const groups = new Set(recipe.ingredients.map((ri) => cat.ingredients.get(ri.ingredientId)?.foodGroup ?? 'other').filter((g) => g !== 'fat' && g !== 'condiment'));
-  return { recipe, kcal: t.energyKcal.value, protein: t.proteinG.value, fibre: t.fibreG.value, cost: mealCost(recipe, 1, {}, tier, cat.products), groups };
+  return { recipe, kcal: t.energyKcal.value, protein: t.proteinG.value, fibre: t.fibreG.value, ironMg: t.ironMg.value, calciumMg: t.calciumMg.value, cost: mealCost(recipe, 1, {}, tier, cat.products), groups };
 }
 
 interface ScoreCtx {
@@ -128,6 +138,33 @@ interface ScoreCtx {
   usedYesterday: Set<string>;
   groupsToday: Set<string>;
   usedInEarlierOptions: Set<string>;
+  targets: PlanTargets;
+}
+
+// Typical density of the whole recipe set, per 100 kcal, used to scale the focus bonus
+// so "more iron" and "more calcium" weigh about the same as one extra food group.
+const IRON_PER_100_KCAL = 0.64;
+const CALCIUM_PER_100_KCAL = 31;
+
+/**
+ * Bonus for the person's own aims: nutrients they asked for more of, and a protein
+ * target above the floor. Applied to every option, more strongly to Goal Aligned.
+ */
+function personalBonus(f: RecipeFacts, t: PlanTargets, option: OptionKey): number {
+  if (f.kcal <= 0) return 0;
+  let s = 0;
+  for (const n of t.focus ?? []) {
+    const src = FOCUS_SOURCES[n];
+    if (src.measured === 'ironMg') s += Math.min(3, (f.ironMg / f.kcal) * 100 / IRON_PER_100_KCAL) * 2;
+    else if (src.measured === 'calciumMg') s += Math.min(2, (f.calciumMg / f.kcal) * 100 / CALCIUM_PER_100_KCAL) * 0.8;
+    if (src.groups.some((g) => f.groups.has(g))) s += 0.6;
+  }
+  // Protein aim: how far the target sits above the floor decides how hard we lean.
+  if (t.proteinTargetG && t.proteinTargetG > t.proteinEarG) {
+    const lean = Math.min(1.5, t.proteinTargetG / t.proteinEarG - 1);
+    s += ((f.protein / f.kcal) * 100) * lean * (option === 'goal' ? 1.2 : 0.8);
+  }
+  return s;
 }
 
 /** Higher is better. Weights per option are the only thing that differs between plans. */
@@ -159,6 +196,7 @@ function score(f: RecipeFacts, ctx: ScoreCtx): number {
       break;
   }
   s += likes * 0.4 - dislikeHits * 1.2 - overTime * 0.05;
+  s += personalBonus(f, ctx.targets, ctx.option);
   if (ctx.usedInEarlierOptions.has(f.recipe.id)) s -= ctx.option === 'budget' ? 0 : 0.6;
   return s;
 }
@@ -204,7 +242,7 @@ export function generatePlanOptions(b: ProfileBundle, targets: PlanTargets, cat:
       for (const slot of slots) {
         const ranked = [...(bySlot.get(slot) ?? [])]
           .filter((f) => !today.has(f.recipe.id))
-          .map((f) => ({ f, s: score(f, { option, b, usedThisWeek, usedYesterday, groupsToday, usedInEarlierOptions }) }))
+          .map((f) => ({ f, s: score(f, { option, b, usedThisWeek, usedYesterday, groupsToday, usedInEarlierOptions, targets }) }))
           .sort((x, y) => y.s - x.s || x.f.recipe.id.localeCompare(y.f.recipe.id));
         const choice = ranked[0].f;
         picked.push(choice);
@@ -325,7 +363,9 @@ export function evaluatePlan(plan: PlanDraft, targets: PlanTargets, cat: Catalog
     }
     groupsSum += groups.size;
     const energyOk = Math.abs(totals.energyKcal.value - targets.energyKcal) <= targets.energyKcal * ENERGY_TOLERANCE;
-    const proteinOk = totals.proteinG.value >= targets.proteinEarG;
+    // Totals are summed from per-meal values rounded to 0.1 g, so the sum can be up to ~0.1 g
+    // high. Requiring 0.1 g extra keeps the check honest against the unrounded amount.
+    const proteinOk = totals.proteinG.value >= targets.proteinEarG + 0.1;
     if (!energyOk) issues.push(`Day ${day + 1}: energy ${round(totals.energyKcal.value)} kcal is outside ±10% of ${targets.energyKcal} kcal.`);
     if (!proteinOk) issues.push(`Day ${day + 1}: protein ${round(totals.proteinG.value)} g is below the EAR planning reference of ${targets.proteinEarG} g.`);
     week = addTotals(week, totals);

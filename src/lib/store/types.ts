@@ -1,3 +1,4 @@
+import { NO_CUSTOM_TARGETS } from '../../domain/nutrition/personal.ts';
 // The single data-access interface the UI talks to. Two implementations:
 //  - DemoStore: browser storage + simulated email inbox (no backend; used for review previews)
 //  - SupabaseStore: Supabase Auth (email OTP), PostgREST + RLS, Edge Functions
@@ -88,7 +89,7 @@ export function emptyBundle(profile: Profile): ProfileBundle {
     },
     activity: { profileId: profile.id, questionnaireVersion: 'aq-1', occupation: null, movement: null, workoutsPerWeek: 0, workoutType: 'none', workoutMinutes: 0, intensity: null },
     budget: { profileId: profile.id, amountInr: null, period: 'weekly', mode: 'hard' },
-    goals: { profileId: profile.id, goal: null },
+    goals: { profileId: profile.id, goal: null, bodyGoal: null, custom: NO_CUSTOM_TARGETS, focusNutrients: [] },
   };
 }
 

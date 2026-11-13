@@ -3,35 +3,21 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, Check, Package, ShoppingBasket, Sparkles } from 'lucide-react';
-import { qk, useActiveProfile, useBundle, useCalculation, useGroceryPipeline, usePantry, useReplenishment, useSelectedPlan, useOrders } from '../../app/hooks.ts';
+import { Check, Package, ShoppingBasket } from 'lucide-react';
+import { qk, useActiveProfile, useBundle, useGroceryPipeline, usePantry, useReplenishment, useSelectedPlan, useOrders } from '../../app/hooks.ts';
 import { store } from '../../lib/store/index.ts';
-import { Notice, RangeBar, Spinner, Tag } from '../../components/ui.tsx';
+import { Notice, Spinner } from '../../components/ui.tsx';
 import { CAT } from '../../lib/catalog.ts';
 import { dateShort, formatInr, SLOT_LABEL, todayIndex, dayLong } from '../../lib/format.ts';
 import { applyPatchToPlan } from '../../domain/pipeline.ts';
 import { aggregateRecipeNutrition } from '../../domain/recipes/aggregate.ts';
 import { validateProfileForNutrition } from '../../domain/nutrition/eligibility.ts';
+import { cartFilled } from '../../lib/cartFilled.ts';
 import { OPTION_META } from '../../domain/planning/plan.ts';
-
-function NextStep({ done, title, to, children, icon }: { done: boolean; title: string; to: string; children: string; icon: React.ReactNode }) {
-  return (
-    <li>
-      <Link to={to} className="flex items-start gap-3 rounded-ctl px-3 py-3 hover:bg-on-surface/[0.06]">
-        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${done ? 'bg-primary text-on-primary' : 'bg-secondary-container text-primary'}`}>{done ? <Check className="h-4 w-4" aria-label="Done" /> : icon}</span>
-        <span>
-          <span className={`block font-medium ${done ? 'text-on-surface-variant line-through decoration-on-surface-variant/40' : ''}`}>{title}</span>
-          <span className="block text-sm text-on-surface-variant">{children}</span>
-        </span>
-      </Link>
-    </li>
-  );
-}
 
 export function OverviewPage() {
   const { profile, profiles } = useActiveProfile();
   const bundle = useBundle(profile?.id);
-  const calc = useCalculation(profile?.id);
   const { plan } = useSelectedPlan(profile?.id);
   const pantry = usePantry(profile?.id);
   const orders = useOrders();
@@ -58,101 +44,89 @@ export function OverviewPage() {
     qc.invalidateQueries({ queryKey: qk.schedule(profile.id) });
   };
 
-  const steps = [
-    { done: profile.onboardingComplete && elig.status === 'eligible', title: 'Finish the profile', to: `/profiles/${profile.id}/${profile.onboardingComplete ? 'setup' : 'quick'}`, children: 'Body, activity, food rules and budget.', icon: <Sparkles className="h-4 w-4" /> },
-    { done: !!calc.data, title: 'See nutrition estimates', to: '/nutrition', children: 'Energy and protein, with the method shown.', icon: <Sparkles className="h-4 w-4" /> },
-    { done: !!plan, title: 'Choose a meal plan', to: '/plans', children: 'Compare three options for the week.', icon: <CalendarDays className="h-4 w-4" /> },
-    { done: myOrders.length > 0, title: 'Approve a basket', to: '/groceries', children: 'Review the simulated basket and place a test order.', icon: <ShoppingBasket className="h-4 w-4" /> },
+  // The weekly loop as three stages. The first unfinished one becomes the single next step.
+  const stages = [
+    { done: profile.onboardingComplete && elig.status === 'eligible', label: 'Set up', title: 'Finish setting up', text: 'A few questions about you and your food.', to: `/profiles/${profile.id}/quick`, cta: 'Continue' },
+    { done: !!plan, label: 'Meals', title: 'Pick your meals for the week', text: 'Three plans made for your targets. Choose one.', to: '/plans', cta: 'See plans' },
+    { done: myOrders.length > 0 || (!!plan && cartFilled(plan.id)), label: 'Groceries', title: "Get this week's groceries", text: 'Compare Zepto and Instamart and fill your cart.', to: '/groceries', cta: 'Open shopping list' },
   ];
-  const allDone = steps.every((s) => s.done);
+  const next = stages.find((x) => !x.done);
+  const dayKcal = todays.reduce((sum, m) => sum + aggregateRecipeNutrition(CAT.recipes.get(m.recipeId)!, CAT.ingredients, m.servings, effective!.swaps).energyKcal.value, 0);
+  const dayProtein = todays.reduce((sum, m) => sum + aggregateRecipeNutrition(CAT.recipes.get(m.recipeId)!, CAT.ingredients, m.servings, effective!.swaps).proteinG.value, 0);
 
   return (
     <>
-      <h1 className="text-2xl font-normal sm:text-3xl">{allDone ? `${dayLong(today)} for ${profile.displayName}` : `Let’s set up ${profile.displayName}’s week`}</h1>
-      {elig.status === 'out_of_scope' && <Notice tone="warn" className="mt-4" title="Personal plans are not available for this profile">{elig.scopeReasons[0]}</Notice>}
+      <h1 className="text-2xl sm:text-3xl">{plan ? dayLong(today) : `Hi ${profile.displayName}`}</h1>
+      {elig.status === 'out_of_scope' && <Notice tone="warn" className="mt-4" title="We can't make a personal plan for this profile">{elig.scopeReasons[0]}</Notice>}
       {scheduledDue && (
-        <Notice tone="info" className="mt-4" title="Your scheduled basket is ready to review">
-          <Link to="/groceries" onClick={markPrepared} className="link">Review this week’s draft basket</Link>. It will not be ordered until you approve it.
+        <Notice className="mt-4" title="This week's list is ready">
+          <Link to="/groceries" onClick={markPrepared} className="link">Check it</Link>. Nothing is ordered until you say so.
         </Notice>
       )}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        {!allDone ? (
-          <section className="card p-3 sm:p-4" aria-labelledby="next-h">
-            <h2 id="next-h" className="px-3 pt-2 text-lg font-medium">Next steps</h2>
-            <ol className="mt-1">{steps.map((s) => <NextStep key={s.title} {...s} />)}</ol>
-          </section>
-        ) : (
-          <section className="card p-5" aria-labelledby="today-h">
-            <div className="flex items-baseline justify-between">
-              <h2 id="today-h" className="text-lg font-medium">Today’s meals</h2>
-              <Link to="/plans" className="text-sm text-primary">Full week</Link>
-            </div>
-            <ul className="mt-2 divide-y divide-outline-variant">
-              {todays.map((m) => {
-                const rec = CAT.recipes.get(m.recipeId)!;
-                const t = aggregateRecipeNutrition(rec, CAT.ingredients, m.servings, effective!.swaps);
-                return (
-                  <li key={m.id}>
-                    <Link to={`/recipes/${rec.id}?servings=${m.servings}`} className="flex items-center gap-3 py-3 hover:text-primary">
-                      <span className="w-20 shrink-0 text-sm text-on-surface-variant">{SLOT_LABEL[m.slot]}</span>
-                      <span className="flex-1 font-medium">{rec.name}</span>
-                      <span className="num text-sm text-on-surface-variant">{Math.round(t.energyKcal.value)} kcal</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-            {plan && <p className="mt-2 text-xs text-on-surface-variant">{OPTION_META[plan.optionKey].label} plan, week of {dateShort(plan.weekStart)}.</p>}
-          </section>
-        )}
+      {next && (
+        <section className="card mt-5 p-5" aria-labelledby="next-h">
+          {/* Three stages of the week, so people see where they are. */}
+          <ol className="flex gap-2 text-xs" aria-label="Progress">
+            {stages.map((x) => (
+              <li key={x.label} className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 ${x.done ? 'bg-primary text-on-primary' : x === next ? 'bg-secondary-container text-on-secondary-container' : 'bg-surface-container-high text-on-surface-variant'}`}>
+                {x.done && <Check className="h-3 w-3" aria-label="Done" />} {x.label}
+              </li>
+            ))}
+          </ol>
+          <h2 id="next-h" className="mt-4 text-xl">{next.title}</h2>
+          <p className="mt-1 text-on-surface-variant">{next.text}</p>
+          <Link to={next.to} className="mt-4 inline-flex min-h-[48px] items-center rounded-full bg-primary px-6 font-medium text-on-primary hover:brightness-110">
+            {next.cta}
+          </Link>
+        </section>
+      )}
 
-        <div className="space-y-4">
-          {pipe && pipe.result.basket.budgetInr != null && (
-            <section className="card p-5">
-              <div className="flex items-baseline justify-between">
-                <h2 className="font-medium">This week’s basket</h2>
-                <Link to="/groceries" className="text-sm text-primary">Groceries</Link>
-              </div>
-              <RangeBar
-                ariaLabel={`Basket ${pipe.result.basket.totalInr} against budget ${pipe.result.basket.budgetInr}`}
-                min={0}
-                max={Math.max(pipe.result.basket.budgetInr, pipe.result.basket.totalInr) * 1.15}
-                value={pipe.result.basket.totalInr}
-                valueLabel={formatInr(pipe.result.basket.totalInr)}
-                tone={pipe.result.basket.status === 'OVER_BUDGET' ? 'warn' : 'good'}
-                ticks={[{ at: pipe.result.basket.budgetInr, label: `Budget ${formatInr(pipe.result.basket.budgetInr)}` }]}
-              />
-              <p className="text-sm text-on-surface-variant">{pipe.result.basket.lines.length} simulated products after pantry deduction.</p>
-            </section>
-          )}
-          <section className="card p-5">
-            <div className="flex items-baseline justify-between">
-              <h2 className="flex items-center gap-2 font-medium"><Package className="h-4 w-4 text-primary" aria-hidden /> Pantry</h2>
-              <Link to="/pantry" className="text-sm text-primary">Manage</Link>
-            </div>
-            {pantry.data?.length ? (
-              <>
-                <p className="mt-1 text-sm text-on-surface-variant">{pantry.data.length} items tracked.</p>
-                {nextDue && (
-                  <p className="mt-2 text-sm">
-                    Next to run low: <strong>{nextDue.name}</strong> around {dateShort(nextDue.reorderOn!)} {nextDue.status !== 'ok' && <Tag tone="warn">soon</Tag>}
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="mt-1 text-sm text-on-surface-variant">Nothing tracked yet. Adding staples you already own makes the basket cheaper.</p>
-            )}
-          </section>
-          {allDone && (
-            <section className="card p-5">
-              <h2 className="font-medium">Recent orders</h2>
-              <p className="mt-1 text-sm text-on-surface-variant">{myOrders.length} simulated order{myOrders.length === 1 ? '' : 's'} for {profile.displayName}.</p>
-              <Link to="/orders" className="mt-2 inline-block text-sm text-primary">Order history</Link>
-            </section>
-          )}
+      {plan && (
+        <section className="card mt-4 p-5" aria-labelledby="today-h">
+          <div className="flex items-baseline justify-between">
+            <h2 id="today-h" className="font-medium">Today's meals</h2>
+            <Link to="/plans" className="text-sm text-primary">Whole week</Link>
+          </div>
+          <p className="num mt-0.5 text-sm text-on-surface-variant">
+            {Math.round(dayKcal).toLocaleString('en-IN')} / {plan.targets.energyKcal.toLocaleString('en-IN')} kcal · {Math.round(dayProtein)} / {plan.targets.proteinTargetG ?? plan.targets.proteinEarG} g protein
+          </p>
+          <ul className="mt-2 divide-y divide-outline-variant">
+            {todays.map((m) => {
+              const rec = CAT.recipes.get(m.recipeId)!;
+              const t = aggregateRecipeNutrition(rec, CAT.ingredients, m.servings, effective!.swaps);
+              return (
+                <li key={m.id}>
+                  <Link to={`/recipes/${rec.id}?servings=${m.servings}`} className="flex items-center gap-3 py-3 hover:text-primary">
+                    <span className="w-20 shrink-0 text-sm text-on-surface-variant">{SLOT_LABEL[m.slot]}</span>
+                    <span className="flex-1 font-medium">{rec.name}</span>
+                    <span className="num text-sm text-on-surface-variant">{Math.round(t.energyKcal.value)} kcal</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {plan && pipe && (
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Link to="/groceries" className="card block p-5 hover:bg-on-surface/[0.03]">
+            <p className="flex items-center gap-2 font-medium"><ShoppingBasket className="h-4 w-4 text-primary" aria-hidden /> Groceries</p>
+            <p className="num mt-1 text-sm text-on-surface-variant">
+              {pipe.result.basket.lines.length} items, about {formatInr(pipe.result.basket.totalInr)}
+              {pipe.result.basket.budgetInr != null && (pipe.result.basket.status === 'OVER_BUDGET' ? ' (over budget)' : ' (within budget)')}
+            </p>
+          </Link>
+          <Link to="/pantry" className="card block p-5 hover:bg-on-surface/[0.03]">
+            <p className="flex items-center gap-2 font-medium"><Package className="h-4 w-4 text-primary" aria-hidden /> Pantry</p>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              {pantry.data?.length ? (nextDue ? `${nextDue.name} runs low around ${dateShort(nextDue.reorderOn!)}` : `${pantry.data.length} items at home`) : 'Add what you have at home to buy less.'}
+            </p>
+          </Link>
         </div>
-      </div>
+      )}
+      {plan && <p className="mt-3 text-xs text-on-surface-variant">{OPTION_META[plan.optionKey].label} plan, week of {dateShort(plan.weekStart)}.</p>}
     </>
   );
 }

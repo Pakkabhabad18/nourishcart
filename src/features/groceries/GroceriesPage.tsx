@@ -3,12 +3,12 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { ChevronDown, Info, ShoppingBasket, Undo2, Users } from 'lucide-react';
+import { ChevronDown, ShoppingBasket, Undo2, Users } from 'lucide-react';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useApp } from '../../app/context.tsx';
 import { qk, useActiveProfile, useBasket, useBundle, useGroceryPipeline, usePantry, useSavePlan, useSaveBundle, useSelectedPlan } from '../../app/hooks.ts';
 import { store } from '../../lib/store/index.ts';
-import { Button, EmptyState, ErrorState, Notice, PageHeader, RangeBar, Select, Sheet, SimulatedTag, Spinner, Tag } from '../../components/ui.tsx';
+import { Button, EmptyState, ErrorState, Notice, PageHeader, Select, Sheet, Spinner, Tag } from '../../components/ui.tsx';
 import { CAT } from '../../lib/catalog.ts';
 import { formatInr, formatQty } from '../../lib/format.ts';
 import { unitPrice } from '../../domain/units.ts';
@@ -18,16 +18,8 @@ import { restrictionsOf } from '../../domain/planning/plan.ts';
 import { buildGroceryDemand } from '../../domain/grocery/demand.ts';
 import { applyPatchToPlan, weeklyBudget } from '../../domain/pipeline.ts';
 import type { StoredBasket } from '../../domain/orders/checkout.ts';
-import { CATALOGUE_SNAPSHOT_AT } from '../../data/catalogue.ts';
 import type { StoredPlan } from '../../domain/persistence/mappers.ts';
 
-const KIND_LABEL: Record<Alternative['kind'], string> = {
-  cheaper_pack: 'Cheaper packs',
-  ingredient_swap: 'Ingredient swap',
-  meal_consolidation: 'Fewer ingredients',
-  remove_optional: 'Optional item',
-  raise_budget: 'Budget',
-};
 
 function describePatch(p: BasketPatch): { key: string; label: string; undo: BasketPatch }[] {
   const out: { key: string; label: string; undo: BasketPatch }[] = [];
@@ -52,12 +44,12 @@ function HouseholdDemand({ selfId }: { selfId: string }) {
     })
     .filter((x): x is NonNullable<typeof x> => !!x);
   if (plans.some((q) => q.isLoading)) return <Spinner label="Combining profiles" />;
-  if (sources.length < 2) return <Notice>Only one profile has a selected plan. Choose plans for others to combine their groceries.</Notice>;
+  if (sources.length < 2) return <Notice>Only one person has picked meals so far.</Notice>;
   const demand = buildGroceryDemand(sources, [], CAT);
   return (
     <div className="card overflow-hidden">
       <p className="border-b border-outline-variant px-5 py-3 text-sm text-on-surface-variant">
-        Combined demand for {sources.map((s) => s.profileName).join(', ')}. Each person keeps their own targets and budget (total of personal budgets: {formatInr(sources.reduce((s, x) => s + (x.budget ?? 0), 0))}). Ordering a combined basket is planned for a later version.
+        Everyone's needs together: {sources.map((s) => s.profileName).join(', ')}. Each person keeps their own targets and budget.
       </p>
       <ul className="divide-y divide-outline-variant">
         {demand.map((d) => (
@@ -84,10 +76,11 @@ export function GroceriesPage() {
   const savePlan = useSavePlan();
   const saveBundle = useSaveBundle();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<'basket' | 'list' | 'household'>('basket');
+  const [tab, setTab] = useState<'basket' | 'household'>('basket');
   const [open, setOpen] = useState<string | null>(null);
   const [raise, setRaise] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showAllAlts, setShowAllAlts] = useState(false);
   const pantryStock = useMemo(() => pantry.data?.map((p) => ({ profileId: p.profileId, ingredientId: p.ingredientId, quantity: p.quantity })), [pantry.data]);
   const pipe = useGroceryPipeline(bundle.data, plan, pantryStock);
 
@@ -97,9 +90,9 @@ export function GroceriesPage() {
   if (!plan || !pipe)
     return (
       <>
-        <PageHeader title="Groceries" />
-        <EmptyState icon={<ShoppingBasket className="h-5 w-5" />} title="Choose a meal plan first" action={<Button onClick={() => nav('/plans')}>Go to meal plans</Button>}>
-          The grocery list is built from the meals in your selected week.
+        <PageHeader title="Shopping list" />
+        <EmptyState icon={<ShoppingBasket className="h-5 w-5" />} title="Pick your meals first" action={<Button onClick={() => nav('/plans')}>Pick meals</Button>}>
+          The list is made from this week's meals.
         </EmptyState>
       </>
     );
@@ -111,7 +104,6 @@ export function GroceriesPage() {
   const over = basket.status === 'OVER_BUDGET';
   const hardBlocked = over && basket.budgetMode === 'hard';
   const accepted = describePatch(plan.patch ?? {});
-  const buyLines = result.demand.filter((d) => d.toBuyQty > 0);
 
   async function applyPatch(next: BasketPatch, message: string) {
     await savePlan.mutateAsync({ ...plan!, patch: next });
@@ -160,75 +152,66 @@ export function GroceriesPage() {
     }
   }
 
+  const alts = showAllAlts ? alternatives.slice(0, 8) : alternatives.slice(0, 3);
   return (
     <>
       <PageHeader
-        title="Groceries for this week"
-        description={<>Built from {profile.displayName}’s selected plan, minus what is already in the pantry. <SimulatedTag>Simulated catalogue</SimulatedTag></>}
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Link to="/groceries/compare" className="inline-flex min-h-[44px] items-center rounded-full bg-secondary-container px-6 text-sm font-medium text-on-secondary-container hover:shadow-e1">Compare prices on Zepto and Instamart</Link>
-            <Link to="/groceries/catalogue" className="inline-flex min-h-[44px] items-center rounded-full border border-outline px-6 text-sm font-medium text-primary hover:bg-primary/[0.08]">Browse catalogue</Link>
-          </div>
-        }
+        title="Shopping list"
+        description={`${basket.lines.length} items for this week's meals, minus what's in your pantry.`}
       />
 
-      <section className="card p-5 sm:p-6" aria-labelledby="budget-h">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="budget-h" className="text-lg font-medium">
-            Basket total <span className="num">{formatInr(basket.totalInr)}</span>
-          </h2>
+      {/* Total and budget in one line, with a thin bar. */}
+      <section className="card p-5" aria-labelledby="budget-h">
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 id="budget-h" className="num text-2xl">{formatInr(basket.totalInr)}</h2>
           {budget != null ? (
-            over ? <Tag tone="warn">{formatInr(basket.overBudgetByInr)} over your {basket.budgetMode} budget</Tag> : <Tag tone="good">{formatInr(budget - basket.totalInr)} under budget</Tag>
+            over ? <Tag tone="warn">{formatInr(basket.overBudgetByInr)} over budget</Tag> : <Tag tone="good">{formatInr(budget - basket.totalInr)} under budget</Tag>
           ) : (
             <Tag>No budget set</Tag>
           )}
         </div>
         {budget != null && (
-          <RangeBar
-            ariaLabel={`Basket ${basket.totalInr} rupees against budget ${budget}`}
-            min={0}
-            max={Math.max(budget, basket.totalInr) * 1.15}
-            value={basket.totalInr}
-            valueLabel={formatInr(basket.totalInr)}
-            tone={over ? 'warn' : 'good'}
-            ticks={[{ at: budget, label: `Budget ${formatInr(budget)}` }]}
-          />
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-container-highest" aria-hidden>
+            <div className={clsx('h-full rounded-full', over ? 'bg-warning' : 'bg-primary')} style={{ width: `${Math.min(100, (basket.totalInr / budget) * 100)}%` }} />
+          </div>
         )}
-        <p className="text-xs text-on-surface-variant">{basket.feesNote} Prices last checked {new Date(CATALOGUE_SNAPSHOT_AT).toLocaleDateString('en-IN')} in the simulated catalogue.</p>
+        <p className="mt-2 text-xs text-on-surface-variant">Estimate from our price list. Real store prices are checked in the next step.</p>
+        <Link to="/groceries/compare" className="mt-4 flex min-h-[52px] items-center justify-center rounded-full bg-primary px-6 font-medium text-on-primary hover:brightness-110">
+          Compare Zepto and Instamart
+        </Link>
+        <p className="mt-2 text-center text-xs text-on-surface-variant">Finds the cheapest store for this list and fills your cart there.</p>
       </section>
 
       {over && (
-        <section className="card mt-4 border-warning/40 p-5 sm:p-6" aria-labelledby="neg-h">
-          <h2 id="neg-h" className="text-lg font-medium">Bring the basket under {formatInr(budget!)}</h2>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            Biggest costs: {drivers.map((d) => `${d.name} (${formatInr(d.totalInr)}, ${d.sharePct}%)`).join(', ')}. Pick any changes below. Portions and nutrition checks never change silently.
-          </p>
-          <ul className="mt-4 divide-y divide-outline-variant">
-            {alternatives.slice(0, 8).map((a) => (
-              <li key={a.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
+        <section className="card mt-4 p-5" aria-labelledby="neg-h">
+          <h2 id="neg-h" className="font-medium">Ways to save</h2>
+          <p className="mt-0.5 text-sm text-on-surface-variant">Biggest costs: {drivers.slice(0, 3).map((d) => d.name).join(', ')}.</p>
+          <ul className="mt-2 divide-y divide-outline-variant">
+            {alts.map((a) => (
+              <li key={a.id} className="flex items-center gap-3 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-on-surface-variant">{KIND_LABEL[a.kind]}</p>
                   <p className="font-medium">{a.title}</p>
-                  <p className="text-sm text-on-surface-variant">{a.detail}</p>
-                  {a.nutritionNote && <p className={clsx('mt-0.5 text-sm', (a.proteinDeltaG ?? 0) < -5 ? 'text-warning' : 'text-on-surface-variant')}>{a.nutritionNote}</p>}
-                  {a.blocked && <p className="mt-0.5 text-sm font-medium text-error">{a.blockedReason}</p>}
+                  {a.nutritionNote && <p className={clsx('text-sm', (a.proteinDeltaG ?? 0) < -5 ? 'text-warning' : 'text-on-surface-variant')}>{a.nutritionNote}</p>}
+                  {a.blocked && <p className="text-sm text-error">{a.blockedReason}</p>}
                 </div>
-                <div className="flex items-center gap-3 sm:flex-col sm:items-end">
-                  {a.savingsInr > 0 && <span className="num font-medium text-primary">Save {formatInr(a.savingsInr)}</span>}
-                  <Button size="sm" variant={a.kind === 'raise_budget' ? 'secondary' : 'primary'} disabled={a.blocked || !online || savePlan.isPending} onClick={() => accept(a)}>
-                    {a.kind === 'raise_budget' ? 'Change budget' : 'Accept'}
-                  </Button>
-                </div>
+                {a.savingsInr > 0 && <span className="num shrink-0 text-sm text-primary">−{formatInr(a.savingsInr)}</span>}
+                <Button size="sm" variant={a.kind === 'raise_budget' ? 'secondary' : 'tonal'} disabled={a.blocked || !online || savePlan.isPending} onClick={() => accept(a)}>
+                  {a.kind === 'raise_budget' ? 'Change budget' : 'Apply'}
+                </Button>
               </li>
             ))}
           </ul>
+          {alternatives.length > 3 && !showAllAlts && (
+            <Button variant="ghost" size="sm" onClick={() => setShowAllAlts(true)}>
+              More ideas
+            </Button>
+          )}
         </section>
       )}
 
       {accepted.length > 0 && (
         <section className="card mt-4 p-5" aria-labelledby="acc-h">
-          <h2 id="acc-h" className="font-medium">Changes you accepted</h2>
+          <h2 id="acc-h" className="font-medium">Your changes</h2>
           <ul className="mt-2 divide-y divide-outline-variant">
             {accepted.map((c) => (
               <li key={c.key} className="flex items-center justify-between gap-3 py-2 text-sm">
@@ -243,20 +226,22 @@ export function GroceriesPage() {
         </section>
       )}
 
-      <div className="mt-6 flex flex-wrap gap-2" role="tablist">
-        <button role="tab" aria-selected={tab === 'basket'} className="chip" onClick={() => setTab('basket')}>Basket ({basket.lines.length})</button>
-        <button role="tab" aria-selected={tab === 'list'} className="chip" onClick={() => setTab('list')}>Ingredient list ({result.demand.length})</button>
-        {all.filter((p) => !p.archived).length > 1 && (
-          <button role="tab" aria-selected={tab === 'household'} className="chip" onClick={() => setTab('household')}>
-            <Users className="h-4 w-4" aria-hidden /> Household view
-          </button>
-        )}
+      <div className="mt-6 flex items-center justify-between">
+        <h2 className="font-medium">Items</h2>
+        <div className="flex gap-3 text-sm">
+          <Link to="/pantry" className="text-primary">Have some at home?</Link>
+          {all.filter((p) => !p.archived).length > 1 && (
+            <button className="inline-flex items-center gap-1 text-primary" onClick={() => setTab(tab === 'household' ? 'basket' : 'household')}>
+              <Users className="h-4 w-4" aria-hidden /> {tab === 'household' ? 'Just me' : 'Whole household'}
+            </button>
+          )}
+        </div>
       </div>
 
       {tab === 'basket' && (
-        <div className="mt-3 card overflow-hidden">
+        <div className="mt-2 card overflow-hidden">
           {basket.unmatched.length > 0 && (
-            <Notice tone="warn" className="m-4" title="Some ingredients could not be matched">
+            <Notice tone="warn" className="m-4" title="Couldn't find some items">
               {basket.unmatched.map((u) => <p key={u.ingredientId}>{u.name}: {u.reason}</p>)}
             </Notice>
           )}
@@ -265,38 +250,28 @@ export function GroceriesPage() {
               const ing = CAT.ingredients.get(l.ingredientId)!;
               const cands = eligibleProducts(l.ingredientId, CAT.products, ing, restrictionsOf(b));
               const isOpen = open === l.ingredientId;
+              const pk = l.picks[0];
+              const prod = pk ? CAT.products.find((x) => x.id === pk.productId) : undefined;
               return (
-                <li key={l.ingredientId} className="px-4 py-3 sm:px-5">
-                  <div className="flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{l.name}</p>
-                      {l.picks.map((pk) => {
-                        const p = CAT.products.find((x) => x.id === pk.productId)!;
-                        const up = unitPrice(p.priceInr, p.packQty, p.packUnit);
-                        return (
-                          <p key={pk.productId} className="num text-sm text-on-surface-variant">
-                            {pk.packs} × {p.brand} {p.title} at {formatInr(p.priceInr)} ({formatInr(up.value)}{up.label})
-                          </p>
-                        );
-                      })}
-                      <p className="num text-xs text-on-surface-variant">Need {formatQty(l.demandQty, l.unit)}, buying {formatQty(l.coveredQty, l.unit)}{l.leftoverQty > 0 ? `, ${formatQty(l.leftoverQty, l.unit)} left for later` : ''}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="num font-medium">{formatInr(l.lineTotalInr)}</p>
-                      <button className="mt-1 inline-flex items-center gap-1 text-xs text-primary" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : l.ingredientId)}>
-                        Why this <ChevronDown className={clsx('h-3.5 w-3.5 transition-transform', isOpen && 'rotate-180')} aria-hidden />
-                      </button>
-                    </div>
-                  </div>
+                <li key={l.ingredientId}>
+                  {/* Row: name, what to buy, price. Tap for product choice and reasons. */}
+                  <button className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-on-surface/[0.04] sm:px-5" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : l.ingredientId)}>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium">{l.name}</span>
+                      <span className="num block text-sm text-on-surface-variant">
+                        {l.picks.map((x) => `${x.packs} × ${formatQty(CAT.products.find((y) => y.id === x.productId)!.packQty, CAT.products.find((y) => y.id === x.productId)!.packUnit)}`).join(' + ')}
+                      </span>
+                    </span>
+                    <span className="num font-medium">{formatInr(l.lineTotalInr)}</span>
+                    <ChevronDown className={clsx('h-4 w-4 shrink-0 text-on-surface-variant transition-transform', isOpen && 'rotate-180')} aria-hidden />
+                  </button>
                   {isOpen && (
-                    <div className="mt-3 rounded-ctl bg-surface-container p-3 text-sm">
-                      <ul className="list-disc space-y-0.5 pl-4 text-on-surface-variant">
-                        {l.reasons.map((r) => <li key={r}>{r}</li>)}
-                        <li>Match score {l.matchScore} (versioned weights, not a nutrition claim)</li>
-                      </ul>
+                    <div className="mx-4 mb-3 rounded-ctl bg-surface-container p-3 text-sm sm:mx-5">
+                      {prod && <p>{prod.brand} {prod.title}, {formatInr(prod.priceInr)} ({formatInr(unitPrice(prod.priceInr, prod.packQty, prod.packUnit).value)}{unitPrice(prod.priceInr, prod.packQty, prod.packUnit).label})</p>}
+                      <p className="num text-on-surface-variant">Meals need {formatQty(l.demandQty, l.unit)}{l.leftoverQty > 0 ? `; ${formatQty(l.leftoverQty, l.unit)} left over for later` : ''}.</p>
                       {cands.length > 1 && (
                         <label className="mt-3 block">
-                          <span className="text-xs font-medium">Pick a different product</span>
+                          <span className="text-xs font-medium">Choose a different product</span>
                           <Select
                             className="mt-1"
                             value={plan.patch.skuOverrides?.[l.ingredientId] ?? ''}
@@ -309,10 +284,10 @@ export function GroceriesPage() {
                               applyPatch({ ...plan.patch, skuOverrides: sku }, 'Product updated');
                             }}
                           >
-                            <option value="">Let NourishCart choose</option>
+                            <option value="">Best value (our pick)</option>
                             {cands.map((c) => (
                               <option key={c.id} value={c.id}>
-                                {c.brand} {c.title}, {formatInr(c.priceInr)} ({c.tier})
+                                {c.brand} {c.title}, {formatInr(c.priceInr)}
                               </option>
                             ))}
                           </Select>
@@ -327,45 +302,13 @@ export function GroceriesPage() {
         </div>
       )}
 
-      {tab === 'list' && (
-        <div className="mt-3 card overflow-x-auto">
-          <table className="w-full min-w-[520px] text-sm">
-            <caption className="sr-only">Ingredient demand for the week</caption>
-            <thead className="border-b border-outline-variant text-left text-on-surface-variant">
-              <tr>
-                <th className="px-5 py-3 font-medium">Ingredient</th>
-                <th className="px-3 py-3 text-right font-medium">Week needs</th>
-                <th className="px-3 py-3 text-right font-medium">In pantry</th>
-                <th className="px-5 py-3 text-right font-medium">To buy</th>
-              </tr>
-            </thead>
-            <tbody className="num divide-y divide-outline-variant">
-              {result.demand.map((d) => (
-                <tr key={d.ingredientId}>
-                  <td className="px-5 py-2.5">{d.name}{d.optional && <span className="text-on-surface-variant"> (optional)</span>}</td>
-                  <td className="px-3 py-2.5 text-right">{formatQty(d.requiredQty, d.unit)}</td>
-                  <td className="px-3 py-2.5 text-right text-on-surface-variant">{d.pantryQty > 0 ? `−${formatQty(d.pantryQty, d.unit)}` : ''}</td>
-                  <td className="px-5 py-2.5 text-right font-medium">{d.toBuyQty > 0 ? formatQty(d.toBuyQty, d.unit) : 'Covered'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="border-t border-outline-variant px-5 py-3 text-xs text-on-surface-variant">
-            {buyLines.length} of {result.demand.length} ingredients need buying. Add staples you already have in <Link to="/pantry" className="link">Pantry</Link> to lower the basket.
-          </p>
-        </div>
-      )}
-
       {tab === 'household' && <div className="mt-3"><HouseholdDemand selfId={profile.id} /></div>}
 
-      <div className="sticky bottom-[72px] mt-6 flex flex-col items-end gap-2 bg-surface/95 py-3 backdrop-blur lg:bottom-0">
-        {hardBlocked && (
-          <p className="flex items-center gap-1.5 text-sm text-warning">
-            <Info className="h-4 w-4" aria-hidden /> Accept changes above or raise the budget before reviewing.
-          </p>
-        )}
-        <Button size="lg" onClick={review} loading={busy} disabled={hardBlocked || !online || basket.lines.length === 0 || !result.validation.valid}>
-          Review basket
+      {/* Without the browser helper, a practice checkout still lets you finish the flow. */}
+      <div className="mt-6 text-center">
+        {hardBlocked && <p className="mb-2 text-sm text-warning">Apply a saving above or change your budget first.</p>}
+        <Button variant="ghost" onClick={review} loading={busy} disabled={hardBlocked || !online || basket.lines.length === 0 || !result.validation.valid}>
+          Practice checkout (no real order)
         </Button>
       </div>
 
@@ -373,9 +316,9 @@ export function GroceriesPage() {
         open={raise}
         onClose={() => setRaise(false)}
         title="Change your budget?"
-        footer={<><Button variant="secondary" onClick={() => setRaise(false)}>Keep current budget</Button><Button onClick={confirmRaise} loading={saveBundle.isPending}>Set budget to {formatInr(Math.ceil(basket.totalInr))} a week</Button></>}
+        footer={<><Button variant="secondary" onClick={() => setRaise(false)}>Keep it</Button><Button onClick={confirmRaise} loading={saveBundle.isPending}>Make it {formatInr(Math.ceil(basket.totalInr))} a week</Button></>}
       >
-        <p>This changes {profile.displayName}’s saved grocery budget from {formatInr(budget ?? 0)} to {formatInr(Math.ceil(basket.totalInr))} per week. The basket stays exactly as it is.</p>
+        <p>Your budget goes from {formatInr(budget ?? 0)} to {formatInr(Math.ceil(basket.totalInr))} a week. The list stays the same.</p>
       </Sheet>
     </>
   );

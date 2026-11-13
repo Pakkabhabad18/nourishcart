@@ -5,7 +5,7 @@ import { createMockInstamart } from '../commerce/instamartMock.ts';
 import { matchProductTitle } from '../commerce/match.ts';
 import { runPipeline } from '../pipeline.ts';
 import { generatePlanOptions } from '../planning/plan.ts';
-import { calculateTargets } from '../nutrition/targets.ts';
+import { calculateTargets, planTargetsFrom } from '../nutrition/targets.ts';
 import { CAT } from '../../lib/catalog.ts';
 import { ALLERGY_SETS, DIETS, makeProfile, mulberry32 } from '../../eval/recommendations.ts';
 import { goldenBundle } from '../../test/fixtures.ts';
@@ -14,7 +14,7 @@ import type { ProfileBundle } from '../types.ts';
 function basketFor(b: ProfileBundle) {
   const t = calculateTargets(b);
   if (!t.ok) throw new Error('not eligible');
-  const targets = { energyKcal: t.record.planningEnergyKcal, proteinEarG: t.record.protein.earG, proteinRdaG: t.record.protein.rdaG };
+  const targets = planTargetsFrom(t.record);
   const opts = generatePlanOptions(b, targets, CAT);
   if (!opts.ok) throw new Error('no plan');
   return runPipeline({ bundle: b, plan: opts.plans[0], targets, patch: {}, pantry: [], cat: CAT }).basket;

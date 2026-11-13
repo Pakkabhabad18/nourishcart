@@ -45,11 +45,11 @@ function ScheduleCard({ profileId, name }: { profileId: string; name: string }) 
       <div className="flex items-start gap-3">
         <CalendarClock className="mt-0.5 h-5 w-5 text-primary" aria-hidden />
         <div className="flex-1">
-          <h2 className="font-medium">Scheduled basket</h2>
+          <h2 className="font-medium">Weekly reminder</h2>
           {r?.enabled ? (
-            <p className="mt-1 text-sm text-on-surface-variant">Every {dayLong(r.weekday)} a draft basket for {name} is prepared{r.maxSpendInr ? ` (up to ₹${r.maxSpendInr})` : ''}. You review and approve it; nothing is ordered automatically.</p>
+            <p className="mt-1 text-sm text-on-surface-variant">Every {dayLong(r.weekday)} your list for {name} is ready to check{r.maxSpendInr ? `, up to ₹${r.maxSpendInr}` : ''}. Nothing is ordered without you.</p>
           ) : (
-            <p className="mt-1 text-sm text-on-surface-variant">Have a draft basket waiting on a set day each week. It always waits for your approval.</p>
+            <p className="mt-1 text-sm text-on-surface-variant">Get next week's list ready on the same day each week.</p>
           )}
         </div>
       </div>
@@ -92,7 +92,7 @@ export function PantryPage() {
   const [qty, setQty] = useState<number | ''>('');
   const [expiry, setExpiry] = useState('');
 
-  if (!profile) return <EmptyState title="Create a profile first" action={<Link className="link" to="/profiles">Go to profiles</Link>} />;
+  if (!profile) return <EmptyState title="Add a person first" action={<Link className="link" to="/profiles">Household</Link>} />;
   if (pantry.isLoading) return <Spinner label="Loading pantry" />;
   if (pantry.error) return <ErrorState error={pantry.error} retry={() => pantry.refetch()} />;
   const items = pantry.data!;
@@ -139,16 +139,16 @@ export function PantryPage() {
     <>
       <PageHeader
         title="Pantry"
-        description={`What ${profile.displayName} has at home. Quantities here are subtracted from the grocery list.`}
+        description="Things you already have. We won't buy them again." 
         actions={<Button icon={<Plus className="h-4 w-4" aria-hidden />} onClick={() => setAdding(true)} disabled={!online}>Add item</Button>}
       />
       {items.length === 0 ? (
         <EmptyState
           icon={<Package className="h-5 w-5" />}
-          title="The pantry is empty"
-          action={<div className="flex flex-wrap gap-2"><Button onClick={addStaples} disabled={!online}>Add common staples</Button><Button variant="secondary" onClick={() => setAdding(true)} disabled={!online}>Add one item</Button></div>}
+          title="Nothing here yet"
+          action={<div className="flex flex-wrap gap-2"><Button onClick={addStaples} disabled={!online}>Add usual staples</Button><Button variant="secondary" onClick={() => setAdding(true)} disabled={!online}>Add one item</Button></div>}
         >
-          Add what you already have, or confirm a simulated order and it will appear here.
+          Rice, dal, oil and spices you have at home make the list shorter.
         </EmptyState>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">

@@ -6,7 +6,7 @@ import { Mail } from 'lucide-react';
 import { store, isDemo } from '../../lib/store/index.ts';
 import { EMAIL_RE } from '../../lib/store/types.ts';
 import { useApp } from '../../app/context.tsx';
-import { Button, Field, Input, Notice } from '../../components/ui.tsx';
+import { Button, Field, Input } from '../../components/ui.tsx';
 import { Logo } from '../../components/Logo.tsx';
 import { DEMO_MAIL_EVENT, demoInbox, type DemoMail } from '../../lib/store/demoStore.ts';
 
@@ -22,8 +22,8 @@ function DemoInbox({ email }: { email: string }) {
   const mine = mails.filter((m) => m.to === email.trim().toLowerCase()).slice(0, 1);
   if (mine.length === 0) return null;
   return (
-    <aside aria-label="Demo inbox" className="mt-6 rounded-card border border-dashed border-warning/50 bg-warning-container p-4">
-      <p className="text-sm font-medium text-warning">Demo inbox (simulated email, not sent)</p>
+    <aside aria-label="Test inbox" className="mt-6 rounded-card border border-dashed border-warning/50 bg-warning-container p-4">
+      <p className="text-sm font-medium text-warning">Test inbox (no email server on this copy)</p>
       {mine.map((m) => (
         <div key={m.id} className="mt-3 rounded-ctl border border-outline-variant bg-surface p-4">
           <p className="text-xs text-on-surface-variant">To {m.to}</p>
@@ -104,8 +104,8 @@ export function SignInPage() {
         <div className="card mt-6 p-6 sm:p-8">
           {step === 'email' ? (
             <form onSubmit={send} noValidate>
-              <h1 className="text-2xl font-normal">Sign in or create an account</h1>
-              <p className="mt-1.5 text-on-surface-variant">We will email you a 6-digit code. No password needed.</p>
+              <h1 className="text-2xl font-normal">Sign in</h1>
+              <p className="mt-1.5 text-on-surface-variant">We'll email you a 6-digit code. No password.</p>
               <div className="mt-6">
                 <Field label="Email address" htmlFor="email" error={error}>
                   <Input id="email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} invalid={!!error} describedBy={error ? 'email-error' : undefined} placeholder="name@example.com" required />
@@ -158,11 +158,6 @@ export function SignInPage() {
           )}
         </div>
         {isDemo && step === 'code' && <DemoInbox email={email} />}
-        {isDemo && step === 'email' && (
-          <Notice className="mt-6" tone="warn" title="Demo mode">
-            This preview has no email server. Use any address; the code will appear on screen.
-          </Notice>
-        )}
       </div>
     </div>
   );

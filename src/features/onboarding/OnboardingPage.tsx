@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { z } from 'zod';
 import { ArrowLeft } from 'lucide-react';
+import { GoalPicker, FocusPicker } from '../nutrition/TargetsEditor.tsx';
 import { useBundle, useSaveBundle } from '../../app/hooks.ts';
 import { useApp } from '../../app/context.tsx';
 import { Button, Chip, ErrorState, Field, Input, Notice, Select, Spinner } from '../../components/ui.tsx';
-import type { Allergen, ClinicalFlag, DietPattern, Goal, ProfileBundle } from '../../domain/types.ts';
+import type { Allergen, ClinicalFlag, DietPattern, ProfileBundle } from '../../domain/types.ts';
 import { ALLERGEN_LABELS, DIET_LABELS } from '../../domain/diet.ts';
 import { cmToFtIn, ftInToCm, kgToLb, lbToKg, round, ageInYears } from '../../domain/units.ts';
 import { BOUNDS, currentAge } from '../../domain/nutrition/eligibility.ts';
@@ -76,7 +77,7 @@ function stepErrors(step: number, b: ProfileBundle): Record<string, string> {
     if (!b.preferences.allergiesConfirmed) e.allergies = 'Select allergies, or confirm that there are none.';
   }
   if (step === 4) {
-    if (!b.goals.goal) e.goal = 'Choose a goal.';
+    if (!b.goals.bodyGoal) e.goal = 'Choose a goal.';
     if (b.budget.amountInr == null || !(b.budget.amountInr >= 200 && b.budget.amountInr <= 100000)) e.budget = 'Enter a grocery budget between ₹200 and ₹1,00,000.';
   }
   if (step === 5 && !b.preferences.noClinicalFlagsConfirmed && b.preferences.clinicalFlags.length === 0) e.clinical = 'Tick any that apply, or confirm that none apply.';
@@ -379,23 +380,17 @@ export function OnboardingPage() {
         {step === 4 && (
           <>
             <fieldset>
-              <legend className="text-sm font-medium">Main goal</legend>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2" role="radiogroup">
-                {(
-                  [
-                    ['general', 'Eat balanced, everyday meals', 'More variety and regular meals.'],
-                    ['muscle_fitness', 'Support training and muscle', 'Leans on affordable protein-rich foods.'],
-                    ['weight_management', 'Manage weight', 'Stays near your estimated needs, with more fibre.'],
-                    ['budget_first', 'Spend as little as possible', 'Keeps nutrition checks, cuts grocery cost.'],
-                  ] as [Goal, string, string][]
-                ).map(([v, t, d]) => (
-                  <button key={v} type="button" role="radio" aria-checked={b.goals.goal === v} onClick={() => set((x) => ((x.goals.goal = v), x))} className="chip h-auto flex-col items-start rounded-ctl px-4 py-3 text-left">
-                    <span className="font-medium">{t}</span>
-                    <span className="text-xs font-normal text-on-surface-variant">{d}</span>
-                  </button>
-                ))}
-              </div>
+              <legend className="mb-3 text-sm font-medium">Your goal</legend>
+              <GoalPicker
+                value={b.goals.bodyGoal}
+                onChange={(g) => set((x) => ((x.goals.bodyGoal = g), (x.goals.goal = g === 'lose' ? 'weight_management' : g === 'gain' ? 'muscle_fitness' : x.goals.goal === 'budget_first' ? 'budget_first' : 'general'), x))}
+              />
               {err('goal')}
+            </fieldset>
+            <fieldset>
+              <legend className="text-sm font-medium">Low in anything?</legend>
+              <p className="mb-3 text-xs text-on-surface-variant">Only if a doctor or blood test said so. Meals will lean towards foods rich in it.</p>
+              <FocusPicker value={b.goals.focusNutrients} onChange={(v) => set((x) => ((x.goals.focusNutrients = v), x))} />
             </fieldset>
             <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
               <Field label="Grocery budget for this person" htmlFor="budget" hint="Only for this profile. Household baskets never merge budgets silently.">

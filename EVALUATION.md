@@ -135,6 +135,32 @@ If the AI is off, offline or slow, the rule reader is used and the person sees a
 
 The menu and amounts come from the plan, with no AI involved. The AI only rewrites it in Telugu or Hindi. `checkTranslation` requires every number from the English note, and no others, to appear in the translation (Telugu and Devanagari digits are accepted). If the check fails, the cook gets the English note. **Live (`npm run eval:cook`): 12 of 12 menus kept every quantity.**
 
+## 9. Personal targets (goal, own numbers, nutrients to boost)
+
+`src/eval/personal.ts`, part of `npm run eval`. 60 synthetic people, every goal, and four sets of typed numbers each (none, absurdly low, absurdly high, random), so 720 target calculations.
+
+| Gate | What | Result (14 Nov 2026) |
+|---|---|---|
+| T1 (critical) | Calories never below the floor or past the 20% cut / 15% surplus caps | 0 of 720 |
+| T2 (critical) | Protein never below the EAR or above 2 g/kg | 0 of 720 |
+| T3 | Plans for a goal still pass every day's calorie and protein checks | 180/180 plans |
+| T4 | "Best for your goal" reaches 90% of the protein target | 80% of people |
+| T5 | Asking for more iron / calcium raises it (same person, with vs without) | iron 30/30 (+16%), calcium 27/30 (+19%) |
+
+T4 shows the limit honestly: with home-style recipes, one person in five gets a goal plan a little under their protein target. The screen shows it in amber rather than hiding it.
+
+## 10. Setup conversation
+
+`src/eval/conversationEval.ts` plays scripted conversations (`src/eval/datasets/conversations.ts`) through the real engine. Answers are written the way people talk: "twenty six", "5 feet 4", "very less", "non-veg but no beef", "chicken and eggs, no fish", and some deliberately unclear ("umm", "not sure") that must be asked again. 14 fields per person are compared with hand labels.
+
+| Gate | What | Development set (16) | Held-out set (8), first run | Held-out now |
+|---|---|---|---|---|
+| V5 (critical) | No stated allergy lost, no false "no allergies", every doctor-managed condition out of scope | 0 | 0 | 0 |
+| V6 | Fields correct | 100% | **71.4%** | 100% |
+| V7 | Finished without tap-to-answer help | 16/16 | **3/8** | 8/8 |
+
+The held-out batch was written after the development fixes and scored once before any change. Its first-run score (bold) is the honest estimate for new people: everyday words like "zero", "too much", "bank job", "UX designer" and "cricket on Sundays" were missed. Those were then added as general vocabulary (not per-sentence rules), so the "now" column is no longer held-out. In the app, a missed answer is asked again with an example, then tap-to-answer options appear, and (if allowed) the AI reader tries, so a miss slows a person down rather than producing a wrong profile.
+
 ## How to run
 
 ```bash

@@ -10,7 +10,7 @@ const STATUS_TONE: Record<OrderStatus, 'good' | 'warn' | 'danger' | 'neutral'> =
   CONFIRMED: 'good', FAILED: 'danger', CANCELLED: 'neutral', CHECKOUT_PROCESSING: 'warn', APPROVED: 'neutral', DRAFT: 'neutral', OPTIMISED: 'neutral', REVIEW_REQUIRED: 'warn',
 };
 const STATUS_LABEL: Record<OrderStatus, string> = {
-  CONFIRMED: 'Confirmed (simulated)', FAILED: 'Failed', CANCELLED: 'Cancelled', CHECKOUT_PROCESSING: 'Processing', APPROVED: 'Approved', DRAFT: 'Draft', OPTIMISED: 'Optimised', REVIEW_REQUIRED: 'Needs review',
+  CONFIRMED: 'Practice order', FAILED: 'Failed', CANCELLED: 'Cancelled', CHECKOUT_PROCESSING: 'Processing', APPROVED: 'Approved', DRAFT: 'Draft', OPTIMISED: 'Optimised', REVIEW_REQUIRED: 'Needs review',
 };
 
 export function OrdersPage() {
@@ -21,10 +21,10 @@ export function OrdersPage() {
   const name = (id: string) => all.find((p) => p.id === id)?.displayName ?? 'Profile';
   return (
     <>
-      <PageHeader title="Orders" description="All orders in this version are simulated. Nothing was bought or paid for." />
+      <PageHeader title="Orders" description="Practice orders made here. Real orders are placed in the store app." />
       {orders.data!.length === 0 ? (
-        <EmptyState icon={<Receipt className="h-5 w-5" />} title="No orders yet" action={<Link to="/groceries" className="link">Build a basket</Link>}>
-          Approved baskets you check out appear here with a receipt.
+        <EmptyState icon={<Receipt className="h-5 w-5" />} title="No orders yet" action={<Link to="/groceries" className="link">Shopping list</Link>}>
+          Practice orders show up here.
         </EmptyState>
       ) : (
         <ul className="card divide-y divide-outline-variant">

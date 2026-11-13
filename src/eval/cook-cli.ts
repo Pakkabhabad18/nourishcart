@@ -5,7 +5,7 @@
 import { writeFileSync } from 'node:fs';
 import { CAT } from '../lib/catalog.ts';
 import { generatePlanOptions } from '../domain/planning/plan.ts';
-import { calculateTargets } from '../domain/nutrition/targets.ts';
+import { calculateTargets, planTargetsFrom } from '../domain/nutrition/targets.ts';
 import { buildMenu, checkTranslation, COOK_PROMPT_VERSION, COOK_SYSTEM_PROMPT, englishNote, LANGUAGE_NAMES } from '../domain/cook/note.ts';
 import { makeProfile, mulberry32 } from './recommendations.ts';
 
@@ -20,7 +20,7 @@ for (const [i, diet] of (['vegetarian', 'non_vegetarian'] as const).entries()) {
   const b = makeProfile(i + 1, diet, [], [], mulberry32(7 + i));
   const t = calculateTargets(b);
   if (!t.ok) continue;
-  const plans = generatePlanOptions(b, { energyKcal: t.record.planningEnergyKcal, proteinEarG: t.record.protein.earG, proteinRdaG: t.record.protein.rdaG }, CAT);
+  const plans = generatePlanOptions(b, planTargetsFrom(t.record), CAT);
   if (!plans.ok) continue;
   for (const day of [0, 3, 6]) notes.push(englishNote(buildMenu(plans.plans[0], day, CAT), ['Monday', 'Thursday', 'Sunday'][[0, 3, 6].indexOf(day)]));
 }

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
 import { Logo } from '../../components/Logo.tsx';
 import { RangeBar } from '../../components/ui.tsx';
-import { calculateTargets } from '../../domain/nutrition/targets.ts';
+import { calculateTargets, planTargetsFrom } from '../../domain/nutrition/targets.ts';
 import { generatePlanOptions } from '../../domain/planning/plan.ts';
 import { runPipeline } from '../../domain/pipeline.ts';
 import { CAT } from '../../lib/catalog.ts';
@@ -15,7 +15,7 @@ function useSampleWeek() {
   return useMemo(() => {
     const t = calculateTargets(SAMPLE_BUNDLE, new Date('2026-11-11T09:00:00Z'));
     if (!t.ok) return null;
-    const targets = { energyKcal: t.record.planningEnergyKcal, proteinEarG: t.record.protein.earG, proteinRdaG: t.record.protein.rdaG };
+    const targets = planTargetsFrom(t.record);
     const plan = generatePlanOptions(SAMPLE_BUNDLE, targets, CAT).plans[0];
     const r = runPipeline({ bundle: SAMPLE_BUNDLE, plan, targets, patch: {}, pantry: [], cat: CAT });
     return { t: t.record, plan, r };
@@ -35,30 +35,26 @@ export function LandingPage() {
       </header>
       <main className="mx-auto grid max-w-6xl gap-10 px-5 pb-16 pt-6 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pt-14">
         <section>
-          <h1 className="text-3xl font-normal leading-tight sm:text-4xl">Plan a week of Indian meals around your body, your taste and your grocery budget.</h1>
+          <h1 className="text-3xl font-normal leading-tight sm:text-4xl">A week of Indian meals for your goal, and the groceries in your cart.</h1>
           <p className="mt-4 max-w-prose text-lg text-on-surface-variant">
-            NourishCart estimates your energy and protein needs, offers three meal plans, then turns the plan you choose into a grocery basket that you review before anything is ordered.
+            Answer a few questions by voice. We plan meals for your calories, protein and budget, then fill your Zepto or Instamart cart with the cheapest picks.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link to="/sign-in" className="inline-flex min-h-[50px] items-center rounded-full bg-primary px-5 text-lg font-medium text-on-primary hover:brightness-110">
-              Get started with email
+              Get started
             </Link>
             <a href="#how" className="inline-flex min-h-[50px] items-center rounded-full px-5 font-medium text-primary hover:bg-primary/[0.08]">
               How it works
             </a>
           </div>
-          <ul className="mt-8 grid max-w-prose gap-2 text-sm text-on-surface-variant">
-            <li>One login can plan for several adults, each with their own needs and budget.</li>
-            <li>Every estimate shows its method, range and what it does not know.</li>
-            <li>Groceries and checkout are simulated in this version. No payment is taken.</li>
-          </ul>
+          <p className="mt-6 max-w-prose text-sm text-on-surface-variant">Plan for everyone at home. You always check the cart and pay in the store app yourself.</p>
         </section>
 
         {s && (
           <section aria-label="Example week for a sample profile" className="card p-5 sm:p-6">
             <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-lg font-medium">A Wednesday for “Demo Asha”</h2>
-              <span className="text-xs text-on-surface-variant">Sample profile</span>
+              <h2 className="text-lg font-medium">A day for Asha</h2>
+              <span className="text-xs text-on-surface-variant">Example</span>
             </div>
             <p className="mt-1 text-sm text-on-surface-variant">26, desk job, walks daily, eggetarian, ₹1,500 a week.</p>
             <RangeBar
@@ -81,9 +77,9 @@ export function LandingPage() {
             </ul>
             <div className="mt-4 rounded-ctl bg-secondary-container px-4 py-3 text-sm">
               <p className="font-medium text-primary">
-                Week’s simulated basket: <span className="num">{formatInr(s.r.basket.totalInr)}</span> for {s.r.basket.lines.length} items
+                Week's groceries: about <span className="num">{formatInr(s.r.basket.totalInr)}</span> for {s.r.basket.lines.length} items
               </p>
-              <p className="mt-0.5 text-on-surface-variant">Under the ₹1,500 budget, before any pantry items are counted.</p>
+              <p className="mt-0.5 text-on-surface-variant">Under her ₹1,500 budget.</p>
             </div>
           </section>
         )}
@@ -91,13 +87,12 @@ export function LandingPage() {
 
       <section id="how" className="border-t border-outline-variant bg-surface">
         <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
-          <h2 className="text-2xl font-normal">How a week comes together</h2>
-          <ol className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <h2 className="text-2xl font-normal">How it works</h2>
+          <ol className="mt-8 grid gap-6 sm:grid-cols-3">
             {[
-              ['Tell us about each person', 'Age, height, weight, daily activity, food pattern, allergies and a weekly budget. Each profile stays separate.'],
-              ['See transparent estimates', 'Energy as a range, protein against the ICMR-NIN planning reference, and every assumption listed.'],
-              ['Pick one of three plans', 'Budget, Balanced or Goal-aligned. Swap any meal; totals and groceries update straight away.'],
-              ['Approve the basket', 'Pack sizes, unit prices and your pantry are counted. If it runs over budget, you choose what changes.'],
+              ['Talk for two minutes', 'Your body, your day, what you eat, your goal and budget. Speak or type.'],
+              ['Pick your meals', 'Three weekly plans that hit your targets. Swap any dish.'],
+              ['Fill your cart', 'We compare Zepto and Instamart and add the cheapest picks. You pay in the store app.'],
             ].map(([t, d], i) => (
               <li key={t} className="flex gap-3">
                 <span className="num grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary-container text-sm font-medium text-primary">{i + 1}</span>
@@ -109,7 +104,7 @@ export function LandingPage() {
             ))}
           </ol>
           <p className="mt-10 max-w-prose text-xs text-on-surface-variant">
-            NourishCart is a general-wellness planning tool for healthy adults aged 18 and over. It does not diagnose or treat any condition. Nutrition values in this version are illustrative sample data, and all products, prices and orders are simulated.
+            For healthy adults, 18 and over. Not medical advice. Nutrition values are sample data in this version.
           </p>
         </div>
       </section>

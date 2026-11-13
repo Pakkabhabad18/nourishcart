@@ -1,4 +1,5 @@
 // Synthetic sample profile used only for the public landing example.
+import { NO_CUSTOM_TARGETS } from '../../domain/nutrition/personal.ts';
 import type { ProfileBundle } from '../../domain/types.ts';
 
 export const SAMPLE_BUNDLE: ProfileBundle = {
@@ -6,5 +7,5 @@ export const SAMPLE_BUNDLE: ProfileBundle = {
   preferences: { profileId: 'sample', dietPattern: 'eggetarian', cuisines: ['south_indian', 'hyderabadi'], likes: [], dislikes: [], hardExclusions: ['okra'], allergies: [], allergiesConfirmed: true, mealsPerDay: 4, maxCookMinutes: 40, groceryTier: 'standard', clinicalFlags: [], noClinicalFlagsConfirmed: true },
   activity: { profileId: 'sample', questionnaireVersion: 'aq-1', occupation: 'sedentary', movement: 'medium', workoutsPerWeek: 3, workoutMinutes: 45, workoutType: 'strength', intensity: 'moderate' },
   budget: { profileId: 'sample', amountInr: 1500, period: 'weekly', mode: 'hard' },
-  goals: { profileId: 'sample', goal: 'muscle_fitness' },
+  goals: { profileId: 'sample', goal: 'muscle_fitness', bodyGoal: null, custom: NO_CUSTOM_TARGETS, focusNutrients: [] },
 };

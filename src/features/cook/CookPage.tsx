@@ -35,7 +35,7 @@ export function CookPage() {
 
   if (!profile) return null;
   if (isLoading || bundle.isLoading) return <Spinner label="Loading the plan" />;
-  if (!plan || !english) return <EmptyState title="Choose a meal plan first" action={<Button onClick={() => nav('/plans')}>Go to meal plans</Button>}>The note is made from your selected plan.</EmptyState>;
+  if (!plan || !english) return <EmptyState title="Pick your meals first" action={<Button onClick={() => nav('/plans')}>Pick meals</Button>}>The note is made from this week's meals.</EmptyState>;
 
   async function make() {
     setNotice(null);
@@ -80,7 +80,7 @@ export function CookPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader title="Menu for the cook" description="The day's dishes with exact amounts, in the language your cook prefers. Read it out, or send it on WhatsApp." />
+      <PageHeader title="Menu for my cook" description="The day's dishes and amounts in Telugu, Hindi or English. Play it aloud or send on WhatsApp." />
       <section className="card space-y-4 p-5">
         <div>
           <p className="text-sm font-medium">Day</p>
@@ -99,7 +99,7 @@ export function CookPage() {
           </div>
         </div>
         <Button onClick={make} loading={busy}>Make the note</Button>
-        {lang !== 'en' && <p className="text-xs text-on-surface-variant">Translated by AI (on Groq); only the menu is sent. Every quantity is checked against the English version before it's shown.</p>}
+        {lang !== 'en' && <p className="text-xs text-on-surface-variant">Translated by AI. Only the menu is sent, and every amount is checked against the English.</p>}
       </section>
 
       {notice && <Notice tone="warn">{notice}</Notice>}

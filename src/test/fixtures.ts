@@ -1,4 +1,5 @@
 // Synthetic test profiles. Never use real people's data in fixtures (PRD 15.2).
+import { NO_CUSTOM_TARGETS } from '../domain/nutrition/personal.ts';
 import type { ProfileBundle } from '../domain/types.ts';
 import { INGREDIENT_MAP } from '../data/ingredients.ts';
 import { RECIPE_MAP } from '../data/recipes.ts';
@@ -24,7 +25,7 @@ export function goldenBundle(overrides: Partial<{ [K in keyof ProfileBundle]: Pa
     },
     activity: { profileId: 'p-golden', questionnaireVersion: 'aq-1', occupation: 'sedentary', movement: 'medium', workoutsPerWeek: 3, workoutMinutes: 45, workoutType: 'strength', intensity: 'moderate' },
     budget: { profileId: 'p-golden', amountInr: 1500, period: 'weekly', mode: 'hard' },
-    goals: { profileId: 'p-golden', goal: 'muscle_fitness' },
+    goals: { profileId: 'p-golden', goal: 'muscle_fitness', bodyGoal: null, custom: NO_CUSTOM_TARGETS, focusNutrients: [] },
   };
   return {
     profile: { ...b.profile, ...overrides.profile },

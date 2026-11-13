@@ -1,5 +1,5 @@
 // Meal plans: three-plan comparison (FR-007/008) and the selected week (FR-009/010).
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { clsx } from 'clsx';
@@ -7,9 +7,9 @@ import { CalendarDays, Clock, Minus, Plus, RefreshCw, Repeat2 } from 'lucide-rea
 import { store } from '../../lib/store/index.ts';
 import { useApp } from '../../app/context.tsx';
 import { qk, useActiveProfile, useBundle, useSavePlan, useSelectedPlan } from '../../app/hooks.ts';
-import { Button, EmptyState, ErrorState, Notice, PageHeader, RangeBar, Sheet, Spinner, Tag } from '../../components/ui.tsx';
+import { Button, EmptyState, ErrorState, Notice, PageHeader, Sheet, Spinner, Tag } from '../../components/ui.tsx';
 import { CAT } from '../../lib/catalog.ts';
-import { evaluatePlan, OPTION_META, replaceMeal, replacementCandidates, roundServings, SERVING_MAX, SERVING_MIN, SERVING_STEP, ENERGY_TOLERANCE, type PlannedMeal } from '../../domain/planning/plan.ts';
+import { evaluatePlan, OPTION_META, replaceMeal, replacementCandidates, roundServings, SERVING_MAX, SERVING_MIN, SERVING_STEP, type PlannedMeal } from '../../domain/planning/plan.ts';
 import { aggregateRecipeNutrition } from '../../domain/recipes/aggregate.ts';
 import { applyPatchToPlan, runPipeline } from '../../domain/pipeline.ts';
 import type { StoredPlan } from '../../domain/persistence/mappers.ts';
@@ -34,67 +34,56 @@ function Compare({ plans, bundle, onChoose, choosing }: { plans: StoredPlan[]; b
   const minCost = Math.min(...rows.map((r) => r.basket.totalInr));
   const maxVariety = Math.max(...rows.map((r) => r.ev.distinctRecipes));
   const t = plans[0].targets;
+  const proteinAim = t.proteinTargetG ?? t.proteinEarG;
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="space-y-3">
       {rows.map(({ p, ev, basket }) => {
         const meta = OPTION_META[p.optionKey];
-        const dishes = [...new Set(p.draft.meals.map((m) => m.recipeId))].slice(0, 5).map((id) => CAT.recipes.get(id)!.name);
+        const dishes = [...new Set(p.draft.meals.map((m) => m.recipeId))].slice(0, 4).map((id) => CAT.recipes.get(id)!.name);
         return (
-          <article key={p.id} className="card flex flex-col p-5" aria-labelledby={`opt-${p.id}`}>
+          <article key={p.id} className="card p-5" aria-labelledby={`opt-${p.id}`}>
             <div className="flex flex-wrap items-center gap-2">
               <h2 id={`opt-${p.id}`} className="text-lg font-medium">{meta.label}</h2>
-              {basket.totalInr === minCost && <Tag tone="good">Lowest basket cost</Tag>}
-              {ev.distinctRecipes === maxVariety && <Tag>Most variety</Tag>}
+              {basket.totalInr === minCost && p.optionKey !== 'budget' && <Tag tone="good">Cheapest</Tag>}
+              {ev.distinctRecipes === maxVariety && p.optionKey !== 'balanced' && <Tag>Most dishes</Tag>}
             </div>
-            <p className="mt-1 text-sm text-on-surface-variant">{meta.emphasis}</p>
-            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <p className="mt-0.5 text-sm text-on-surface-variant">{meta.emphasis}</p>
+            {/* Three numbers people compare on: cost, protein against their own target, variety. */}
+            <dl className="mt-4 grid grid-cols-3 gap-3">
               <div>
-                <dt className="text-on-surface-variant">Energy, daily average</dt>
-                <dd className="num font-medium">{ev.dailyAverage.energyKcal.toLocaleString('en-IN')} kcal</dd>
+                <dt className="text-xs text-on-surface-variant">Groceries</dt>
+                <dd className="num text-lg">{formatInr(basket.totalInr)}</dd>
               </div>
               <div>
-                <dt className="text-on-surface-variant">Protein, daily average</dt>
-                <dd className="num font-medium">{ev.dailyAverage.proteinG} g <span className="font-normal text-on-surface-variant">(EAR {t.proteinEarG} g)</span></dd>
+                <dt className="text-xs text-on-surface-variant">Protein a day</dt>
+                <dd className={clsx('num text-lg', ev.dailyAverage.proteinG < proteinAim * 0.9 && 'text-warning')}>
+                  {Math.round(ev.dailyAverage.proteinG)}<span className="text-sm text-on-surface-variant">/{proteinAim} g</span>
+                </dd>
               </div>
               <div>
-                <dt className="text-on-surface-variant">Carbs / fat / fibre</dt>
-                <dd className="num font-medium">{ev.dailyAverage.carbsG} / {ev.dailyAverage.fatG} / {ev.dailyAverage.fibreG} g</dd>
-              </div>
-              <div>
-                <dt className="text-on-surface-variant">Iron / calcium</dt>
-                <dd className="num font-medium">≈{ev.dailyAverage.ironMg} mg / ≈{ev.dailyAverage.calciumMg} mg</dd>
-              </div>
-              <div>
-                <dt className="text-on-surface-variant">Simulated basket</dt>
-                <dd className="num font-medium">{formatInr(basket.totalInr)} <span className="font-normal text-on-surface-variant">this week</span></dd>
-              </div>
-              <div>
-                <dt className="text-on-surface-variant">Food used</dt>
-                <dd className="num font-medium">{formatInr(ev.dayCostInr)}/day</dd>
-              </div>
-              <div>
-                <dt className="text-on-surface-variant">Different dishes</dt>
-                <dd className="num font-medium">{ev.distinctRecipes} in the week</dd>
-              </div>
-              <div>
-                <dt className="text-on-surface-variant">Average prep</dt>
-                <dd className="num font-medium">{ev.avgPrepMinutes} min per meal</dd>
+                <dt className="text-xs text-on-surface-variant">Dishes</dt>
+                <dd className="num text-lg">{ev.distinctRecipes}</dd>
               </div>
             </dl>
-            <p className="mt-4 text-sm"><span className="text-on-surface-variant">Includes </span>{dishes.join(', ')}{p.draft.meals.length > 5 ? ' and more' : ''}.</p>
+            <p className="mt-3 text-sm text-on-surface-variant">{dishes.join(', ')}{p.draft.meals.length > 4 ? '…' : ''}</p>
+            <details className="mt-2 text-sm">
+              <summary className="cursor-pointer text-primary">More numbers</summary>
+              <dl className="num mt-2 grid grid-cols-2 gap-y-1 text-on-surface-variant">
+                <dt>Calories a day</dt><dd className="text-right text-on-surface">{ev.dailyAverage.energyKcal.toLocaleString('en-IN')} / {t.energyKcal.toLocaleString('en-IN')}</dd>
+                <dt>Carbs / fat / fibre</dt><dd className="text-right text-on-surface">{Math.round(ev.dailyAverage.carbsG)} / {Math.round(ev.dailyAverage.fatG)} / {Math.round(ev.dailyAverage.fibreG)} g</dd>
+                <dt>Iron / calcium</dt><dd className="text-right text-on-surface">{ev.dailyAverage.ironMg} / {ev.dailyAverage.calciumMg} mg</dd>
+                <dt>Cooking time</dt><dd className="text-right text-on-surface">{ev.avgPrepMinutes} min a meal</dd>
+              </dl>
+            </details>
             {!ev.valid && <Notice tone="warn" className="mt-3">{ev.issues[0]}</Notice>}
-            {basket.status === 'OVER_BUDGET' && <p className="mt-3 text-sm text-warning">The first basket is {formatInr(basket.overBudgetByInr)} over budget. You can pick cheaper options before approving.</p>}
-            <div className="mt-auto pt-5">
-              <Button className="w-full" onClick={() => onChoose(p)} loading={choosing === p.id}>
-                Choose {meta.label}
-              </Button>
-            </div>
+            {basket.status === 'OVER_BUDGET' && <p className="mt-3 text-sm text-warning">{formatInr(basket.overBudgetByInr)} over your budget. You can swap to cheaper items later.</p>}
+            <Button className="mt-4 w-full" onClick={() => onChoose(p)} loading={choosing === p.id}>
+              Choose this plan
+            </Button>
           </article>
         );
       })}
-      <p className="text-xs text-on-surface-variant lg:col-span-3">
-        Food used is the cost of the ingredients the week needs. The basket is what the first shop costs after rounding to whole packs, so it is higher when staples like oil and dal last beyond the week. Micronutrients are approximate: sample data and no cooking-loss factors. All three plans meet the same allergy, food-pattern, energy (±{ENERGY_TOLERANCE * 100}%) and protein checks.
-      </p>
+      <p className="text-xs text-on-surface-variant">All plans follow your food rules and allergies, and every day stays within 10% of your calories with at least {t.proteinEarG} g protein.</p>
     </div>
   );
 }
@@ -199,33 +188,32 @@ function Week({ plan, bundle }: { plan: StoredPlan; bundle: ProfileBundle }) {
         </section>
         <aside className="space-y-4">
           <section className="card p-5">
-            <h3 className="font-medium">Day totals</h3>
-            <RangeBar
-              ariaLabel={`Day energy ${Math.round(dEv.totals.energyKcal.value)} kcal against target ${t.energyKcal}`}
-              min={t.energyKcal * 0.7}
-              max={t.energyKcal * 1.3}
-              band={[t.energyKcal * (1 - ENERGY_TOLERANCE), t.energyKcal * (1 + ENERGY_TOLERANCE)]}
-              value={dEv.totals.energyKcal.value}
-              valueLabel={`${Math.round(dEv.totals.energyKcal.value)} kcal`}
-              tone={dEv.energyOk ? 'good' : 'warn'}
-              ticks={[{ at: t.energyKcal, label: 'estimate' }]}
-            />
-            <dl className="num grid grid-cols-2 gap-y-2 text-sm">
-              <dt className="text-on-surface-variant">Protein</dt>
-              <dd className={clsx('text-right font-medium', !dEv.proteinOk && 'text-warning')}>{Math.round(dEv.totals.proteinG.value)} g <span className="font-normal text-on-surface-variant">/ EAR {t.proteinEarG}</span></dd>
-              <dt className="text-on-surface-variant">Carbohydrate</dt>
-              <dd className="text-right font-medium">{Math.round(dEv.totals.carbsG.value)} g</dd>
-              <dt className="text-on-surface-variant">Fat</dt>
-              <dd className="text-right font-medium">{Math.round(dEv.totals.fatG.value)} g</dd>
-              <dt className="text-on-surface-variant">Fibre</dt>
-              <dd className="text-right font-medium">{dEv.totals.fibreG.status === 'complete' ? '' : '≥'}{Math.round(dEv.totals.fibreG.value)} g</dd>
-              <dt className="text-on-surface-variant">Iron</dt>
-              <dd className="text-right font-medium">≈{dEv.totals.ironMg.value} mg</dd>
-              <dt className="text-on-surface-variant">Food cost</dt>
-              <dd className="text-right font-medium">{formatInr(dEv.costInr)}</dd>
-            </dl>
-            {(!dEv.energyOk || !dEv.proteinOk) && <Notice tone="warn" className="mt-3">This day is outside the plan checks. Adjust servings or replace a meal.</Notice>}
-            <p className="mt-3 text-xs text-on-surface-variant">≥ means some ingredients have no value in the sample data, so the true total may be higher. ≈ marks micronutrients without cooking-loss factors.</p>
+            <h3 className="font-medium">This day</h3>
+            <ul className="mt-3 space-y-3">
+              {[
+                { label: 'Calories', v: dEv.totals.energyKcal.value, aim: t.energyKcal, unit: 'kcal' },
+                { label: 'Protein', v: dEv.totals.proteinG.value, aim: t.proteinTargetG ?? t.proteinEarG, unit: 'g' },
+                { label: 'Carbs', v: dEv.totals.carbsG.value, aim: t.carbsG, unit: 'g' },
+                { label: 'Fat', v: dEv.totals.fatG.value, aim: t.fatG, unit: 'g' },
+                { label: 'Fibre', v: dEv.totals.fibreG.value, aim: t.fibreG, unit: 'g' },
+              ].map((r) => (
+                <li key={r.label}>
+                  <div className="num flex justify-between text-sm">
+                    <span className="text-on-surface-variant">{r.label}</span>
+                    <span>
+                      {Math.round(r.v).toLocaleString('en-IN')}
+                      {r.aim ? <span className="text-on-surface-variant"> / {Math.round(r.aim).toLocaleString('en-IN')} {r.unit}</span> : ` ${r.unit}`}
+                    </span>
+                  </div>
+                  {r.aim ? (
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-container-highest" aria-hidden>
+                      <div className={clsx('h-full rounded-full', r.v / r.aim < 0.85 ? 'bg-warning' : 'bg-primary')} style={{ width: `${Math.min(100, (r.v / r.aim) * 100)}%` }} />
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            {(!dEv.energyOk || !dEv.proteinOk) && <Notice tone="warn" className="mt-3">This day is off target. Change servings or swap a meal.</Notice>}
           </section>
           {Object.keys(effective.draft.swaps).length > 0 && (
             <Notice title="Ingredient swaps from your basket choices">
@@ -235,16 +223,16 @@ function Week({ plan, bundle }: { plan: StoredPlan; bundle: ProfileBundle }) {
             </Notice>
           )}
           <Link to="/groceries" className="flex min-h-[48px] items-center justify-center rounded-full bg-primary px-4 font-medium text-on-primary hover:brightness-110">
-            Build this week’s groceries
+            Shop for this week
           </Link>
           <Link to="/cook" className="flex min-h-[48px] items-center justify-center rounded-full border border-outline px-4 font-medium text-primary hover:bg-primary/[0.08]">
-            Menu for the cook (Telugu / Hindi)
+            Menu for my cook
           </Link>
         </aside>
       </div>
 
       <Sheet open={!!replacing} onClose={() => setReplacing(null)} title={replacing ? `Replace ${SLOT_LABEL[replacing.slot].toLowerCase()} on ${dayLong(replacing.day)}` : ''} wide>
-        <p className="mb-3 text-sm text-on-surface-variant">Only this meal changes. Servings are set to keep the day’s energy close. Allergens and excluded foods are already filtered out.</p>
+        <p className="mb-3 text-sm text-on-surface-variant">Only this meal changes. All options follow your food rules.</p>
         <ul className="divide-y divide-outline-variant">
           {candidates.map((c) => (
             <li key={c.recipe.id} className="flex items-center gap-3 py-3">
@@ -280,6 +268,7 @@ export function PlansPage() {
   const [choosing, setChoosing] = useState<string | null>(null);
   const [genError, setGenError] = useState<unknown>(null);
   const comparing = params.get('compare') === '1' || (!plan && proposed.length > 0);
+  const autoStarted = useRef(false);
 
   if (!profile) return <EmptyState title="Create a profile first" action={<Link className="link" to="/profiles">Go to profiles</Link>} />;
   if (isLoading || bundle.isLoading) return <Spinner label="Loading plans" />;
@@ -312,6 +301,12 @@ export function PlansPage() {
     toast(`${OPTION_META[p.optionKey].label} plan selected`);
   }
 
+  // First visit: make the three options straight away instead of asking for another tap.
+  if (!plan && proposed.length === 0 && !busy && !reasons && genError == null && online && elig.status === 'eligible' && !autoStarted.current) {
+    autoStarted.current = true;
+    queueMicrotask(generate);
+  }
+
   if (elig.status !== 'eligible')
     return (
       <>
@@ -321,18 +316,18 @@ export function PlansPage() {
       </>
     );
 
-  if (busy) return <Spinner label="Building three plan options" />;
+  if (busy || (!plan && proposed.length === 0 && !reasons && genError == null)) return <Spinner label="Making three plans for your week" />;
 
   if (comparing && proposed.length >= 1)
     return (
       <>
         <PageHeader
-          title="Choose a plan for this week"
-          description={`Three ways to plan ${profile.displayName}’s week from the same food rules and estimates. Pick the trade-off that suits you; you can change any meal afterwards.`}
+          title="Pick a plan for this week"
+          description="You can change any meal later." 
           actions={
             <>
               {plan && <Button variant="secondary" onClick={() => setParams({})}>Back to current plan</Button>}
-              <Button variant="secondary" icon={<RefreshCw className="h-4 w-4" aria-hidden />} onClick={generate} disabled={!online}>
+              <Button variant="ghost" icon={<RefreshCw className="h-4 w-4" aria-hidden />} onClick={generate} disabled={!online}>
                 New options
               </Button>
             </>
@@ -340,7 +335,7 @@ export function PlansPage() {
         />
         {proposed.length < 3 && (
           <Notice className="mb-4" title={`Only ${proposed.length} different week${proposed.length === 1 ? '' : 's'} possible`}>
-            {profile.displayName}’s food rules leave too few recipes for three different weeks, so we show {proposed.length === 1 ? 'one' : 'two'} instead of repeating a plan. Removing a non-allergy exclusion adds more choice.
+            Your food rules leave too few recipes for three different weeks. Removing a food you've excluded (not an allergy) gives more choice.
           </Notice>
         )}
         <Compare plans={proposed} bundle={b} onChoose={choose} choosing={choosing} />
@@ -352,26 +347,24 @@ export function PlansPage() {
       <>
         <PageHeader title="Meal plans" />
         {reasons && (
-          <Notice tone="warn" title="We could not build a plan that passes every check" className="mb-4">
+          <Notice tone="warn" title="We couldn't make a plan that fits" className="mb-4">
             {reasons.map((r) => <p key={r}>{r}</p>)}
-            <p className="mt-1">We never relax allergy or exclusion rules. Try removing a non-allergy exclusion or allowing more cooking time.</p>
+            <p className="mt-1">Allergies are never relaxed. Try allowing more cooking time or removing a food you've excluded.</p>
           </Notice>
         )}
         {genError != null && <ErrorState error={genError} />}
-        <EmptyState icon={<CalendarDays className="h-5 w-5" />} title="Get three plan options" action={<Button onClick={generate} disabled={!online}>Show me three plans</Button>}>
-          Budget-optimised, balanced and goal-aligned weeks, all checked against {profile.displayName}’s energy, protein, allergies and food rules.
-        </EmptyState>
+        <EmptyState icon={<CalendarDays className="h-5 w-5" />} title="Make meal plans" action={<Button onClick={generate} disabled={!online}>Try again</Button>} />
       </>
     );
 
   return (
     <>
       <PageHeader
-        title={`${OPTION_META[plan.optionKey].label} week`}
-        description={`Week of ${new Date(plan.weekStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}. Tap a meal to see the recipe, change servings or replace it.`}
+        title="This week's meals"
+        description={`${OPTION_META[plan.optionKey].label} plan. Tap a dish for the recipe.`}
         actions={
-          <Button variant="secondary" icon={<RefreshCw className="h-4 w-4" aria-hidden />} onClick={() => (proposed.length >= 1 ? setParams({ compare: '1' }) : generate())} disabled={!online}>
-            {proposed.length >= 1 ? 'Compare options' : 'Regenerate options'}
+          <Button variant="ghost" icon={<RefreshCw className="h-4 w-4" aria-hidden />} onClick={() => (proposed.length >= 1 ? setParams({ compare: '1' }) : generate())} disabled={!online}>
+            Change plan
           </Button>
         }
       />

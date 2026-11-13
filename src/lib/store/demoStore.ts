@@ -5,7 +5,8 @@
 import type { Profile, ProfileBundle } from '../../domain/types.ts';
 import type { StoredCalculation, StoredPlan } from '../../domain/persistence/mappers.ts';
 import { DATA_VERSION, weekStartOf } from '../../domain/persistence/mappers.ts';
-import { calculateTargets } from '../../domain/nutrition/targets.ts';
+import { NO_CUSTOM_TARGETS } from '../../domain/nutrition/personal.ts';
+import { calculateTargets, planTargetsFrom } from '../../domain/nutrition/targets.ts';
 import { generatePlanOptions, PLANNER_VERSION } from '../../domain/planning/plan.ts';
 import { simulateCheckout, type SimulatedOrder, type StoredBasket } from '../../domain/orders/checkout.ts';
 import { applyOrderToPantry, type PantryItem } from '../../domain/inventory/pantry.ts';
@@ -43,6 +44,13 @@ interface DB {
   otp: Record<string, { code: string; sentAt: number; expiresAt: number; attempts: number }>;
   inbox: DemoMail[];
   data: Record<string, UserData>;
+}
+
+/** Profiles saved before nutrition targets existed get the empty defaults. */
+function withGoalDefaults(b: ProfileBundle): ProfileBundle {
+  const g = b.goals as Partial<ProfileBundle['goals']> & { profileId: string; goal: ProfileBundle['goals']['goal'] };
+  if (g.custom && g.focusNutrients) return b;
+  return { ...b, goals: { ...g, bodyGoal: g.bodyGoal ?? null, custom: g.custom ?? NO_CUSTOM_TARGETS, focusNutrients: g.focusNutrients ?? [] } };
 }
 
 const blank = (): UserData => ({ profiles: [], bundles: {}, consents: [], calculations: [], plans: [], baskets: [], orders: [], pantry: [], schedules: [] });
@@ -88,7 +96,7 @@ export class DemoStore implements NourishStore {
   private ownedBundle(d: UserData, profileId: string): ProfileBundle {
     const b = d.bundles[profileId];
     if (!b) throw new Error('Profile not found');
-    return b;
+    return withGoalDefaults(b);
   }
 
   async getSession() {
@@ -159,7 +167,8 @@ export class DemoStore implements NourishStore {
   }
   async getBundle(profileId: string) {
     await delay(60);
-    return this.user().d.bundles[profileId] ?? null;
+    const b = this.user().d.bundles[profileId];
+    return b ? withGoalDefaults(b) : null;
   }
   async createProfile(displayName: string) {
     const { db, d, s } = this.user();
@@ -226,7 +235,7 @@ export class DemoStore implements NourishStore {
     const now = new Date().toISOString();
     const run: StoredCalculation = { id: uuid(), profileId, ownerUserId: s.userId, record: t.record, createdAt: now };
     d.calculations.push(run);
-    const targets = { energyKcal: t.record.planningEnergyKcal, proteinEarG: t.record.protein.earG, proteinRdaG: t.record.protein.rdaG };
+    const targets = planTargetsFrom(t.record);
     const gen = generatePlanOptions(bundle, targets, CAT);
     if (!gen.ok) {
       save(db);

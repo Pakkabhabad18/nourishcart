@@ -11,7 +11,7 @@ import { SignInPage } from '../features/auth/SignInPage.tsx';
 import { WelcomePage } from '../features/profiles/WelcomePage.tsx';
 import { ProfilesPage } from '../features/profiles/ProfilesPage.tsx';
 import { OnboardingPage } from '../features/onboarding/OnboardingPage.tsx';
-import { QuickSetupPage } from '../features/onboarding/QuickSetupPage.tsx';
+import { ConversationPage } from '../features/onboarding/ConversationPage.tsx';
 import { EvaluationPage } from '../features/evaluation/EvaluationPage.tsx';
 import { StoreOrderPage } from '../features/orders/StoreOrderPage.tsx';
 import { ComparePage } from '../features/groceries/ComparePage.tsx';
@@ -73,7 +73,8 @@ export function App() {
                   <Route path="/overview" element={<OverviewPage />} />
                   <Route path="/profiles" element={<ProfilesPage />} />
                   <Route path="/profiles/:id/setup" element={<OnboardingPage />} />
-                  <Route path="/profiles/:id/quick" element={<QuickSetupPage />} />
+                  <Route path="/profiles/:id/quick" element={<ConversationPage />} />
+                  <Route path="/profiles/:id/talk" element={<ConversationPage />} />
                   <Route path="/evaluation" element={<EvaluationPage />} />
                   <Route path="/nutrition" element={<NutritionPage />} />
                   <Route path="/plans" element={<PlansPage />} />

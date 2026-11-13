@@ -7,7 +7,7 @@ import { store } from '../../lib/store/index.ts';
 import { useApp } from '../../app/context.tsx';
 import { qk, useActiveProfile, useSaveBundle } from '../../app/hooks.ts';
 import { Button, EmptyState, ErrorState, Field, Input, PageHeader, Sheet, Spinner, Tag } from '../../components/ui.tsx';
-import { ageInYears } from '../../domain/units.ts';
+import { currentAge } from '../../domain/nutrition/eligibility.ts';
 import type { Profile } from '../../domain/types.ts';
 
 export function ProfilesPage() {
@@ -55,11 +55,11 @@ export function ProfilesPage() {
   return (
     <>
       <PageHeader
-        title="Profiles"
-        description="Each adult has their own measurements, food rules, targets and budget. Nothing is averaged across people."
+        title="Household"
+        description="Everyone gets their own targets, food rules and budget."
         actions={
           <Button icon={<Plus className="h-4 w-4" aria-hidden />} onClick={() => (setName(''), setAdding(true))} disabled={!online}>
-            Add adult profile
+            Add a person
           </Button>
         }
       />
@@ -84,7 +84,7 @@ export function ProfilesPage() {
                     <span className="grid h-10 w-10 place-items-center rounded-full bg-secondary-container font-medium text-primary">{p.displayName.slice(0, 1).toUpperCase()}</span>
                     <div>
                       <h2 className="font-medium">{p.displayName}</h2>
-                      <p className="text-sm text-on-surface-variant">{p.dateOfBirth ? `${ageInYears(p.dateOfBirth)} years` : 'Age not set'}</p>
+                      <p className="text-sm text-on-surface-variant">{Number.isNaN(currentAge(p)) ? 'Setup not finished' : `${currentAge(p)} years`}</p>
                     </div>
                   </div>
                   {isActive ? <Tag tone="good">Active</Tag> : p.onboardingComplete ? null : <Tag tone="warn">Setup incomplete</Tag>}
@@ -119,8 +119,8 @@ export function ProfilesPage() {
         </ul>
       )}
 
-      <Sheet open={adding} onClose={() => setAdding(false)} title="Add an adult profile" footer={<><Button variant="secondary" onClick={() => setAdding(false)}>Cancel</Button><Button onClick={create} loading={busy} disabled={!name.trim()}>Create and set up</Button></>}>
-        <Field label="Name" htmlFor="newname" hint="This person must be 18 or older. Children's nutrition is outside NourishCart's scope.">
+      <Sheet open={adding} onClose={() => setAdding(false)} title="Add a person" footer={<><Button variant="secondary" onClick={() => setAdding(false)}>Cancel</Button><Button onClick={create} loading={busy} disabled={!name.trim()}>Create and set up</Button></>}>
+        <Field label="Name" htmlFor="newname" hint="Adults only (18+).">
           <Input id="newname" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} autoFocus />
         </Field>
       </Sheet>
