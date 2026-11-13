@@ -1,6 +1,6 @@
 // Row <-> domain mappers for the Supabase tables. Shared by the browser store and the
 // Edge Functions so both read and write the same shapes.
-import type { ActivityAssessment, Allergen, BodyGoal, ClinicalFlag, FocusNutrient, ProfileBundle, Profile } from '../types.ts';
+import type { ActivityAssessment, Allergen, BodyGoal, ClinicalFlag, FocusNutrient, MealSlot, ProfileBundle, Profile } from '../types.ts';
 import type { PantryItem } from '../inventory/pantry.ts';
 import type { StoredBasket, SimulatedOrder } from '../orders/checkout.ts';
 import type { PlanDraft, PlanTargets, OptionKey } from '../planning/plan.ts';
@@ -20,6 +20,8 @@ export interface ProfileRow {
   onboarding_step: number;
   onboarding_complete: boolean;
   archived_at: string | null;
+  avatar?: string | null;
+  relation?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +42,8 @@ export function profileFromRow(r: ProfileRow): Profile {
     archived: r.archived_at != null,
     onboardingStep: r.onboarding_step,
     onboardingComplete: r.onboarding_complete,
+    avatar: r.avatar ?? null,
+    relation: r.relation ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -59,6 +63,8 @@ export function profileToRow(p: Profile): Omit<ProfileRow, 'created_at' | 'updat
     onboarding_step: p.onboardingStep,
     onboarding_complete: p.onboardingComplete,
     archived_at: p.archived ? new Date().toISOString() : null,
+    avatar: p.avatar ?? null,
+    relation: p.relation ?? null,
   };
 }
 
@@ -77,6 +83,8 @@ export interface PreferencesRow {
   max_cook_minutes: number;
   grocery_tier: ProfileBundle['preferences']['groceryTier'];
   clinical_scope: 'none_confirmed' | 'out_of_scope' | null;
+  // Added by migration 20261114000002_meals_and_profile.
+  meal_slots?: string[] | null;
   // Added by migration 20261114000001_nutrition_targets.
   body_goal?: BodyGoal | null;
   target_kcal?: number | null;
@@ -123,7 +131,8 @@ export function bundleFromRows(p: ProfileRow, pref: PreferencesRow | null, act: 
       hardExclusions: pref?.hard_exclusions ?? [],
       allergies: (pref?.allergies ?? []) as Allergen[],
       allergiesConfirmed: pref?.allergies_confirmed ?? false,
-      mealsPerDay: (pref?.meals_per_day ?? 4) === 3 ? 3 : 4,
+      mealsPerDay: pref?.meal_slots?.length ? pref.meal_slots.length : (pref?.meals_per_day ?? 4),
+      mealSlots: (pref?.meal_slots ?? []) as MealSlot[],
       maxCookMinutes: pref?.max_cook_minutes ?? 40,
       groceryTier: pref?.grocery_tier ?? 'standard',
       clinicalFlags: pref?.clinical_scope === 'out_of_scope' ? OUT_OF_SCOPE_FLAG : [],
@@ -171,7 +180,8 @@ export function bundleToRows(b: ProfileBundle): { preferences: PreferencesRow; a
       hard_exclusions: pr.hardExclusions,
       allergies: pr.allergies,
       allergies_confirmed: pr.allergiesConfirmed,
-      meals_per_day: pr.mealsPerDay,
+      meals_per_day: pr.mealSlots?.length ? pr.mealSlots.length : pr.mealsPerDay,
+      meal_slots: pr.mealSlots ?? [],
       max_cook_minutes: pr.maxCookMinutes,
       grocery_tier: pr.groceryTier,
       clinical_scope: pr.clinicalFlags.length > 0 ? 'out_of_scope' : pr.noClinicalFlagsConfirmed ? 'none_confirmed' : null,

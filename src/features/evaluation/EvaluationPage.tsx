@@ -75,7 +75,7 @@ export function EvaluationPage() {
         <h2 className="text-lg font-medium">How the check works</h2>
         <div className="mt-2 max-w-prose space-y-2 text-sm text-on-surface-variant">
           <p>
-            We generate {r.profiles} synthetic adults covering every food pattern, eight allergy combinations and four sets of strict exclusions. For each one the app builds its meal plans, cheaper alternatives and grocery basket exactly as it would for a real person.
+            We generate {r.profiles} synthetic adults in India's real mix (about three in four eat meat or fish, one in five is vegetarian; NFHS-5), with realistic heights, weights and jobs. Every food pattern and allergy combination appears at least once, and allergies are deliberately ten times more common than in real life so the safety checks see enough of them. For each one the app builds its meal plans, cheaper alternatives and grocery basket exactly as it would for a real person.
           </p>
           <p>
             A separate checker, written independently of the planner and sharing none of its code, then re-reads every meal ingredient by ingredient and every product in the basket. It flags any egg, meat or fish in a vegetarian plan, any allergen, any excluded food, and any day outside the person’s energy range or below their protein floor.

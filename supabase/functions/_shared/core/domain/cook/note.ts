@@ -15,8 +15,8 @@ export type CookLanguage = 'en' | 'te' | 'hi';
 export const LANGUAGE_NAMES: Record<CookLanguage, string> = { en: 'English', te: 'Telugu', hi: 'Hindi' };
 export const SPEECH_LANG: Record<CookLanguage, string> = { en: 'en-IN', te: 'te-IN', hi: 'hi-IN' };
 
-const SLOT_ORDER: MealSlot[] = ['breakfast', 'lunch', 'snack', 'dinner'];
-const SLOT_NAMES: Record<MealSlot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' };
+const SLOT_ORDER: MealSlot[] = ['breakfast', 'snack_am', 'lunch', 'snack', 'dinner'];
+const SLOT_NAMES: Record<MealSlot, string> = { breakfast: 'Breakfast', snack_am: 'Morning snack', lunch: 'Lunch', snack: 'Evening snack', dinner: 'Dinner' };
 
 export interface MenuDish {
   slot: MealSlot;

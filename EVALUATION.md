@@ -17,6 +17,10 @@ There is no LLM making decisions in NourishCart, so there are no prompts to grad
 | **Store product matching** | "Egg noodles" treated as vegetarian, "Jowar atta" read as wheat, pack size misread | 72 labelled product titles |
 | **Scope** | A 16-year-old or a pregnant person given personal targets | 11 must-refuse profiles |
 
+## Who the synthetic people are
+
+384 adults in India's real mix rather than equal groups: about three in four eat meat or fish and one in five is vegetarian (NFHS-5, 2019-21: 17% of men and 29% of women never eat fish, chicken or meat), with a few eggetarians and vegans. Heights and weights centre on Indian adult averages (men about 165 cm and 65 kg, women about 152 cm and 56 kg), most work is desk or light, and ages lean young. Every diet x allergy combination still appears at least once, and allergies are about ten times more common than in real life, on purpose, so the safety checks see enough of them. This run: 279 non-vegetarian, 76 vegetarian, 17 eggetarian, 12 vegan.
+
 ## 1. Recommendation safety and quality
 
 **Test population.** Every combination of 4 diet patterns × 8 allergy sets (none, peanut, dairy, gluten, egg, soy+peanut, dairy+gluten, fish+shellfish) × 4 strict-exclusion sets, with 3 synthetic people for each (random sex, age 18–77, height, weight, job, movement, workouts, goal, budget, meals per day, brand tier). The random generator is seeded, so the population is identical on every run. 4 × 8 × 4 × 3 = **384 users**.

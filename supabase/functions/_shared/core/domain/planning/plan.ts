@@ -98,9 +98,31 @@ export function restrictionsOf(b: ProfileBundle): Restrictions {
   return { dietPattern: b.preferences.dietPattern, allergies: b.preferences.allergies, hardExclusions: b.preferences.hardExclusions };
 }
 
-export function slotsFor(mealsPerDay: 3 | 4): MealSlot[] {
-  return mealsPerDay === 4 ? ['breakfast', 'lunch', 'snack', 'dinner'] : ['breakfast', 'lunch', 'dinner'];
+export const SLOT_ORDER: MealSlot[] = ['breakfast', 'snack_am', 'lunch', 'snack', 'dinner'];
+
+/** Default slots for a meal count when the person hasn't picked which meals. */
+export function slotsFor(mealsPerDay: number): MealSlot[] {
+  if (mealsPerDay >= 5) return [...SLOT_ORDER];
+  if (mealsPerDay === 4) return ['breakfast', 'lunch', 'snack', 'dinner'];
+  if (mealsPerDay === 2) return ['lunch', 'dinner'];
+  if (mealsPerDay <= 1) return ['lunch'];
+  return ['breakfast', 'lunch', 'dinner'];
 }
+
+/** The meals this person eats, in the order of the day. */
+export function slotsOf(p: { mealsPerDay: number; mealSlots?: MealSlot[] }): MealSlot[] {
+  const chosen = p.mealSlots?.length ? p.mealSlots : slotsFor(p.mealsPerDay);
+  return SLOT_ORDER.filter((s) => chosen.includes(s));
+}
+
+/** Recipes are tagged breakfast / lunch / snack / dinner; a morning snack uses snack recipes. */
+export const recipeSlot = (s: MealSlot): MealSlot => (s === 'snack_am' ? 'snack' : s);
+
+/**
+ * Largest serving multiple for a meal. With one or two meals a day (intermittent fasting),
+ * each meal has to carry more of the day, so the cap is higher.
+ */
+export const maxServingsFor = (mealsPerDay: number) => (mealsPerDay <= 2 ? 4.5 : SERVING_MAX);
 
 /** Recipes that pass every hard rule. Swaps are applied first so a substituted ingredient is what gets checked. */
 export function eligibleRecipes(cat: Catalog, r: Restrictions, swaps: Record<string, IngredientSwap> = {}): Recipe[] {
@@ -203,9 +225,9 @@ function score(f: RecipeFacts, ctx: ScoreCtx): number {
 
 // ---------------------------------------------------------------- generation
 
-export function roundServings(x: number): number {
+export function roundServings(x: number, max: number = SERVING_MAX): number {
   const r = Math.round(x / SERVING_STEP) * SERVING_STEP;
-  return Math.min(SERVING_MAX, Math.max(SERVING_MIN, r));
+  return Math.min(max, Math.max(SERVING_MIN, r));
 }
 
 export interface GenerateResult {
@@ -219,11 +241,16 @@ export interface GenerateResult {
 export function generatePlanOptions(b: ProfileBundle, targets: PlanTargets, cat: Catalog, addSnack = false): GenerateResult {
   const r = restrictionsOf(b);
   const pool = eligibleRecipes(cat, r);
-  const slots = slotsFor(addSnack ? 4 : b.preferences.mealsPerDay);
+  // Fixed meal choices (e.g. intermittent fasting) are respected; only the default 3-meal
+  // pattern may get an extra snack when the energy target can't be reached otherwise.
+  const chosenByPerson = !!b.preferences.mealSlots?.length;
+  const base = slotsOf(b.preferences);
+  const slots = addSnack && !chosenByPerson ? slotsFor(4) : base;
+  const maxServ = maxServingsFor(slots.length);
   const reasons: string[] = [];
   const bySlot = new Map<MealSlot, RecipeFacts[]>();
   for (const slot of slots) {
-    const list = pool.filter((rec) => rec.slots.includes(slot)).map((rec) => factsFor(rec, cat, b.preferences.groceryTier));
+    const list = pool.filter((rec) => rec.slots.includes(recipeSlot(slot))).map((rec) => factsFor(rec, cat, b.preferences.groceryTier));
     if (list.length === 0) reasons.push(`No recipe for ${slot} fits your food pattern, allergies and exclusions.`);
     bySlot.set(slot, list);
   }
@@ -254,7 +281,7 @@ export function generatePlanOptions(b: ProfileBundle, targets: PlanTargets, cat:
       const dayKcal = picked.reduce((s, f) => s + f.kcal, 0);
       const factor = targets.energyKcal / dayKcal;
       picked.forEach((f, i) =>
-        meals.push({ id: `d${day}-${slots[i]}`, day, slot: slots[i], recipeId: f.recipe.id, recipeVersion: f.recipe.version, servings: roundServings(factor) }),
+        meals.push({ id: `d${day}-${slots[i]}`, day, slot: slots[i], recipeId: f.recipe.id, recipeVersion: f.recipe.version, servings: roundServings(factor, maxServ) }),
       );
       usedYesterday = today;
     }
@@ -274,14 +301,23 @@ export function generatePlanOptions(b: ProfileBundle, targets: PlanTargets, cat:
   // Energy check: high needs with 3 meals can exceed sensible portions. First add a daily
   // snack (and say so); if a plan still misses, drop it rather than show it as valid.
   const energyOk = (p: PlanDraft) => evaluatePlan(p, targets, cat, b.preferences.groceryTier).days.every((d) => d.energyOk && d.proteinOk);
-  if (!addSnack && slots.length === 3 && !distinct.every(energyOk)) {
+  if (!addSnack && !chosenByPerson && slots.length === 3 && !distinct.every(energyOk)) {
     const withSnack = generatePlanOptions(b, targets, cat, true);
     withSnack.notes.unshift(`A daily snack was added: ${targets.energyKcal.toLocaleString('en-IN')} kcal is hard to reach in 3 meals at normal portion sizes.`);
     return withSnack;
   }
   const valid = distinct.filter(energyOk);
   if (valid.length === 0)
-    return { ok: false, plans: [], notes: [], reasons: [`Your energy estimate (${targets.energyKcal.toLocaleString('en-IN')} kcal a day) is higher than our current recipes can reach at sensible portion sizes with your food rules. We will not show a plan that misses it.`] };
+    return {
+      ok: false,
+      plans: [],
+      notes: [],
+      reasons: [
+        slots.length <= 2
+          ? `${targets.energyKcal.toLocaleString('en-IN')} kcal is too much to fit into ${slots.length === 1 ? 'one meal' : 'two meals'} at sensible portion sizes. Add a meal or a snack, or lower your calorie target.`
+          : `Your energy estimate (${targets.energyKcal.toLocaleString('en-IN')} kcal a day) is higher than our current recipes can reach at sensible portion sizes with your food rules. We will not show a plan that misses it.`,
+      ],
+    };
   const notes: string[] = [];
   if (valid.length < distinct.length) notes.push('Some plan options could not meet your energy or protein checks and were left out.');
   if (distinct.length < plans.length) notes.push(`Your food rules allow only ${pool.length} recipes, so ${distinct.length === 1 ? 'one week plan is' : `${distinct.length} different week plans are`} possible instead of three. Removing a non-allergy exclusion would add more choice.`);
@@ -303,9 +339,10 @@ export function fitPortions(plan: PlanDraft, targets: PlanTargets, cat: Catalog)
       const diff = targets.energyKcal - total;
       if (Math.abs(diff) <= targets.energyKcal * ENERGY_TOLERANCE * 0.5) break;
       const ordered = [...dayMeals].sort((a, b) => kcalOf(b) - kcalOf(a) || a.id.localeCompare(b.id));
-      const target = ordered.find((m) => (diff > 0 ? m.servings < SERVING_MAX : m.servings > SERVING_MIN));
+      const cap = maxServingsFor(dayMeals.length);
+      const target = ordered.find((m) => (diff > 0 ? m.servings < cap : m.servings > SERVING_MIN));
       if (!target) break;
-      target.servings = roundServings(target.servings + (diff > 0 ? SERVING_STEP : -SERVING_STEP));
+      target.servings = roundServings(target.servings + (diff > 0 ? SERVING_STEP : -SERVING_STEP), cap);
     }
   }
   return meals;
@@ -425,9 +462,9 @@ export interface ReplacementCandidate {
   deltaCostInr: number;
 }
 
-function servingsToMatch(oldKcal: number, recipe: Recipe, cat: Catalog, swaps: Record<string, IngredientSwap>): number {
+function servingsToMatch(oldKcal: number, recipe: Recipe, cat: Catalog, swaps: Record<string, IngredientSwap>, max = SERVING_MAX): number {
   const per = aggregateRecipeNutrition(recipe, cat.ingredients, 1, swaps).energyKcal.value;
-  return roundServings(per > 0 ? oldKcal / per : 1);
+  return roundServings(per > 0 ? oldKcal / per : 1, max);
 }
 
 /** Candidates for one meal slot, closest to the current meal's energy first. */
@@ -438,9 +475,9 @@ export function replacementCandidates(plan: PlanDraft, mealId: string, b: Profil
   const curT = aggregateRecipeNutrition(cur, cat.ingredients, meal.servings, plan.swaps);
   const curCost = mealCost(cur, meal.servings, plan.swaps, b.preferences.groceryTier, cat.products);
   return eligibleRecipes(cat, restrictionsOf(b), plan.swaps)
-    .filter((rec) => rec.slots.includes(meal.slot) && rec.id !== meal.recipeId)
+    .filter((rec) => rec.slots.includes(recipeSlot(meal.slot)) && rec.id !== meal.recipeId)
     .map((rec) => {
-      const servings = servingsToMatch(curT.energyKcal.value, rec, cat, plan.swaps);
+      const servings = servingsToMatch(curT.energyKcal.value, rec, cat, plan.swaps, maxServingsFor(plan.meals.filter((m) => m.day === meal.day).length));
       const t = aggregateRecipeNutrition(rec, cat.ingredients, servings, plan.swaps);
       return {
         recipe: rec,
@@ -460,15 +497,16 @@ export function replaceMeal(plan: PlanDraft, mealId: string, recipeId: string, s
   const meal = plan.meals.find((m) => m.id === mealId);
   const rec = cat.recipes.get(recipeId);
   if (!meal || !rec) return { ok: false, reason: 'Meal or recipe not found' };
-  if (!rec.slots.includes(meal.slot)) return { ok: false, reason: `${rec.name} is not offered for ${meal.slot}` };
+  if (!rec.slots.includes(recipeSlot(meal.slot))) return { ok: false, reason: `${rec.name} is not offered for ${meal.slot}` };
   const swapped: Recipe = { ...rec, ingredients: rec.ingredients.map((ri) => (plan.swaps[ri.ingredientId] ? { ...ri, ingredientId: plan.swaps[ri.ingredientId].ingredientId } : ri)) };
   const why = recipeRejection(swapped, cat.ingredients, restrictionsOf(b));
   if (why) return { ok: false, reason: why.detail };
   const cur = cat.recipes.get(meal.recipeId)!;
   const oldKcal = aggregateRecipeNutrition(cur, cat.ingredients, meal.servings, plan.swaps).energyKcal.value;
-  const s = servings ?? servingsToMatch(oldKcal, rec, cat, plan.swaps);
+  const cap = maxServingsFor(plan.meals.filter((m) => m.day === meal.day).length);
+  const s = servings ?? servingsToMatch(oldKcal, rec, cat, plan.swaps, cap);
   return {
     ok: true,
-    plan: { ...plan, meals: plan.meals.map((m) => (m.id === mealId ? { ...m, recipeId, recipeVersion: rec.version, servings: roundServings(s) } : m)) },
+    plan: { ...plan, meals: plan.meals.map((m) => (m.id === mealId ? { ...m, recipeId, recipeVersion: rec.version, servings: roundServings(s, cap) } : m)) },
   };
 }

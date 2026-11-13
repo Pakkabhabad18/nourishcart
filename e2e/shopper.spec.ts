@@ -122,6 +122,7 @@ document.querySelectorAll('.card').forEach((c) => {
   await page.getByRole('button', { name: 'Yes, add them' }).click();
   await expect(page.getByText(/: added/).first()).toBeVisible({ timeout: 120_000 });
   await expect.poll(() => added.length, { timeout: 60_000 }).toBeGreaterThan(0);
+  await expect(page.getByRole('link', { name: /Go to Zepto to pay/ })).toHaveAttribute('href', 'https://www.zepto.com/');
   console.log('cart log', JSON.stringify(added));
   await page.screenshot({ path: 'e2e/screenshots/13b-fill-cart.png', fullPage: true });
 

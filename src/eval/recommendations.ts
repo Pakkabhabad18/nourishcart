@@ -26,13 +26,46 @@ export const ALLERGY_SETS: Allergen[][] = [[], ['peanut'], ['dairy'], ['gluten']
 export const EXCLUSION_SETS: string[][] = [[], ['okra'], ['paneer'], ['toor_dal', 'rice']];
 const GOALS: Goal[] = ['general', 'muscle_fitness', 'weight_management', 'budget_first'];
 
+/**
+ * Diet mix of Indian adults, from NFHS-5 (2019-21): about 17% of men and 29% of women never
+ * eat fish, chicken or meat, and most of them don't eat eggs either. Vegan is rare.
+ */
+export const DIET_SHARE: Record<DietPattern, number> = { non_vegetarian: 0.75, vegetarian: 0.19, eggetarian: 0.04, vegan: 0.02 };
+/** Share of people with each allergy set. Allergies are deliberately ~10x more common than in
+ *  real life, so the safety checks see enough of them. */
+const ALLERGY_SHARE = [0.7, 0.06, 0.06, 0.05, 0.04, 0.03, 0.03, 0.03];
+const EXCLUSION_SHARE = [0.55, 0.2, 0.15, 0.1];
+
+/** Normal-ish random number (sum of uniforms), for heights and weights. */
+const around = (rnd: () => number, mean: number, sd: number) => mean + sd * ((rnd() + rnd() + rnd() + rnd() - 2) * 1.73);
+const weighted = <T,>(rnd: () => number, xs: T[], ws: number[]) => {
+  let x = rnd() * ws.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < xs.length; i++) if ((x -= ws[i]) <= 0) return xs[i];
+  return xs[xs.length - 1];
+};
+
+/**
+ * The synthetic population: realistic Indian proportions (diet, sex, height, weight, age,
+ * work), plus at least one person for every diet x allergy combination so rare cases are
+ * still tested. Returns [diet, allergies, exclusions] per person.
+ */
+export function population(n: number, rnd: () => number): [DietPattern, Allergen[], string[]][] {
+  const out: [DietPattern, Allergen[], string[]][] = [];
+  for (const d of DIETS) for (const a of ALLERGY_SETS) out.push([d, a, weighted(rnd, EXCLUSION_SETS, EXCLUSION_SHARE)]);
+  while (out.length < n) out.push([weighted(rnd, DIETS, DIETS.map((d) => DIET_SHARE[d])), weighted(rnd, ALLERGY_SETS, ALLERGY_SHARE), weighted(rnd, EXCLUSION_SETS, EXCLUSION_SHARE)]);
+  return out;
+}
+
 export function makeProfile(i: number, diet: DietPattern, allergies: Allergen[], exclusions: string[], rnd: () => number): ProfileBundle {
   const id = `eval-${i}`;
   const pick = <T,>(xs: T[]) => xs[Math.floor(rnd() * xs.length)];
-  const sex = pick(['male', 'female', 'prefer_not_to_say'] as const);
-  const age = 18 + Math.floor(rnd() * 60);
-  const heightCm = Math.round(150 + rnd() * 35);
-  const weightKg = Math.round(45 + rnd() * 50);
+  const sex = weighted(rnd, ['male', 'female', 'prefer_not_to_say'] as const, [0.49, 0.49, 0.02]);
+  // Adults 18-65, more of them young (as in India's adult population).
+  const age = Math.min(65, 18 + Math.floor(Math.abs(around(rnd, 0, 1)) * 18));
+  // Indian adult averages: men about 165 cm / 65 kg, women about 152 cm / 56 kg.
+  const male = sex === 'male';
+  const heightCm = Math.round(Math.min(190, Math.max(140, around(rnd, male ? 165 : sex === 'female' ? 152 : 158, 7))));
+  const weightKg = Math.round(Math.min(120, Math.max(40, around(rnd, male ? 65 : sex === 'female' ? 56 : 60, 11))));
   const workouts = pick([0, 0, 2, 3, 5]);
   return {
     profile: { id, ownerUserId: 'eval', displayName: `Eval ${i}`, dateOfBirth: `${2026 - age - 1}-01-15`, ageAtEntry: null, ageEnteredAt: null, sex, heightCm, weightKg, archived: false, onboardingStep: 6, onboardingComplete: true, createdAt: '', updatedAt: '' },
@@ -40,7 +73,7 @@ export function makeProfile(i: number, diet: DietPattern, allergies: Allergen[],
       profileId: id, dietPattern: diet, cuisines: [], likes: [], dislikes: [], hardExclusions: exclusions, allergies, allergiesConfirmed: true,
       mealsPerDay: pick([3, 4] as const), maxCookMinutes: pick([20, 40, 60]), groceryTier: pick(['value', 'standard', 'premium'] as const), clinicalFlags: [], noClinicalFlagsConfirmed: true,
     },
-    activity: { profileId: id, questionnaireVersion: 'aq-1', occupation: pick(['sedentary', 'light', 'moderate', 'heavy'] as const), movement: pick(['low', 'medium', 'high'] as const), workoutsPerWeek: workouts, workoutType: workouts ? 'mixed' : 'none', workoutMinutes: workouts ? pick([30, 45, 60]) : 0, intensity: workouts ? pick(['light', 'moderate', 'vigorous'] as const) : null },
+    activity: { profileId: id, questionnaireVersion: 'aq-1', occupation: weighted(rnd, ['sedentary', 'light', 'moderate', 'heavy'] as const, [0.45, 0.3, 0.18, 0.07]), movement: weighted(rnd, ['low', 'medium', 'high'] as const, [0.4, 0.45, 0.15]), workoutsPerWeek: workouts, workoutType: workouts ? 'mixed' : 'none', workoutMinutes: workouts ? pick([30, 45, 60]) : 0, intensity: workouts ? pick(['light', 'moderate', 'vigorous'] as const) : null },
     budget: { profileId: id, amountInr: pick([700, 1000, 1500, 2500, 4000]), period: 'weekly', mode: 'hard' },
     goals: { profileId: id, goal: pick(GOALS), bodyGoal: null, custom: NO_CUSTOM_TARGETS, focusNutrients: [] },
   };
@@ -121,10 +154,10 @@ export function runRecommendationEval(cat: Catalog, opts: { perCombination?: num
   };
 
   let i = 0;
-  for (const diet of DIETS)
-    for (const allergies of ALLERGY_SETS)
-      for (const exclusions of EXCLUSION_SETS)
-        for (let k = 0; k < perCombination; k++) {
+  // Population size: the old grid size (diets x allergies x exclusions x perCombination), now
+  // with a realistic mix instead of equal groups.
+  for (const [diet, allergies, exclusions] of population(DIETS.length * ALLERGY_SETS.length * EXCLUSION_SETS.length * perCombination, rnd))
+        {
           const b = makeProfile(i++, diet, allergies, exclusions, rnd);
           const u: UserRules = { diet, allergies, exclusions };
           r.profiles++;

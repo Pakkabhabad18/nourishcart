@@ -21,7 +21,7 @@ test('new person: setup by conversation to a filled shopping list', async ({ pag
   await page.getByRole('button', { name: 'Continue' }).click();
 
   // Conversation: one question at a time
-  await expect(page.getByRole('heading', { name: "Let's set up Asha" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Hi Asha, I'm Nutrion!" })).toBeVisible();
   await shot(page, '04-talk-start');
   await page.getByRole('button', { name: 'Type my answers' }).click();
   await expect(page.getByText('How old are you?')).toBeVisible();
@@ -45,15 +45,13 @@ test('new person: setup by conversation to a filled shopping list', async ({ pag
   await expect(page.getByRole('region', { name: 'Your answers' }).getByText('Lose fat', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Looks right' }).click();
 
-  // Targets: goal, own numbers, nutrients
+  // Targets: goal, sliders, nutrients, meals
   await expect(page.getByRole('heading', { name: 'Your daily targets' })).toBeVisible();
   await expect(page.getByRole('radio', { name: /Lose fat/ })).toBeChecked();
   await expect(page.getByRole('checkbox', { name: 'Iron' })).toHaveAttribute('aria-checked', 'true');
-  await page.getByRole('button', { name: 'Edit numbers' }).click();
-  await page.getByLabel('Protein per day').fill('90');
-  await page.getByRole('button', { name: 'Done' }).click();
+  await page.getByLabel('Protein per day').fill('90'); // range input: fill sets the slider
   await page.getByRole('button', { name: 'Save targets' }).click();
-  await expect(page.getByText('Yours', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Use suggestion' })).toBeVisible();
   await shot(page, '05-targets');
 
   // Plans are made without another tap
@@ -71,6 +69,20 @@ test('new person: setup by conversation to a filled shopping list', async ({ pag
   await page.getByRole('dialog').getByRole('button', { name: 'Use this' }).first().click();
   await expect(page.getByText(/replaced/)).toBeVisible();
   await shot(page, '07-week');
+
+  // Cart edits: more of one item, remove one, add one from the catalogue
+  await page.getByRole('link', { name: 'Shop for this week' }).click();
+  await expect(page.getByRole('heading', { name: 'Shopping list' })).toBeVisible();
+  const firstPlus = page.getByRole('button', { name: /^One more / }).first();
+  await firstPlus.click();
+  await expect(page.getByText('Updated')).toBeVisible();
+  await page.getByRole('button', { name: /^Remove / }).nth(1).click();
+  await expect(page.getByText(/Not buying:/)).toBeVisible();
+  await page.getByRole('button', { name: 'Add an item' }).click();
+  await page.getByLabel('Search products').fill('banana');
+  await page.getByRole('dialog').getByRole('button', { name: 'Add' }).first().click();
+  await expect(page.getByText('Added', { exact: true }).first()).toBeVisible();
+  await page.getByRole('link', { name: 'Meals', exact: true }).last().click();
 
   // Shopping list; bring it under budget if needed
   await page.getByRole('link', { name: 'Shop for this week' }).click();
@@ -100,19 +112,21 @@ test('new person: setup by conversation to a filled shopping list', async ({ pag
   await page.getByRole('link', { name: 'Today', exact: true }).last().click();
   await expect(page.getByRole('heading', { name: "Today's meals" })).toBeVisible();
   await shot(page, '10-today');
-  await page.getByRole('button', { name: /Asha/ }).click();
-  await page.getByRole('menuitem', { name: 'Pantry' }).click();
+  // Log a meal: rings and streak update
+  await page.getByRole('button', { name: /^Ate / }).first().click();
+  await expect(page.getByText(/1 day/)).toBeVisible();
+  await page.getByRole('link', { name: 'Me', exact: true }).last().click();
+  await expect(page.getByText('First bite')).toBeVisible();
+  await page.getByRole('link', { name: /Pantry/ }).click();
   await expect(page.getByText(/Reorder around/).first()).toBeVisible();
 
   // Second person: separate setup and pantry
-  await page.getByRole('button', { name: /Asha/ }).click();
-  await page.getByRole('menuitem', { name: 'Household' }).click();
-  await page.getByRole('button', { name: 'Add a person' }).click();
+  await page.getByRole('link', { name: 'Me', exact: true }).last().click();
+  await page.getByRole('button', { name: 'Add' }).click();
   await page.getByRole('dialog').getByLabel('Name').fill('Ravi');
   await page.getByRole('button', { name: 'Create and set up' }).click();
-  await expect(page.getByRole('heading', { name: "Let's set up Ravi" })).toBeVisible();
-  await page.getByRole('button', { name: /Ravi/ }).click();
-  await page.getByRole('menuitem', { name: 'Pantry' }).click();
+  await expect(page.getByRole('heading', { name: "Hi Ravi, I'm Nutrion!" })).toBeVisible();
+  await page.goto('/pantry');
   await expect(page.getByText('Nothing here yet')).toBeVisible();
   await page.getByRole('button', { name: /Ravi/ }).click();
   await page.getByRole('menuitemradio', { name: /Asha/ }).click();
@@ -124,9 +138,10 @@ test('phone layout: four tabs, no overflow @mobile', async ({ page }) => {
   await shot(page, 'm01-week');
   const nav = page.getByRole('navigation', { name: 'Main' }).last();
   await expect(nav.getByRole('link')).toHaveCount(4);
+  await expect(nav.getByRole('button', { name: 'Log a meal' })).toBeVisible();
   await expect(page.getByText(/Demo mode/)).toHaveCount(0);
-  for (const tab of ['Today', 'Shop', 'Scan']) {
-    await nav.getByRole('link', { name: tab }).click();
+  for (const tab of ['Today', 'Shop', 'Me']) {
+    await nav.getByRole('link', { name: tab, exact: true }).click();
     await page.waitForTimeout(300);
     await shot(page, `m-${tab.toLowerCase()}`);
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
@@ -136,8 +151,8 @@ test('phone layout: four tabs, no overflow @mobile', async ({ page }) => {
 test('evaluation page shows the gates', async ({ page }) => {
   await signIn(page, 'demo.eval@example.com');
   await firstPerson(page, 'Eval');
-  await page.getByRole('button', { name: /Eval/ }).click();
-  await page.getByRole('menuitem', { name: 'How we test' }).click();
+  await page.goto('/me');
+  await page.getByRole('link', { name: /How we test/ }).click();
   await expect(page.getByText(/All \d+ checks passed/)).toBeVisible();
   await expect(page.getByText(/Calories never below the floor/)).toBeVisible();
   await shot(page, '15-evaluation');
@@ -168,7 +183,7 @@ test('conversation: AI reads an answer the rules could not, and our checks drop 
     await page.getByRole('button', { name: 'Send' }).click();
   }
   await expect(page.getByText(/Some walking, got it/)).toBeVisible();
-  for (const a of ['some', 'no', 'non veg', 'no', 'nothing', 'stay the same', 'no', '2000 a week', 'no']) {
+  for (const a of ['some', 'no', 'non veg', 'no', 'nothing', 'three meals', 'stay the same', 'no', '2000 a week', 'no']) {
     await page.locator('#conv-answer').fill(a);
     await page.getByRole('button', { name: 'Send' }).click();
   }
@@ -190,7 +205,7 @@ test('label scan: photo read by AI, verdict by our rules (AI mocked)', async ({ 
   await firstPerson(page, 'Asha');
   await talk(page);
   await page.getByRole('button', { name: 'Looks right' }).click();
-  await page.getByRole('link', { name: 'Scan', exact: true }).first().click();
+  await page.goto('/scan');
   await expect(page.getByText(/Gemini/)).toHaveCount(0);
   await page.locator('#label-photo').setInputFiles('eval-data/labels/l06-gummy-gelatin.jpg');
   await expect(page.getByText('Fruity Gummy Bears')).toBeVisible();

@@ -22,7 +22,7 @@ export async function firstPerson(page: Page, name: string) {
   await page.getByLabel('Your name').fill(name);
   await page.getByLabel(/I agree NourishCart can use my details/).check();
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('heading', { name: `Let's set up ${name}` })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `Hi ${name}, I'm Nutrion!` })).toBeVisible();
 }
 
 /** Types answers into the conversation until the summary appears. */

@@ -50,6 +50,9 @@ export function runPipeline(i: PipelineInput): PipelineResult {
     cheapestOnly: i.patch.cheapestOnly,
     skuOverrides: i.patch.skuOverrides,
     removed: i.patch.removed,
+    skip: i.patch.skip,
+    packCount: i.patch.packCount,
+    extras: i.patch.extras,
     budgetInr: i.budgetInrOverride !== undefined ? i.budgetInrOverride : weeklyBudget(i.bundle),
     budgetMode: i.bundle.budget.mode,
   });

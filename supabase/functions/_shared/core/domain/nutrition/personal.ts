@@ -62,6 +62,9 @@ export interface TargetValue {
   value: number;
   suggested: number;
   source: Source;
+  /** Safe range for this person; the sliders on "My targets" can't go outside it. */
+  min: number;
+  max: number;
 }
 
 export interface PersonalTargets {
@@ -81,14 +84,16 @@ export interface PersonalTargets {
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
 function pick(suggested: number, typed: number | null, lo: number, hi: number, what: string, unit: string, notes: string[]): TargetValue {
-  const s = Math.round(clamp(suggested, lo, hi));
-  if (typed == null) return { value: s, suggested: s, source: 'suggested' };
-  const v = Math.round(clamp(typed, lo, hi));
+  const min = Math.ceil(lo);
+  const max = Math.max(min, Math.floor(hi));
+  const s = Math.round(clamp(suggested, min, max));
+  if (typed == null) return { value: s, suggested: s, source: 'suggested', min, max };
+  const v = Math.round(clamp(typed, min, max));
   if (v !== Math.round(typed)) {
     notes.push(`Your ${what} of ${Math.round(typed).toLocaleString('en-IN')} ${unit} is outside the safe range for you, so we plan with ${v.toLocaleString('en-IN')} ${unit}.`);
-    return { value: v, suggested: s, source: 'yours_adjusted' };
+    return { value: v, suggested: s, source: 'yours_adjusted', min, max };
   }
-  return { value: v, suggested: s, source: 'yours' };
+  return { value: v, suggested: s, source: 'yours', min, max };
 }
 
 /**

@@ -25,7 +25,17 @@ Working end to end in demo mode and against a local Supabase stack. See [BUILD_S
 | Label scan | Photo of a packet → AI copies the label → our word lists say who in the household it suits, quoting the label |
 | Cook note | The day's menu with amounts in Telugu or Hindi (AI translation, every quantity checked), read aloud or sent on WhatsApp |
 | Store ordering (sandbox) | Swiggy Instamart cart via the official Builders Club tool flow, on a sandbox until access is granted |
+| Progress | Log meals with one tap; calorie and protein rings, a forgiving streak and badges; Nutrion the mascot guides each step |
+| Cart | Change pack counts, remove items, add any product (checked against the person's food rules), then compare stores and fill the real cart |
+| Voice | Nutrion speaks with Sarvam Bulbul v4 (natural Indian voices) when `SARVAM_API_KEY` is set; read-aloud has pause and stop |
+| Legal | Privacy policy, terms and health disclaimer (fill in the [bracketed] company details before launch) |
 | Evaluation | 40 gates (no key needed) + 5 live-model evaluations; shown in the app under How we test (EVALUATION.md) |
+
+## Voice key (optional, for Nutrion's natural voice)
+
+1. Create a key at https://dashboard.sarvam.ai (API keys).
+2. In Vercel → nourishcart → Settings → Environment Variables, add `SARVAM_API_KEY` (Secret, Production and Preview), then redeploy.
+Without it, the app uses the phone's built-in voice.
 
 ## Connect the live site to a real backend (team, once)
 
