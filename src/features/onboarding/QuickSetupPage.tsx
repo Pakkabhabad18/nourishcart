@@ -18,7 +18,7 @@ import { INGREDIENT_MAP } from '../../data/ingredients.ts';
 import { useSpeech } from '../../lib/useSpeech.ts';
 
 const EXAMPLE =
-  "I'm 26, female, 162 cm and 58 kg. I have a desk job and walk in the evenings. I go to the gym three times a week for 45 minutes. I'm vegetarian but I eat eggs, no allergies, and I never eat bhindi. I want to build muscle on about ₹1,500 a week. No health conditions.";
+  "I'm 26, female, 162 cm and 58 kg. I have a desk job and walk about 7,000 steps a day. I go to the gym three times a week for 45 minutes, moderate effort. I'm vegetarian but I eat eggs, no allergies, and I never eat bhindi. I want to build muscle on about ₹1,500 a week. No health conditions.";
 
 // What we hope to hear, in the order people usually say it. Shown as a live checklist.
 const TOPICS: { key: Topic; label: string }[] = [

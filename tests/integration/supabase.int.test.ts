@@ -101,6 +101,15 @@ describe('profiles and RLS', () => {
     const r = await A.from('profiles').insert({ display_name: 'Kid', date_of_birth: '2015-01-01' });
     expect(r.error?.code).toBe('23514');
   });
+  it('stores a stated age instead of a date of birth, and rejects under-18 ages', async () => {
+    const ok = await A.from('profiles').insert({ display_name: 'Ravi', age_at_entry: 26, age_entered_at: new Date().toISOString() }).select().single();
+    expect(ok.error).toBeNull();
+    expect(ok.data!.age_at_entry).toBe(26);
+    const minor = await A.from('profiles').insert({ display_name: 'Teen', age_at_entry: 16, age_entered_at: new Date().toISOString() });
+    expect(minor.error).not.toBeNull();
+    const half = await A.from('profiles').insert({ display_name: 'No date', age_at_entry: 30 });
+    expect(half.error).not.toBeNull(); // age and the date it was given must come together
+  });
   it('clients cannot write orders or calculation runs directly', async () => {
     const o = await A.from('orders').insert({ owner_user_id: aId, profile_id: profileA, basket_id: profileA, basket_version: 1, idempotency_key: 'x', status: 'CONFIRMED', total_inr: 1, receipt: {} });
     expect(o.error?.code).toBe('42501');

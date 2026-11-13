@@ -25,6 +25,17 @@ export const BOUNDS = {
   ageYears: { min: 18, max: 100 },
 } as const;
 
+/**
+ * Current age in completed years: from the date of birth when known, otherwise from the
+ * age the person stated plus whole years elapsed since they stated it.
+ */
+export function currentAge(p: { dateOfBirth: string | null; ageAtEntry: number | null; ageEnteredAt: string | null }, onDate: Date = new Date()): number {
+  if (p.dateOfBirth) return ageInYears(p.dateOfBirth, onDate);
+  if (p.ageAtEntry == null) return NaN;
+  const since = p.ageEnteredAt ? Math.floor((onDate.getTime() - new Date(p.ageEnteredAt).getTime()) / (365.2425 * 86_400_000)) : 0;
+  return p.ageAtEntry + Math.max(0, since);
+}
+
 export function validateProfileForNutrition(b: ProfileBundle, onDate: Date = new Date()): EligibilityResult {
   const missing: ValidationIssue[] = [];
   const invalid: ValidationIssue[] = [];
@@ -32,9 +43,9 @@ export function validateProfileForNutrition(b: ProfileBundle, onDate: Date = new
   const { profile, preferences, activity, goals } = b;
 
   let ageYears: number | null = null;
-  if (!profile.dateOfBirth) missing.push({ field: 'dateOfBirth', message: 'Date of birth is required' });
+  if (!profile.dateOfBirth && profile.ageAtEntry == null) missing.push({ field: 'dateOfBirth', message: 'Age or date of birth is required' });
   else {
-    ageYears = ageInYears(profile.dateOfBirth, onDate);
+    ageYears = currentAge(profile, onDate);
     if (Number.isNaN(ageYears)) invalid.push({ field: 'dateOfBirth', message: 'Date of birth is not a valid date' });
     else if (ageYears < BOUNDS.ageYears.min) scopeReasons.push('NourishCart currently plans only for adults aged 18 and over.');
     else if (ageYears > BOUNDS.ageYears.max) invalid.push({ field: 'dateOfBirth', message: 'Please check the date of birth' });

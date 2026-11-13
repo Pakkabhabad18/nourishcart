@@ -189,7 +189,11 @@ test('mobile layout of the key screens @mobile', async ({ page }) => {
   await page.getByLabel(/I have read the notice/).check();
   await page.getByLabel('Profile name').fill('Demo Asha');
   await page.getByRole('button', { name: 'Create profile and continue' }).click();
-  await onboard(page);
+  await page.getByRole('button', { name: 'Use an example' }).click();
+  await shot(page, 'm01b-quick-setup');
+  await page.getByRole('button', { name: 'Review' }).click();
+  await expect(page.getByRole('heading', { name: 'Check what we understood' })).toBeVisible();
+  await page.getByRole('button', { name: 'Save and see my targets' }).click();
   await expect(page.getByRole('heading', { name: 'Daily estimates for Demo Asha' })).toBeVisible();
   await shot(page, 'm02-nutrition');
   await page.getByRole('link', { name: 'Plans', exact: true }).click();
@@ -202,6 +206,17 @@ test('mobile layout of the key screens @mobile', async ({ page }) => {
   // No horizontal overflow in the primary flow (NFR responsive)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   expect(overflow).toBe(false);
+});
+
+test('evaluation page shows the gates', async ({ page }) => {
+  await signIn(page, 'demo.eval@example.com');
+  await page.getByLabel(/I have read the notice/).check();
+  await page.getByLabel('Profile name').fill('Eval');
+  await page.getByRole('button', { name: 'Create profile and continue' }).click();
+  await page.getByRole('link', { name: 'Evaluation', exact: true }).first().click();
+  await expect(page.getByText(/All \d+ checks passed/)).toBeVisible();
+  await expect(page.getByText('Store carts contain nothing that breaks the person’s rules (checked against hand labels)')).toBeVisible();
+  await shot(page, '15-evaluation');
 });
 
 test('step-by-step form still works', async ({ page }) => {

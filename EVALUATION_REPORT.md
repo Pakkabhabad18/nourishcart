@@ -1,6 +1,6 @@
 # Evaluation report
 
-Generated 2026-11-13T08:25:15.142Z (full run). Result: **all gates passed**.
+Generated 2026-11-13T08:55:34.155Z (full run). Result: **all gates passed**.
 
 Versions: planner `planner-1.0.0`, optimiser `optimiser-1.0.0`, extractor `rules-1.0.0`, matcher `matcher-1.0.0`, data `sample-foods-1.0.0+recipes-1.0.0+catalogue-2026-11-11`, energyMethod `energy.fao2004_schofield_pal@1.0.0`.
 
@@ -32,6 +32,9 @@ How the suite works and why each gate exists: see [EVALUATION.md](EVALUATION.md)
 | M2 | Precision when a product is mapped | 100.0% | ≥ 95% | Pass |
 | M3 | Processed/different products correctly left unmapped | 100.0% | ≥ 90% | Pass |
 | M4 | Pack size read correctly | 52/52 | ≥ 95% | Pass |
+| M5 (critical) | Store carts contain nothing that breaks the person’s rules (checked against hand labels) | 0 of 7,578 items in 384 carts | 0 | Pass |
+| M6 | Store cart items are the right product and enough of it | 0 wrong, 0 short | 0 | Pass |
+| M7 | Basket lines placed in the store cart (the rest are listed for the person to add) | 95.2% | ≥ 80% | Pass |
 
 ## Recommendations
 
@@ -90,3 +93,7 @@ Cases with errors:
 ## Store product matching
 
 72 labelled product titles. Accuracy 100.0%, precision when mapped 100.0%, correct refusals 19/19, pack sizes 52/52, safety markers missed 0/27, false alarms 0.
+
+## Store cart (Instamart sandbox)
+
+One sandbox Instamart cart per person (384 carts, 7962 basket lines). The sandbox sells our catalogue plus every labelled look-alike title, including traps. Each item placed is checked against hand labels, not the matcher. Items placed 7578 (95.2% of lines), left for the person 384, unsafe 0, wrong product 0, short quantity 0.

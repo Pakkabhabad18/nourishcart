@@ -65,11 +65,26 @@ There is no LLM making decisions in NourishCart, so there are no prompts to grad
 
 **Gates:** no missed egg/meat/fish/allergen marker (critical, 0); precision when a product is mapped ≥ 95%; processed or different products correctly left unmapped ≥ 90%; pack size read correctly ≥ 95%.
 
+## 4. Store carts (Swiggy Instamart sandbox)
+
+For every synthetic person, the Instamart cart builder (`src/domain/commerce/instamart.ts`) searches a sandbox Instamart (`instamartMock.ts`) and fills a cart from that person's basket. The sandbox sells our catalogue plus every one of the 72 labelled look-alike titles, so trap products ("Egg masala noodles", "Chicken masala", "Multigrain atta", "Eggless mayo") come up in real searches.
+
+Each item placed is checked against **hand labels** of the sandbox products (`SANDBOX_GOLD`), not against the matcher that chose it. This is the same idea as the independent oracle in section 1: the code being tested never grades itself.
+
+**Gates:** M5 no item that breaks the person's diet, allergies or exclusions, including allergens or egg/meat/fish words on the product itself (critical, 0); M6 every item is the right ingredient and covers the needed quantity (0 wrong, 0 short); M7 at least 80% of basket lines placed (the rest are listed for the person with reasons).
+
+Unit tests (`instamart.test.ts`) also check the order step: checkout is refused if the cart changed after the person reviewed it, and it is called once at most.
+
+## 5. Optional LLM reader
+
+The app does not need an LLM. `src/domain/intake/llm.ts` holds a versioned system prompt and two safety layers in case one is added later: `sanitiseLlmOutput` drops any field whose quoted evidence is not in what the person said or whose value is outside the allowed lists, and `mergeWithRules` can never be less safe than the rule reader (stricter diet wins, allergies and conditions are combined, "none" only if nothing was found). `npm run eval:llm` scores any OpenAI-compatible model (a local Ollama model keeps data on the machine) on the same 40 labelled descriptions, alone and merged with the rules. Switch only if the merged result has 0 critical errors and beats the rules.
+
 ## How to run
 
 ```bash
 npm run eval        # full run, writes EVALUATION_REPORT.md, eval-results/report.json, src/eval/latest-report.json
 npm test            # includes a quick evaluation that blocks on any critical gate
+npm run eval:llm    # optional: compare an LLM reader (needs LLM_BASE_URL and LLM_MODEL)
 ```
 
 In the app, **Evaluation** shows the last full report and can re-run a quick evaluation in the browser.
@@ -79,6 +94,7 @@ In the app, **Evaluation** shows the last full report and can re-run a quick eva
 - **Nutrition values are sample data.** The gates prove the app follows its own data and rules exactly; they do not prove the sample nutrient values are correct. That needs a licensed dataset and a nutrition professional (see NUTRITION_ENGINE.md).
 - **Synthetic users are not real users.** Real usability, trust and comprehension need user testing.
 - **40 descriptions is a small set.** It shows the safety logic works; field accuracy on real speech will be lower and should be re-measured with consented real transcripts.
+- **The Instamart sandbox is not Instamart.** Real titles, stock and prices will differ; M5–M7 must be re-run against Builders Club staging before going live.
 - **Speech-to-text quality** depends on the browser's recogniser; we evaluate the text after transcription.
 
 ## Findings the evaluation produced during development

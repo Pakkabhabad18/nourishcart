@@ -23,3 +23,9 @@ Decisions made during the build:
 | D-28 | Git commits use the user's name and email only, without a co-author trailer. | User instruction. |
 
 Open questions for the team are listed in BUILD_STATUS.md.
+| D-29 | Material Design 3 is the design kit; colours are generated from one seed by Material Color Utilities (`npm run theme`). | Professor asked for a recognised kit; M3 suits a utility app used daily on Android phones in India. |
+| D-30 | Onboarding starts with "describe yourself" (voice or text) read by a rule-based extractor, not an LLM. Evidence is shown per field and only missing items are asked. | Deterministic, testable (gates V1–V3), free, and no health data leaves the device. An LLM path exists behind safety layers and its own eval. |
+| D-31 | Allergies and "no health conditions" are never inferred from silence. | Missing an allergy is the costliest error in the product. |
+| D-32 | A stated age is stored with the date it was stated (`age_at_entry`, `age_entered_at`); current age is derived. | People say "I'm 26" more readily than a date of birth; the age still moves on each year. |
+| D-33 | Instamart ordering uses only the official Builders Club MCP tools, behind a server proxy; until access is granted it runs on an in-app sandbox. Zepto gets search hand-off links only. | No scraping or automation of consumer sites (terms and safety). The sandbox lets the full flow and its safety be evaluated now. |
+| D-34 | Checkout to a real store needs a fresh confirmation of the exact total and is never retried automatically. | Orders cost real money and the checkout tool is not idempotent. |

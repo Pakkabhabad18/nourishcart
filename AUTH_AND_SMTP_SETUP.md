@@ -88,6 +88,25 @@ The automated version of this is `npm run test:integration` (it reads codes from
 
 ## 3. Hosted demo: Supabase custom SMTP
 
+### Fastest path for the class demo: a Gmail app password (no domain needed)
+
+Good for a team demo of up to a few hundred codes a day. Codes arrive from a Gmail address.
+
+1. Use a team Gmail account (not a personal one). Turn on 2-Step Verification: Google Account → Security.
+2. Create an app password: Google Account → Security → 2-Step Verification → App passwords. Name it "NourishCart Supabase". Google shows a 16-character password once. Do not paste it anywhere except step 3.
+3. Supabase Dashboard → your project → Authentication → Emails → SMTP Settings → enable custom SMTP:
+   - Sender email: the same Gmail address (Gmail rewrites any other From address)
+   - Sender name: `NourishCart`
+   - Host: `smtp.gmail.com`, Port: `587`
+   - Username: the Gmail address
+   - Password: the app password from step 2
+4. Do steps 7–10 below (template, OTP expiry 600 s, rate limit about 20 per hour, Site URL `https://nourishcart.vercel.app`, test).
+5. Limits: Gmail allows roughly 500 messages a day from a normal account, and codes may land in spam for some recipients because the From domain is gmail.com. For a public launch, move to the domain-based Brevo setup below.
+
+Run `./scripts/deploy-hosted.sh <project-ref>` first if the hosted project has no tables yet; it prints the Vercel variables to set afterwards.
+
+### Production path: Brevo with your own domain
+
 Supabase's built-in sender only delivers to your own project team and allows 2 emails per hour. It is not for public sign-in. For a public pilot, use a custom SMTP provider.
 
 ### What the team needs first
@@ -121,7 +140,7 @@ Never paste SMTP passwords, service-role keys or API keys into chat, code, `.env
    - Password: the SMTP key from step 5
 7. **Email template**: Authentication → Emails → Templates. For both **Magic Link** and **Confirm signup**, set the subject to "Your NourishCart sign-in code" and paste the HTML from `supabase/templates/otp.html`. It uses `{{ .Token }}`, the documented variable for the code.
 8. **OTP settings**: set the email OTP expiry to **600 seconds** so it matches the template's "10 minutes", keep the length at 6, and set rate limits (Authentication → Rate Limits) no higher than the provider's daily allowance divided across the day.
-9. **URL configuration**: set Site URL to your deployed app (e.g. `https://nourishcart.pages.dev`) and add it to Redirect URLs.
+9. **URL configuration**: set Site URL to your deployed app (`https://nourishcart.vercel.app`) and add it to Redirect URLs.
 10. **Test** with addresses you control: Gmail plus at least one other provider. Check that the mail lands in the inbox rather than spam, and in Gmail's "Show original" confirm SPF, DKIM and DMARC say PASS.
 11. **Record the status** in `BUILD_STATUS.md` (date, provider, domain, test result). Never record secret values.
 

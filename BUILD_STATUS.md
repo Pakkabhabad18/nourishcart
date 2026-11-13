@@ -1,6 +1,17 @@
 # Build status
 
-Last updated: 11 November 2026, session 1.
+Last updated: 13 November 2026, session 2.
+
+## Session 2 (professor's feedback)
+
+| Feedback | What changed | Tested by |
+|---|---|---|
+| UI looks generic | Material Design 3: colour roles from Material Color Utilities (seed #1A73E8), Roboto Flex, navigation rail/bar, filled/tonal/outlined buttons, filter chips, snackbars | E2E screenshots |
+| Onboarding has too many questions | Speak-or-type setup (`/profiles/:id/quick`): browser speech (en-IN) or typing, rule-based reader with quoted evidence, only missing items asked; age can replace date of birth | `intake.test.ts`, E2E golden journey, gates V1–V3 |
+| OTP email | Gmail app-password and Brevo SMTP steps; `scripts/deploy-hosted.sh` for the hosted project | Local Mailpit integration tests (17 passed) |
+| Order on Instamart / Zepto | Instamart cart builder over the Builders Club tool flow, on a sandbox until access is granted; Instamart/Zepto checklist with search links | `instamart.test.ts`, E2E, gates M5–M7 |
+| Evaluation | 25 gates incl. store carts; in-app Evaluation page | `npm run eval`: all pass |
+
 
 ## Quality gates (run on the final tree of this session)
 
@@ -8,10 +19,10 @@ Last updated: 11 November 2026, session 1.
 |---|---|---|
 | Typecheck (strict) | `npm run typecheck` | Pass |
 | Lint | `npm run lint` | Pass: 0 errors, 4 warnings (`any` at the integration-test boundary) |
-| Unit tests | `npm test` | **48 passed** (nutrition 19, planning 12, grocery/checkout/pantry/adapters 17) |
+| Unit tests | `npm test` | **60 passed** (incl. intake, Instamart cart, quick evaluation) |
 | Production build | `npm run build` | Pass. Main JS 503 kB (154 kB gzip). Bundle splitting is a to-do. |
-| Integration tests | `npm run test:integration` | **16 passed** against local Supabase (CLI 3.1.0, Postgres + Auth + Edge Runtime + Mailpit in Docker) |
-| E2E | `npm run e2e` | **2 passed**: desktop golden journey; Pixel 7 mobile journey with no horizontal overflow |
+| Integration tests | `npm run test:integration` | **17 passed** against local Supabase (CLI 3.1.0, Postgres + Auth + Edge Runtime + Mailpit in Docker) |
+| E2E | `npm run e2e` | **3 passed**: desktop golden journey (quick setup, Instamart sandbox order), step-by-step form, Pixel 7 mobile journey |
 | Secret scan of `dist/` | grep for service-role, secret keys, SMTP passwords | None found |
 
 ## Email OTP status
@@ -23,8 +34,8 @@ Last updated: 11 November 2026, session 1.
 ## Deployment status
 
 - **Review preview: deployed** as a private claude.ai hosted page in demo mode: https://claude.ai/artifact/6GkSF7HcKgNfydqENX4kDQ. Built with `npm run build:preview`; smoke-tested before publishing (sign-in to Welcome with no page errors). Share it from its page to give teammates access.
-- **Cloudflare Pages / Vercel: not deployed.** Needs the team's account. Config is ready (`public/_redirects`, `public/_headers`, `vercel.json`); steps in ARCHITECTURE.md → Deployment.
-- **Hosted Supabase project: not created.** Needs the team's account (free plan). Migration, seed and functions are ready to push.
+- **Vercel: deployed** at https://nourishcart.vercel.app from the GitHub repo (demo mode until the Supabase variables are set).
+- **Hosted Supabase project:** run `./scripts/deploy-hosted.sh <project-ref>` with the team's account.
 
 ## Release gates (PRD 17.4)
 
@@ -52,7 +63,7 @@ Every screen in the brief is built and wired to real state: landing, sign-in/OTP
 6. **Edge Functions** cover targets, plan generation, checkout and deletion. Meal replacement and basket optimisation run client-side with RLS writes; the server re-verifies prices, approval, version and budget at checkout. A `optimise-basket` function could add server-side recomputation earlier.
 7. **Bundle size**: split vendor and route chunks.
 8. **Accessibility**: manual keyboard audit and axe run still to do (semantic controls and labels are in place).
-9. **Provider research**: Swiggy Builders Club staging spike (COMMERCE_ADAPTERS.md).
+9. **Swiggy Builders Club**: apply with a demo video of the sandbox flow, then add the `instamart-proxy` function (COMMERCE_ADAPTERS.md).
 10. **Abuse controls** before public sign-up: Turnstile on sign-in, rate-limit review.
 
 ## Questions for the team

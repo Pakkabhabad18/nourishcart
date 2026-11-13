@@ -4,8 +4,8 @@ Personal nutrition, meal planning and grocery planning for Indian homes, as an i
 
 One account plans for several adults. For each person, NourishCart estimates energy and protein needs, offers three meal plans (Budget Optimised, Balanced, Goal Aligned), turns the chosen week into a grocery basket sized to real pack sizes and the pantry, helps bring it under budget, and records a **simulated** order after explicit approval. No real purchase or payment happens in this version.
 
+**Live app:** https://nourishcart.vercel.app (demo mode until the hosted Supabase project is connected; see below).
 **Review preview (demo mode):** https://claude.ai/artifact/6GkSF7HcKgNfydqENX4kDQ
-It is private to the owner until shared from its page. Data stays in the reviewer's browser and sign-in codes appear on screen.
 
 ## Status
 
@@ -13,12 +13,24 @@ Working end to end in demo mode and against a local Supabase stack. See [BUILD_S
 
 | Area | State |
 |---|---|
-| Email OTP sign-in | Working locally with Supabase + Mailpit (tested). Hosted SMTP blocked on a team-owned domain. |
-| Profiles, onboarding, nutrition estimates | Working. Energy method is provisional and unreviewed. |
+| Email OTP sign-in | Working locally with Supabase + Mailpit (tested). Hosted: Gmail app-password SMTP steps ready (AUTH_AND_SMTP_SETUP.md §3), needs the team to enter the password in Supabase. |
+| Onboarding | Speak or type a description once; the app fills the profile, quotes the words it used and asks only what is missing. Step-by-step form still available. |
+| Profiles, nutrition estimates | Working. Energy method is provisional and unreviewed. |
+| Look and feel | Material Design 3 (Google's design kit), colours generated from one seed with Material Color Utilities |
 | Three plans, weekly planner, meal replacement | Working |
 | Groceries, budget negotiation, simulated checkout, orders | Working |
 | Pantry, replenishment, scheduled draft basket | Working |
-| Live retailers | Not connected by design (simulated catalogue) |
+| Store ordering | Swiggy Instamart cart filled automatically (sandbox until Builders Club access), plus an Instamart/Zepto shopping checklist |
+| Evaluation | 25 gates, 384 synthetic people, independent checker; shown in the app under Evaluation (EVALUATION.md) |
+
+## Connect the live site to a real backend (team, once)
+
+```bash
+npx supabase login
+./scripts/deploy-hosted.sh <project-ref>   # tables, security rules, seed data, server functions
+```
+
+Then follow what the script prints: set the Site URL, SMTP (Gmail app password is the quickest) and the two `VITE_SUPABASE_*` variables in Vercel, and redeploy.
 
 ## Run it
 

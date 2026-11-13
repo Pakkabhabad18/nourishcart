@@ -12,6 +12,8 @@ export interface ProfileRow {
   owner_user_id: string;
   display_name: string;
   date_of_birth: string | null;
+  age_at_entry: number | null;
+  age_entered_at: string | null;
   sex: Profile['sex'];
   height_cm: number | string | null;
   weight_kg: number | string | null;
@@ -30,6 +32,8 @@ export function profileFromRow(r: ProfileRow): Profile {
     ownerUserId: r.owner_user_id,
     displayName: r.display_name,
     dateOfBirth: r.date_of_birth,
+    ageAtEntry: r.age_at_entry ?? null,
+    ageEnteredAt: r.age_entered_at ?? null,
     sex: r.sex,
     heightCm: num(r.height_cm),
     weightKg: num(r.weight_kg),
@@ -47,6 +51,8 @@ export function profileToRow(p: Profile): Omit<ProfileRow, 'created_at' | 'updat
     owner_user_id: p.ownerUserId,
     display_name: p.displayName,
     date_of_birth: p.dateOfBirth,
+    age_at_entry: p.ageAtEntry,
+    age_entered_at: p.ageEnteredAt,
     sex: p.sex,
     height_cm: p.heightCm,
     weight_kg: p.weightKg,

@@ -29,6 +29,9 @@ export interface Profile {
   ownerUserId: string;
   displayName: string;
   dateOfBirth: string | null; // ISO date
+  /** Age the person stated (quick setup), with the date they said it. Used only when dateOfBirth is empty. */
+  ageAtEntry: number | null;
+  ageEnteredAt: string | null;
   sex: Sex | null;
   heightCm: number | null;
   weightKg: number | null;
