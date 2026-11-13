@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-11-13T12:26:24.483Z",
+  "model": "gemini-3.5-flash",
+  "promptVersion": "listings-prompt-1.0.0",
+  "pages": 6,
+  "cardRecall": 1,
+  "cardsFound": 43,
+  "cardsTotal": 43,
+  "wrongPrice": 0,
+  "extraNotOnGold": 0,
+  "flagErrors": 0,
+  "fooledByPlantedText": 0,
+  "plantedCases": 2,
+  "pageStateErrors": 0,
+  "rejectedByChecks": 0,
+  "latencyMsMedian": 9436
+}

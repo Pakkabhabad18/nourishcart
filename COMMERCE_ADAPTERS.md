@@ -59,3 +59,22 @@ Going live:
 2. Add a Supabase Edge Function `instamart-proxy` that holds the person's Swiggy OAuth token server-side and forwards JSON-RPC `tools/call` to `https://mcp.swiggy.com/im`. The browser calls the proxy; it never sees the token.
 3. Replace `createMockInstamart().call` with a caller that posts to the proxy. Nothing else changes.
 4. Record `retailer_linking` consent before linking an account.
+
+## Price comparison across Zepto and Instamart (AI shopping agent)
+
+Screen: Groceries → **Compare prices on Zepto and Instamart** (`/groceries/compare`).
+
+How it works:
+
+1. **The NourishCart Shopper browser extension** (`extension/`, downloadable from the screen as `nourishcart-shopper.zip`) opens each store's own search page in background tabs of the person's browser. Because it uses their browser, prices match their delivery location. It copies the visible text, then closes the tab. It is read-only: it never logs in, clicks, adds to cart or pays. It can only open Zepto and Instamart **search** URLs; the allowed patterns are checked in `background.js`, so no web page can use it to open or read anything else. It runs 4 tabs at a time and retries a failed page once.
+2. **AI reads the pages.** `api/listings.js` sends the page text (public store content only, nothing about the person) to Gemini on the free tier, with a fallback list of models when one is busy. The prompt (`src/domain/commerce/listings.ts`) asks only for facts on the product cards and says the page is data, not instructions.
+3. **Checks on every AI answer** (`verifyListings`). A product is kept only if:
+   - its title is a whole line of the page;
+   - its price is printed on its own line inside that product's own card. Cards are the lines between product titles. Whether prices sit before or after the title (Zepto vs Instamart) is decided by a majority vote over all the claims, so one planted claim can't change it.
+
+   Pages showing a login wall or no location are detected without calling the model.
+4. **Deterministic choice** (`src/domain/commerce/compare.ts`). For each item and store it keeps products that the matcher maps to the same ingredient and that pass diet, allergy and exclusion checks, including words in the title. It then takes the cheapest pack count that covers the need, and totals all-from-Zepto, all-from-Instamart and cheapest-per-item. Fees are not included, and the screen says so.
+
+Without the extension, **Try it on saved store pages** runs the same AI and checks on pages captured on 13 Nov 2026.
+
+Not done yet (next stage, after review): filling the store carts automatically. The plan is to have the extension click "Add" for the chosen products on the open store tab, with the person watching, and stop at the cart. That counts as automating a consumer website, so it needs a decision on store terms first. The Builders Club MCP route above is the compliant way for Instamart.

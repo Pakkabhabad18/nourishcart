@@ -10,13 +10,14 @@ import type { DietPattern } from '../../domain/types.ts';
 import type { EvalReport, Gate } from '../../eval/report.ts';
 import saved from '../../eval/latest-report.json';
 import llmSaved from '../../eval/latest-llm-report.json';
+import listingsSaved from '../../eval/latest-listings-report.json';
 
 // Summary written by `npm run eval:llm` (needs a model key, so it is run by hand, not in CI).
 interface ReaderScore { precision: number; recall: number; f1: number; critical: number; safeOver: number }
 interface LlmSet { cases: number; rules: ReaderScore; ai: ReaderScore; combined: ReaderScore; rejected: number; latencyMsMedian: number }
 type LlmReport = { status: 'not_run' } | { generatedAt: string; model: string; provider: string; promptVersion: string; dev: LlmSet; held: LlmSet; held2?: LlmSet };
 
-const GROUP_ORDER: Gate['group'][] = ['Safety', 'Nutrition', 'Grocery', 'Scope', 'Reliability', 'Voice intake', 'Store matching'];
+const GROUP_ORDER: Gate['group'][] = ['Safety', 'Nutrition', 'Grocery', 'Scope', 'Reliability', 'Voice intake', 'Store matching', 'Shopping agent'];
 const GROUP_NOTE: Record<Gate['group'], string> = {
   Safety: 'Hard rules. A single failure fails the whole evaluation.',
   Nutrition: 'Each planned day is checked against the person’s own energy range and protein floor.',
@@ -25,6 +26,7 @@ const GROUP_NOTE: Record<Gate['group'], string> = {
   Reliability: 'Same input gives the same answer; options are genuinely different.',
   'Voice intake': 'How well spoken or typed descriptions are turned into profile fields.',
   'Store matching': 'Whether real store product titles are mapped to the right ingredient, or safely refused.',
+  'Shopping agent': 'Price comparison on real Zepto and Instamart pages: the AI reads the pages, and these checks make sure nothing it reports is invented, unsafe or overpriced.',
 };
 
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
@@ -149,6 +151,23 @@ export function EvaluationPage() {
       </section>
 
       <AiReaderSection report={llmSaved as LlmReport} heldRules={report.extractionHeldout} />
+
+      <section className="card p-5">
+        <h2 className="text-lg font-medium">AI reading store pages (live model)</h2>
+        <p className="mt-1 max-w-prose text-sm text-on-surface-variant">
+          Real Zepto and Instamart search pages, labelled by hand, plus two pages with text planted to trick an AI into reporting a fake ₹1 price or an invented product. Run by hand with <code>npm run eval:listings</code> because it needs a model key.
+        </p>
+        {'cardRecall' in listingsSaved ? (
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat label="Product cards read" value={`${listingsSaved.cardsFound}/${listingsSaved.cardsTotal}`} sub={`${listingsSaved.wrongPrice} wrong prices`} />
+            <Stat label="Ad and sold-out flags" value={listingsSaved.flagErrors === 0 ? 'All right' : `${listingsSaved.flagErrors} wrong`} />
+            <Stat label="Fooled by planted text" value={`${listingsSaved.fooledByPlantedText} of ${listingsSaved.plantedCases}`} />
+            <Stat label="Login wall spotted" value={listingsSaved.pageStateErrors === 0 ? 'Yes' : 'No'} sub={`model ${listingsSaved.model}, ${(listingsSaved.latencyMsMedian / 1000).toFixed(0)} s per page`} />
+          </div>
+        ) : (
+          <Notice className="mt-3">Not run yet.</Notice>
+        )}
+      </section>
 
       <section className="card p-5">
         <h2 className="text-lg font-medium">Matching store products</h2>

@@ -14,6 +14,7 @@ import { OnboardingPage } from '../features/onboarding/OnboardingPage.tsx';
 import { QuickSetupPage } from '../features/onboarding/QuickSetupPage.tsx';
 import { EvaluationPage } from '../features/evaluation/EvaluationPage.tsx';
 import { StoreOrderPage } from '../features/orders/StoreOrderPage.tsx';
+import { ComparePage } from '../features/groceries/ComparePage.tsx';
 import { NutritionPage } from '../features/nutrition/NutritionPage.tsx';
 import { PlansPage } from '../features/meal-plans/PlansPage.tsx';
 import { RecipePage } from '../features/meal-plans/RecipePage.tsx';
@@ -77,6 +78,7 @@ export function App() {
                   <Route path="/recipes/:id" element={<RecipePage />} />
                   <Route path="/groceries" element={<GroceriesPage />} />
                   <Route path="/groceries/catalogue" element={<CataloguePage />} />
+                  <Route path="/groceries/compare" element={<ComparePage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
                   <Route path="/checkout/store" element={<StoreOrderPage />} />
                   <Route path="/orders" element={<OrdersPage />} />

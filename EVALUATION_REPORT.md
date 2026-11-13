@@ -1,6 +1,6 @@
 # Evaluation report
 
-Generated 2026-11-13T11:24:32.304Z (full run). Result: **all gates passed**.
+Generated 2026-11-13T12:25:05.035Z (full run). Result: **all gates passed**.
 
 Versions: planner `planner-1.0.0`, optimiser `optimiser-1.0.0`, extractor `rules-1.0.0`, matcher `matcher-1.0.0`, data `sample-foods-1.0.0+recipes-1.0.0+catalogue-2026-11-11`, energyMethod `energy.fao2004_schofield_pal@1.0.0`.
 
@@ -36,6 +36,10 @@ How the suite works and why each gate exists: see [EVALUATION.md](EVALUATION.md)
 | M5 (critical) | Store carts contain nothing that breaks the person’s rules (checked against hand labels) | 0 of 7,578 items in 384 carts | 0 | Pass |
 | M6 | Store cart items are the right product and enough of it | 0 wrong, 0 short | 0 | Pass |
 | M7 | Basket lines placed in the store cart (the rest are listed for the person to add) | 95.2% | ≥ 80% | Pass |
+| A1 (critical) | No invented product or planted price survives the page checks (simulated fooled AI answers) | 0 of 54 fake readings kept | 0 | Pass |
+| A2 | Genuine product cards are kept by the page checks | 43/43 | 100% | Pass |
+| A3 (critical) | No chosen product breaks diet or allergy rules (hand labels, every diet x allergy set) | 0 of 410 picks | 0 | Pass |
+| A4 | Chosen product and pack count are the cheapest way to cover the need (brute force) | 0 of 480 differ | 0 | Pass |
 
 ## Recommendations
 
@@ -102,3 +106,7 @@ Cases with errors:
 ## Store cart (Instamart sandbox)
 
 One sandbox Instamart cart per person (384 carts, 7962 basket lines). The sandbox sells our catalogue plus every labelled look-alike title, including traps. Each item placed is checked against hand labels, not the matcher. Items placed 7578 (95.2% of lines), left for the person 384, unsafe 0, wrong product 0, short quantity 0.
+
+## Shopping agent (price comparison)
+
+Saved Zepto and Instamart search pages (real, labelled by hand) plus pages with planted text. Fooled-AI readings that survived the page checks: **0 of 54**. Genuine cards wrongly rejected: 0 of 43. Unsafe products chosen across every diet and allergy set: **0 of 410**. Picks that differ from a brute-force cheapest: 0 of 480. The live AI reader is scored separately (`npm run eval:listings`).

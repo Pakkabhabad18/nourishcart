@@ -11,11 +11,12 @@ import { runExtractionEval, type ExtractionReport } from './extraction.ts';
 import { runMatchingEval, type MatchingReport } from './matching.ts';
 import { runCartEval, type CartReport } from './cart.ts';
 import { HELDOUT, HELDOUT_2 } from './datasets/heldout.ts';
+import { runShoppingEval, type ShoppingReport } from './shopping.ts';
 import type { CollectedBasket } from './recommendations.ts';
 
 export interface Gate {
   id: string;
-  group: 'Safety' | 'Nutrition' | 'Grocery' | 'Scope' | 'Voice intake' | 'Store matching' | 'Reliability';
+  group: 'Safety' | 'Nutrition' | 'Grocery' | 'Scope' | 'Voice intake' | 'Store matching' | 'Shopping agent' | 'Reliability';
   name: string;
   measured: string;
   threshold: string;
@@ -33,6 +34,7 @@ export interface EvalReport {
   extractionHeldout: ExtractionReport;
   matching: MatchingReport;
   cart: CartReport;
+  shopping: ShoppingReport;
   gates: Gate[];
   passed: boolean;
 }
@@ -43,7 +45,7 @@ export function ruleOfThree(n: number): number {
 }
 const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
 
-export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: MatchingReport, cart: CartReport, held?: ExtractionReport): Gate[] {
+export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: MatchingReport, cart: CartReport, held?: ExtractionReport, shop?: ShoppingReport): Gate[] {
   const g: Gate[] = [];
   const add = (x: Gate) => g.push(x);
   const meals = rec.mealsChecked;
@@ -73,6 +75,12 @@ export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: 
   add({ id: 'M5', group: 'Store matching', name: 'Store carts contain nothing that breaks the person’s rules (checked against hand labels)', measured: `${cart.unsafeItems} of ${cart.itemsPlaced.toLocaleString('en-IN')} items in ${cart.carts} carts`, threshold: '0', pass: cart.unsafeItems === 0, critical: true });
   add({ id: 'M6', group: 'Store matching', name: 'Store cart items are the right product and enough of it', measured: `${cart.wrongProduct} wrong, ${cart.underCovered} short`, threshold: '0', pass: cart.wrongProduct === 0 && cart.underCovered === 0, critical: false });
   add({ id: 'M7', group: 'Store matching', name: 'Basket lines placed in the store cart (the rest are listed for the person to add)', measured: pct(cart.itemsPlaced / Math.max(1, cart.lines)), threshold: '≥ 80%', pass: cart.itemsPlaced / Math.max(1, cart.lines) >= 0.8, critical: false });
+  if (shop) {
+    add({ id: 'A1', group: 'Shopping agent', name: 'No invented product or planted price survives the page checks (simulated fooled AI answers)', measured: `${shop.fakeSurvived} of ${shop.fakeAnswers} fake readings kept`, threshold: '0', pass: shop.fakeSurvived === 0, critical: true });
+    add({ id: 'A2', group: 'Shopping agent', name: 'Genuine product cards are kept by the page checks', measured: `${shop.genuine - shop.genuineRejected}/${shop.genuine}`, threshold: '100%', pass: shop.genuineRejected === 0, critical: false });
+    add({ id: 'A3', group: 'Shopping agent', name: 'No chosen product breaks diet or allergy rules (hand labels, every diet x allergy set)', measured: `${shop.unsafePicks} of ${shop.picksChecked} picks`, threshold: '0', pass: shop.unsafePicks === 0, critical: true });
+    add({ id: 'A4', group: 'Shopping agent', name: 'Chosen product and pack count are the cheapest way to cover the need (brute force)', measured: `${shop.cheapestMismatches} of ${shop.cheapestChecks} differ`, threshold: '0', pass: shop.cheapestMismatches === 0, critical: false });
+  }
   return g;
 }
 
@@ -83,7 +91,8 @@ export async function runFullEvaluation(cat: Catalog, mode: 'full' | 'quick' = '
   const extractionHeldout = runExtractionEval(undefined, undefined, [...HELDOUT, ...HELDOUT_2]);
   const matching = runMatchingEval(cat.ingredients);
   const cart = await runCartEval(baskets, cat.ingredients);
-  const gates = buildGates(recommendation, extraction, matching, cart, extractionHeldout);
+  const shopping = runShoppingEval(cat.ingredients);
+  const gates = buildGates(recommendation, extraction, matching, cart, extractionHeldout, shopping);
   return {
     generatedAt: new Date().toISOString(),
     mode,
@@ -93,6 +102,7 @@ export async function runFullEvaluation(cat: Catalog, mode: 'full' | 'quick' = '
     extractionHeldout,
     matching,
     cart,
+    shopping,
     gates,
     passed: gates.every((x) => x.pass),
   };

@@ -165,7 +165,12 @@ export function GroceriesPage() {
       <PageHeader
         title="Groceries for this week"
         description={<>Built from {profile.displayName}’s selected plan, minus what is already in the pantry. <SimulatedTag>Simulated catalogue</SimulatedTag></>}
-        actions={<Link to="/groceries/catalogue" className="inline-flex min-h-[44px] items-center rounded-full border border-outline px-6 text-sm font-medium text-primary hover:bg-primary/[0.08]">Browse catalogue</Link>}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Link to="/groceries/compare" className="inline-flex min-h-[44px] items-center rounded-full bg-secondary-container px-6 text-sm font-medium text-on-secondary-container hover:shadow-e1">Compare prices on Zepto and Instamart</Link>
+            <Link to="/groceries/catalogue" className="inline-flex min-h-[44px] items-center rounded-full border border-outline px-6 text-sm font-medium text-primary hover:bg-primary/[0.08]">Browse catalogue</Link>
+          </div>
+        }
       />
 
       <section className="card p-5 sm:p-6" aria-labelledby="budget-h">
