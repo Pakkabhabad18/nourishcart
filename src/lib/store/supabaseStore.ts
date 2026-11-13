@@ -55,8 +55,22 @@ export class SupabaseStore implements NourishStore {
 
   async requestOtp(email: string): Promise<OtpRequestResult> {
     try {
-      const { error } = await this.db.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true } });
+      // The email server can stall (a wrong SMTP port made Supabase wait ~60 s and then
+      // return 504). Give up after 25 s so the button never spins forever.
+      const TIMEOUT = Symbol('timeout');
+      const res = await Promise.race([
+        this.db.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true } }),
+        new Promise<typeof TIMEOUT>((ok) => setTimeout(() => ok(TIMEOUT), 25_000)),
+      ]);
+      if (res === TIMEOUT) {
+        return { ok: false, code: 'unknown', message: 'Our email service is slow right now. Wait a minute, then tap "Email me a code" again. A code may still arrive, so check your inbox too.' };
+      }
+      const { error } = res;
       if (!error) return { ok: true };
+      // 5xx = our email sender failed, not the person's fault.
+      if (error.status && error.status >= 500) {
+        return { ok: false, code: 'unknown', message: 'We could not send the email just now. Please try again in a minute.' };
+      }
       if (error.code === 'over_email_send_rate_limit' || error.status === 429) {
         const wait = Number(/(\d+) seconds?/.exec(error.message)?.[1] ?? 60);
         return { ok: false, code: 'rate_limited', message: `For security, you can request a new code in ${wait} seconds.`, retryAfterSec: wait };

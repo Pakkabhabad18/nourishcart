@@ -1,6 +1,6 @@
 # Evaluation report
 
-Generated 2026-11-13T21:36:25.103Z (full run). Result: **all gates passed**.
+Generated 2026-11-13T22:02:53.365Z (full run). Result: **all gates passed**.
 
 Versions: personalTargets `personal-targets-1.0.0`, conversation `conversation-1.0.0`, planner `planner-1.0.0`, optimiser `optimiser-1.0.0`, extractor `rules-1.0.0`, matcher `matcher-1.0.0`, data `sample-foods-1.0.0+recipes-1.0.0+catalogue-2026-11-11`, energyMethod `energy.fao2004_schofield_pal@1.0.0`.
 
