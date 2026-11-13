@@ -31,6 +31,9 @@ export function renderMarkdown(r: EvalReport): string {
     lines.push('', 'Cases with errors:', '');
     for (const c of errs) lines.push(`- \`${c.id}\` (${c.style}): ${c.errors.map((e) => `${e.kind} ${e.field} (got ${JSON.stringify(e.got)}, expected ${JSON.stringify(e.expected)})`).join('; ')}${c.critical.length ? `. **Critical:** ${c.critical.join('; ')}` : ''}${c.safeOverRestriction.length ? `. Safe over-restriction: ${c.safeOverRestriction.join('; ')}` : ''}`);
   }
+  const hx = r.extractionHeldout;
+  lines.push('', '### Held-out descriptions', '');
+  lines.push(`${hx.cases} descriptions written after the rule reader was finished and never used to tune it. Precision ${pct(hx.overall.precision)}, recall ${pct(hx.overall.recall)}, F1 ${pct(hx.overall.f1)}. Critical errors: **${hx.criticalErrors}**. The drop in recall from the development set shows the rules are tuned to phrasing they have seen; missed details are asked as follow-up questions, so they cost time, not safety. This gap is what the AI reader is for (see EVALUATION.md, section 5).`);
   lines.push('', '## Store product matching', '');
   lines.push(`${mt.cases} labelled product titles. Accuracy ${pct(mt.accuracy)}, precision when mapped ${pct(mt.precisionWhenMapped)}, correct refusals ${mt.correctlyRefused}/${mt.shouldNotMap}, pack sizes ${mt.packCorrect}/${mt.packCases}, safety markers missed ${mt.markerMisses}/${mt.markerChecks}, false alarms ${mt.markerFalseAlarms}.`);
   if (mt.failures.length) {

@@ -75,16 +75,28 @@ Each item placed is checked against **hand labels** of the sandbox products (`SA
 
 Unit tests (`instamart.test.ts`) also check the order step: checkout is refused if the cart changed after the person reviewed it, and it is called once at most.
 
-## 5. Optional LLM reader
+## 5. AI reader for "describe yourself"
 
-The app does not need an LLM. `src/domain/intake/llm.ts` holds a versioned system prompt and two safety layers in case one is added later: `sanitiseLlmOutput` drops any field whose quoted evidence is not in what the person said or whose value is outside the allowed lists, and `mergeWithRules` can never be less safe than the rule reader (stricter diet wins, allergies and conditions are combined, "none" only if nothing was found). `npm run eval:llm` scores any OpenAI-compatible model (a local Ollama model keeps data on the machine) on the same 40 labelled descriptions, alone and merged with the rules. Switch only if the merged result has 0 critical errors and beats the rules.
+The person can tick "Let AI read my description". The text goes to an LLM (OpenAI's open-weight gpt-oss-120b on Groq, through the Vercel function `api/intake.js`) with a versioned system prompt (`src/domain/intake/llm.ts`). The model's answer is never used directly:
+
+1. **Check the evidence.** `sanitiseLlmOutput` drops any field whose quoted words are not in what the person said, or whose value is outside the allowed lists or ranges. This is what stops invented values.
+2. **Never less safe than the rules.** `mergeWithRules` takes the stricter diet, combines allergies and health conditions from both readers, and keeps "no allergies" only if neither found one.
+3. **Show the work.** The review screen marks fields the AI added and lists the suggestions the checks rejected.
+
+If the AI is off, offline or slow, the rule reader is used and the person sees a note.
+
+**Why it is there: the held-out set.** The rule reader was built against the 40 development descriptions, so it scores about 99% on them. `src/eval/datasets/heldout.ts` holds 19 more, written afterwards and never used for tuning: Telugu-English and Hindi, a rambling cab driver, a Jain teacher, texting shorthand ("23F, 5'2"), two corrections in one sentence, a husband's allergy mentioned alongside the speaker's. On these the rule reader captures only about 70% of details (still 0 unsafe errors, gate V4). Missed details become extra questions, which is exactly the burden the professor flagged.
+
+**How it is scored.** `npm run eval:llm` (needs `GROQ_API_KEY`) scores three readers on both sets: rules, AI alone after the checks, and AI + rules (what the app uses). It reports precision, recall, unsafe errors, the number of AI suggestions the checks rejected, and median model time. Rule for shipping: AI + rules must have 0 unsafe errors on both sets. The summary appears on the Evaluation page.
+
+**Tested without a key:** unit tests (`aiIntake.test.ts`) check that the function refuses other websites, oversized text and a missing key; that it sends exactly the evaluated prompt; and that an invented field is rejected and a looser diet is overruled. An E2E test plays back a fixed model answer and checks the review screen.
 
 ## How to run
 
 ```bash
 npm run eval        # full run, writes EVALUATION_REPORT.md, eval-results/report.json, src/eval/latest-report.json
 npm test            # includes a quick evaluation that blocks on any critical gate
-npm run eval:llm    # optional: compare an LLM reader (needs LLM_BASE_URL and LLM_MODEL)
+npm run eval:llm    # AI reader vs rules on both sets (needs GROQ_API_KEY)
 ```
 
 In the app, **Evaluation** shows the last full report and can re-run a quick evaluation in the browser.

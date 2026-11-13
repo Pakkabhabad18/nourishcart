@@ -1,6 +1,6 @@
 # Evaluation report
 
-Generated 2026-11-13T08:55:34.155Z (full run). Result: **all gates passed**.
+Generated 2026-11-13T09:35:50.896Z (full run). Result: **all gates passed**.
 
 Versions: planner `planner-1.0.0`, optimiser `optimiser-1.0.0`, extractor `rules-1.0.0`, matcher `matcher-1.0.0`, data `sample-foods-1.0.0+recipes-1.0.0+catalogue-2026-11-11`, energyMethod `energy.fao2004_schofield_pal@1.0.0`.
 
@@ -28,6 +28,7 @@ How the suite works and why each gate exists: see [EVALUATION.md](EVALUATION.md)
 | V1 (critical) | No unsafe misreading (diet too lenient, allergy or condition missed, “none” invented) | 0 in 40 descriptions | 0 | Pass |
 | V2 | Field precision (filled values that are right) | 99.3% | ≥ 95% | Pass |
 | V3 | Field recall (stated values that were captured; the rest are asked) | 99.7% | ≥ 85% | Pass |
+| V4 (critical) | No unsafe misreading on held-out descriptions (never used to tune the reader) | 0 in 19; recall 70.4% (missed details are asked) | 0 | Pass |
 | M1 (critical) | No egg/meat/fish/allergen marker missed in a product title | 0 in 72 titles | 0 | Pass |
 | M2 | Precision when a product is mapped | 100.0% | ≥ 95% | Pass |
 | M3 | Processed/different products correctly left unmapped | 100.0% | ≥ 90% | Pass |
@@ -89,6 +90,10 @@ Overall precision 99.3%, recall 99.7%, F1 99.5%. Critical errors: **0**. Safe ov
 Cases with errors:
 
 - `u29-other-person` (adversarial): wrong dietPattern (got "vegetarian", expected "non_vegetarian"); hallucinated allergies (got ["peanut"], expected undefined). Safe over-restriction: diet read as vegetarian, stated non_vegetarian; extra allergy: peanut
+
+### Held-out descriptions
+
+19 descriptions written after the rule reader was finished and never used to tune it. Precision 95.2%, recall 70.4%, F1 80.9%. Critical errors: **0**. The drop in recall from the development set shows the rules are tuned to phrasing they have seen; missed details are asked as follow-up questions, so they cost time, not safety. This gap is what the AI reader is for (see EVALUATION.md, section 5).
 
 ## Store product matching
 

@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-11-13T09:35:05.009Z",
+  "model": "openai/gpt-oss-120b",
+  "provider": "Groq",
+  "promptVersion": "intake-prompt-1.0.0",
+  "dev": {
+    "cases": 40,
+    "rules": {
+      "precision": 0.9930795847750865,
+      "recall": 0.9965277777777778,
+      "f1": 0.9948006932409013,
+      "critical": 0,
+      "safeOver": 2
+    },
+    "ai": {
+      "precision": 0.9816849816849816,
+      "recall": 0.9305555555555556,
+      "f1": 0.9554367201426026,
+      "critical": 0,
+      "safeOver": 0
+    },
+    "combined": {
+      "precision": 0.9862542955326461,
+      "recall": 0.9965277777777778,
+      "f1": 0.991364421416235,
+      "critical": 0,
+      "safeOver": 2
+    },
+    "rejected": 1,
+    "latencyMsMedian": 1862
+  },
+  "held": {
+    "cases": 19,
+    "rules": {
+      "precision": 0.9517241379310345,
+      "recall": 0.7040816326530612,
+      "f1": 0.809384164222874,
+      "critical": 0,
+      "safeOver": 5
+    },
+    "ai": {
+      "precision": 0.9574468085106383,
+      "recall": 0.9183673469387755,
+      "f1": 0.9375000000000001,
+      "critical": 0,
+      "safeOver": 3
+    },
+    "combined": {
+      "precision": 0.9326424870466321,
+      "recall": 0.9183673469387755,
+      "f1": 0.9254498714652956,
+      "critical": 0,
+      "safeOver": 6
+    },
+    "rejected": 0,
+    "latencyMsMedian": 3277
+  }
+}

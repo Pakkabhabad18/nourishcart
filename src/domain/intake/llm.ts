@@ -1,6 +1,7 @@
-// OPTIONAL LLM extractor (off by default). The rule-based extractor in extract.ts is what
-// the app uses. This adapter exists so an LLM can be evaluated on exactly the same test set
-// and only switched on if it beats the rules without any critical error.
+// AI (LLM) reader for "describe yourself". Opt-in per person in the quick setup screen; the
+// rule reader in extract.ts always runs too and is the fallback. The model is called from the
+// Vercel function api/intake.js; this file holds the prompt and the checks applied to the
+// model's answer in the browser. Scored by `npm run eval:llm` on the same labelled sets.
 //
 // Three safety layers sit between the model and the profile:
 //  1. A strict system prompt and a fixed JSON schema.
@@ -9,8 +10,8 @@
 //     invented values).
 //  3. mergeWithRules(): the model can never make the profile less safe than the rule
 //     parser: stricter diet wins, allergies and health flags are unioned.
-// Privacy: never send real profile text to a free/unpaid LLM API (PRD). Use a local model
-// or a paid API with a no-retention agreement and the person's consent.
+// Privacy: only the description text is sent, only after the person ticks the AI option, and
+// only to a provider that does not train on API data (Groq, with Zero Data Retention on).
 import type { Allergen, ClinicalFlag, DietPattern, Goal, Intensity, MovementBand, OccupationClass, Sex } from '../types.ts';
 import { normalise, type Extraction, type Found } from './extract.ts';
 

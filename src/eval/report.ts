@@ -10,6 +10,7 @@ import { runRecommendationEval, type RecommendationReport } from './recommendati
 import { runExtractionEval, type ExtractionReport } from './extraction.ts';
 import { runMatchingEval, type MatchingReport } from './matching.ts';
 import { runCartEval, type CartReport } from './cart.ts';
+import { HELDOUT } from './datasets/heldout.ts';
 import type { CollectedBasket } from './recommendations.ts';
 
 export interface Gate {
@@ -28,6 +29,8 @@ export interface EvalReport {
   versions: Record<string, string>;
   recommendation: RecommendationReport;
   extraction: ExtractionReport;
+  /** Rule reader on descriptions written after the rules were finished (never used for tuning). */
+  extractionHeldout: ExtractionReport;
   matching: MatchingReport;
   cart: CartReport;
   gates: Gate[];
@@ -40,7 +43,7 @@ export function ruleOfThree(n: number): number {
 }
 const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
 
-export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: MatchingReport, cart: CartReport): Gate[] {
+export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: MatchingReport, cart: CartReport, held?: ExtractionReport): Gate[] {
   const g: Gate[] = [];
   const add = (x: Gate) => g.push(x);
   const meals = rec.mealsChecked;
@@ -62,6 +65,7 @@ export function buildGates(rec: RecommendationReport, ex: ExtractionReport, mt: 
   add({ id: 'V1', group: 'Voice intake', name: 'No unsafe misreading (diet too lenient, allergy or condition missed, “none” invented)', measured: `${ex.criticalErrors} in ${ex.cases} descriptions`, threshold: '0', pass: ex.criticalErrors === 0, critical: true });
   add({ id: 'V2', group: 'Voice intake', name: 'Field precision (filled values that are right)', measured: pct(ex.overall.precision), threshold: '≥ 95%', pass: ex.overall.precision >= 0.95, critical: false });
   add({ id: 'V3', group: 'Voice intake', name: 'Field recall (stated values that were captured; the rest are asked)', measured: pct(ex.overall.recall), threshold: '≥ 85%', pass: ex.overall.recall >= 0.85, critical: false });
+  if (held) add({ id: 'V4', group: 'Voice intake', name: 'No unsafe misreading on held-out descriptions (never used to tune the reader)', measured: `${held.criticalErrors} in ${held.cases}; recall ${pct(held.overall.recall)} (missed details are asked)`, threshold: '0', pass: held.criticalErrors === 0, critical: true });
   add({ id: 'M1', group: 'Store matching', name: 'No egg/meat/fish/allergen marker missed in a product title', measured: `${mt.criticalErrors} in ${mt.cases} titles`, threshold: '0', pass: mt.criticalErrors === 0, critical: true });
   add({ id: 'M2', group: 'Store matching', name: 'Precision when a product is mapped', measured: pct(mt.precisionWhenMapped), threshold: '≥ 95%', pass: mt.precisionWhenMapped >= 0.95, critical: false });
   add({ id: 'M3', group: 'Store matching', name: 'Processed/different products correctly left unmapped', measured: pct(mt.refusalRecall), threshold: '≥ 90%', pass: mt.refusalRecall >= 0.9, critical: false });
@@ -76,15 +80,17 @@ export async function runFullEvaluation(cat: Catalog, mode: 'full' | 'quick' = '
   const baskets: CollectedBasket[] = [];
   const recommendation = runRecommendationEval(cat, mode === 'full' ? { perCombination: 3, maxAlternatives: 3, collectBaskets: baskets } : { perCombination: 1, maxAlternatives: 2, seed: 42, collectBaskets: baskets });
   const extraction = runExtractionEval();
+  const extractionHeldout = runExtractionEval(undefined, undefined, HELDOUT);
   const matching = runMatchingEval(cat.ingredients);
   const cart = await runCartEval(baskets, cat.ingredients);
-  const gates = buildGates(recommendation, extraction, matching, cart);
+  const gates = buildGates(recommendation, extraction, matching, cart, extractionHeldout);
   return {
     generatedAt: new Date().toISOString(),
     mode,
     versions: { planner: PLANNER_VERSION, optimiser: OPTIMISER_CONFIG.version, extractor: EXTRACTOR_VERSION, matcher: MATCHER_VERSION, data: DATA_VERSION, energyMethod: `${METHODS.energy.id}@${METHODS.energy.version}` },
     recommendation,
     extraction,
+    extractionHeldout,
     matching,
     cart,
     gates,

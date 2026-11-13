@@ -8,7 +8,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Mic, Square } from 'lucide-react';
 import { useBundle, useSaveBundle } from '../../app/hooks.ts';
 import { useApp } from '../../app/context.tsx';
-import { Button, Chip, ErrorState, Field, Input, Notice, Select, Spinner } from '../../components/ui.tsx';
+import { Button, Chip, ErrorState, Field, Input, Notice, Select, Spinner, Tag } from '../../components/ui.tsx';
 import type { Allergen, ClinicalFlag, DietPattern, Goal, ProfileBundle } from '../../domain/types.ts';
 import { ALLERGEN_LABELS, DIET_LABELS } from '../../domain/diet.ts';
 import { extractProfile, type Extraction } from '../../domain/intake/extract.ts';
@@ -16,6 +16,7 @@ import { applyExtraction } from '../../domain/intake/apply.ts';
 import { currentAge, validateProfileForNutrition, BOUNDS } from '../../domain/nutrition/eligibility.ts';
 import { INGREDIENT_MAP } from '../../data/ingredients.ts';
 import { useSpeech } from '../../lib/useSpeech.ts';
+import { AI_CONSENT_KEY, aiAddedFields, readWithAi, type AiReading } from '../../lib/aiIntake.ts';
 
 const EXAMPLE =
   "I'm 26, female, 162 cm and 58 kg. I have a desk job and walk about 7,000 steps a day. I go to the gym three times a week for 45 minutes, moderate effort. I'm vegetarian but I eat eggs, no allergies, and I never eat bhindi. I want to build muscle on about ₹1,500 a week. No health conditions.";
@@ -89,10 +90,11 @@ function answered(t: Topic, b: ProfileBundle, workoutsKnown: boolean, now: Date)
 }
 
 /** Human-readable lines for what the reader understood, each with the words it used. */
-function understood(e: Extraction): { label: string; value: string; evidence: string }[] {
-  const rows: { label: string; value: string; evidence: string }[] = [];
+function understood(e: Extraction): { key: string; label: string; value: string; evidence: string }[] {
+  const rows: { key: string; label: string; value: string; evidence: string }[] = [];
   const add = (label: string, f: { value: unknown; evidence: string } | undefined, show: (v: never) => string) => {
-    if (f) rows.push({ label, value: show(f.value as never), evidence: f.evidence });
+    const key = (Object.keys(e) as (keyof Extraction)[]).find((k) => e[k] === f) ?? label;
+    if (f) rows.push({ key, label, value: show(f.value as never), evidence: f.evidence });
   };
   add('Age', e.ageYears, (v: number) => `${v} years`);
   add('Sex', e.sex, (v: string) => (v === 'prefer_not_to_say' ? 'Prefer not to say' : v === 'male' ? 'Male' : 'Female'));
@@ -132,6 +134,17 @@ export function QuickSetupPage() {
   const [workoutsTicked, setWorkoutsTicked] = useState(false);
   const [asked, setAsked] = useState<Topic[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // AI reader: opt-in, remembered in this browser. Off = rule reader only.
+  const [aiOn, setAiOn] = useState(() => {
+    try {
+      return localStorage.getItem(AI_CONSENT_KEY) === 'yes';
+    } catch {
+      return false;
+    }
+  });
+  const [ai, setAi] = useState<AiReading | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiFailed, setAiFailed] = useState(false);
 
   const speech = useSpeech((phrase) => setText((t) => (t ? `${t.trimEnd()} ${phrase}` : phrase)));
 
@@ -139,7 +152,10 @@ export function QuickSetupPage() {
     if (q.data) setActiveProfileId(q.data.profile.id);
   }, [q.data, setActiveProfileId]);
 
-  const extraction = useMemo(() => extractProfile(text, now), [text, now]);
+  // The rule reader runs on every keystroke (instant, offline). The AI reading, when there is
+  // one for exactly this text, replaces it; editing the text falls back to the rules.
+  const rulesExtraction = useMemo(() => extractProfile(text, now), [text, now]);
+  const extraction = ai && ai.text === text ? ai.merged : rulesExtraction;
   const draft = useMemo(() => {
     if (!q.data) return null;
     const b = applyExtraction(q.data, extraction, now);
@@ -165,11 +181,41 @@ export function QuickSetupPage() {
   const rows = understood(extraction);
   const eligibility = validateProfileForNutrition(b, now);
 
-  function toReview() {
+  const aiUsed = ai && ai.text === text ? ai : null;
+  const aiAdded = new Set(aiUsed ? aiAddedFields(aiUsed) : []);
+
+  /** Which topics are still unanswered for a given reading of the text. */
+  function missingFor(e: Extraction): Topic[] {
+    const d = applyExtraction(q.data!, e, now);
+    for (const patch of Object.values(manual)) patch(d);
+    const known = workoutsTicked || !!e.workoutsPerWeek || q.data!.profile.onboardingStep > 2;
+    return TOPICS.filter((t) => !answered(t.key, d, known, now)).map((t) => t.key);
+  }
+
+  async function toReview() {
     speech.stop();
-    setAsked(missing);
+    let used: Extraction = rulesExtraction;
+    setAiFailed(false);
+    if (aiOn) {
+      setAiBusy(true);
+      const r = await readWithAi(text, now);
+      setAiBusy(false);
+      setAi(r);
+      if (r) used = r.merged;
+      else setAiFailed(true);
+    }
+    setAsked(missingFor(used));
     setStage('review');
     window.scrollTo({ top: 0 });
+  }
+
+  function toggleAi(on: boolean) {
+    setAiOn(on);
+    try {
+      localStorage.setItem(AI_CONSENT_KEY, on ? 'yes' : 'no');
+    } catch {
+      /* private mode: the choice just isn't remembered */
+    }
   }
 
   async function finish() {
@@ -239,6 +285,16 @@ export function QuickSetupPage() {
             </div>
           </div>
 
+          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-ctl bg-surface-container p-4 text-sm">
+            <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-primary" checked={aiOn} onChange={(e) => toggleAi(e.target.checked)} />
+            <span>
+              <span className="font-medium">Let AI read my description</span>
+              <span className="block text-on-surface-variant">
+                Better with long, mixed-language or rambling descriptions. Only these words are sent to an AI model (on Groq), never your name or email. They aren't stored or used for training. NourishCart's own rules check every answer before it's used.
+              </span>
+            </span>
+          </label>
+
           <div className="mt-5">
             <h2 className="text-sm font-medium text-on-surface-variant">Covered so far</h2>
             <ul className="mt-2 flex flex-wrap gap-2" aria-live="polite">
@@ -256,8 +312,8 @@ export function QuickSetupPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button size="lg" onClick={toReview} disabled={!text.trim()}>
-              {missing.length === 0 ? 'Review' : `Continue (${missing.length} left to ask)`}
+            <Button size="lg" onClick={toReview} disabled={!text.trim() || aiBusy} loading={aiBusy}>
+              {aiBusy ? 'AI is reading…' : aiOn ? 'Continue' : missing.length === 0 ? 'Review' : `Continue (${missing.length} left to ask)`}
             </Button>
             <Link to={`/profiles/${b.profile.id}/setup`} className="inline-flex items-center px-3 text-sm text-primary hover:underline">
               Fill the form step by step instead
@@ -270,7 +326,7 @@ export function QuickSetupPage() {
         <>
           <h1 className="text-2xl font-normal">{shown.length ? 'A few more details' : 'Check what we understood'}</h1>
           <p className="mt-1 text-on-surface-variant">
-            {shown.length ? `We understood most of it. Answer ${shown.length === 1 ? 'one more question' : `${shown.length} short questions`} and you're done.` : 'Everything we need is here. Correct anything that looks wrong.'}
+            {shown.length ? `${shown.length <= 3 ? 'We understood most of it. ' : ''}Answer ${shown.length === 1 ? 'one more question' : `${shown.length} short questions`} and you're done.` : 'Everything we need is here. Correct anything that looks wrong.'}
           </p>
 
           {age != null && age < BOUNDS.ageYears.min && <Notice className="mt-4" tone="danger">NourishCart currently plans only for adults aged 18 and over, so this profile can't be completed.</Notice>}
@@ -279,6 +335,25 @@ export function QuickSetupPage() {
               {eligibility.scopeReasons.join(' ')} Please plan meals with a doctor or registered dietitian.
             </Notice>
           )}
+          {aiUsed && (
+            <Notice className="mt-4" tone="success" title="Read by AI, checked by NourishCart">
+              {aiAdded.size > 0 ? `The AI picked up ${aiAdded.size} detail${aiAdded.size === 1 ? '' : 's'} our built-in reader missed (marked AI below).` : 'The AI agreed with our built-in reader.'}{' '}
+              Model {aiUsed.model}, prompt {aiUsed.promptVersion}.
+              {aiUsed.rejected.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer">{aiUsed.rejected.length} AI suggestion{aiUsed.rejected.length === 1 ? ' was' : 's were'} rejected by our checks</summary>
+                  <ul className="mt-1 list-disc pl-5">
+                    {aiUsed.rejected.map((d) => (
+                      <li key={d.field}>
+                        {d.field}: {d.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </Notice>
+          )}
+          {aiFailed && <Notice className="mt-4" tone="info">The AI reader isn't available right now, so our built-in reader filled this in.</Notice>}
           {extraction.warnings.map((w) => (
             <Notice key={w} className="mt-4" tone="warn">{w}</Notice>
           ))}
@@ -397,8 +472,10 @@ export function QuickSetupPage() {
               <p className="mt-1 text-sm text-on-surface-variant">Each line shows the words it came from. If something is wrong, go back and say it differently, or use the step-by-step form.</p>
               <dl className="mt-3 divide-y divide-outline-variant">
                 {rows.map((r) => (
-                  <div key={`${r.label}-${r.value}`} className="grid gap-1 py-2.5 sm:grid-cols-[10rem_1fr]">
-                    <dt className="text-sm text-on-surface-variant">{r.label}</dt>
+                  <div key={`${r.key}-${r.value}`} className="grid gap-1 py-2.5 sm:grid-cols-[10rem_1fr]">
+                    <dt className="text-sm text-on-surface-variant">
+                      {r.label} {aiAdded.has(r.key) && <Tag tone="good">AI</Tag>}
+                    </dt>
                     <dd>
                       <span className="font-medium">{r.value}</span>
                       <span className="block text-xs text-on-surface-variant">from “{r.evidence.replace(/[\s,.;:]+$/, '')}”</span>

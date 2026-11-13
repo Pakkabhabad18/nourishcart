@@ -11,7 +11,7 @@
 //   - "no allergies" / "no conditions" asserted when the person never said so
 import { extractProfile, type Extraction } from '../domain/intake/extract.ts';
 import type { DietPattern } from '../domain/types.ts';
-import { UTTERANCES, type UtteranceGold } from './datasets/utterances.ts';
+import { UTTERANCES, type UtteranceCase, type UtteranceGold } from './datasets/utterances.ts';
 
 type Field = keyof UtteranceGold;
 export const SCORED_FIELDS: Field[] = ['ageYears', 'sex', 'heightCm', 'weightKg', 'occupation', 'movement', 'workoutsPerWeek', 'workoutMinutes', 'intensity', 'dietPattern', 'allergies', 'noAllergies', 'hardExclusions', 'goal', 'budgetInr', 'budgetPeriod', 'clinicalFlags', 'noClinical'];
@@ -56,12 +56,12 @@ function same(f: Field, a: unknown, b: unknown): boolean {
 }
 
 /** Score any extractor (rules by default, or precomputed LLM results) on the labelled set. */
-export function runExtractionEval(today = new Date('2026-11-13T00:00:00Z'), extract: (text: string, id: string) => Extraction = (t) => extractProfile(t, today)): ExtractionReport {
+export function runExtractionEval(today = new Date('2026-11-13T00:00:00Z'), extract: (text: string, id: string) => Extraction = (t) => extractProfile(t, today), cases: UtteranceCase[] = UTTERANCES): ExtractionReport {
   const fields: Record<string, FieldScore> = Object.fromEntries(SCORED_FIELDS.map((f) => [f, { correct: 0, missed: 0, wrong: 0, hallucinated: 0, precision: 0, recall: 0 }]));
   const perCase: ExtractionCaseResult[] = [];
   let critical = 0;
   let safeOver = 0;
-  for (const c of UTTERANCES) {
+  for (const c of cases) {
     const e = extract(c.text, c.id);
     const res: ExtractionCaseResult = { id: c.id, style: c.style, errors: [], critical: [], safeOverRestriction: [] };
     for (const f of SCORED_FIELDS) {
@@ -112,5 +112,5 @@ export function runExtractionEval(today = new Date('2026-11-13T00:00:00Z'), extr
   }
   const precision = C / (C + W + H);
   const recall = C / (C + M + W);
-  return { cases: UTTERANCES.length, fields, overall: { correct: C, missed: M, wrong: W, hallucinated: H, precision, recall, f1: (2 * precision * recall) / (precision + recall) }, criticalErrors: critical, safeOverRestrictions: safeOver, perCase };
+  return { cases: cases.length, fields, overall: { correct: C, missed: M, wrong: W, hallucinated: H, precision, recall, f1: (2 * precision * recall) / (precision + recall) }, criticalErrors: critical, safeOverRestrictions: safeOver, perCase };
 }

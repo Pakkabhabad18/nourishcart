@@ -219,6 +219,35 @@ test('evaluation page shows the gates', async ({ page }) => {
   await shot(page, '15-evaluation');
 });
 
+test('AI reader: model answer is checked before use (model mocked)', async ({ page }) => {
+  // The real model runs on Vercel; here we play back a fixed answer that includes one
+  // correct detail the rules miss (gluten) and one invented detail (weight) that must be rejected.
+  await page.route('**/api/intake', (route) =>
+    route.fulfill({
+      json: {
+        model: 'openai/gpt-oss-120b',
+        promptVersion: 'intake-prompt-1.0.0',
+        content: JSON.stringify({
+          ageYears: { value: 31, evidence: '31 year old' },
+          allergies: { value: ['gluten'], evidence: "can't have gluten" },
+          weightKg: { value: 75, evidence: 'about 75 kilos' },
+        }),
+      },
+    }),
+  );
+  await signIn(page, 'demo.ai@example.com');
+  await page.getByLabel(/I have read the notice/).check();
+  await page.getByLabel('Profile name').fill('Meera');
+  await page.getByRole('button', { name: 'Create profile and continue' }).click();
+  await page.getByLabel('Describe yourself').fill("I can't have gluten at all, it makes me really sick. 31 year old woman, 165 cm. I eat everything including fish.");
+  await page.getByLabel(/Let AI read my description/).check();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByText('Read by AI, checked by NourishCart')).toBeVisible();
+  await expect(page.getByText('1 AI suggestion was rejected by our checks')).toBeVisible();
+  await expect(page.getByText('Gluten (wheat)')).toBeVisible();
+  await shot(page, '04c-ai-reader');
+});
+
 test('step-by-step form still works', async ({ page }) => {
   await signIn(page, 'demo.ravi@example.com');
   await page.getByLabel(/I have read the notice/).check();

@@ -19,7 +19,7 @@ export function PrivacyNotice() {
         <strong>Why:</strong> only to estimate reference nutrition needs, build meal plans and prepare simulated grocery baskets for you.
       </p>
       <p>
-        <strong>What we do not do:</strong> no advertising, no analytics on health or profile data, and no sending of your profile to any AI service. Voice input is turned into text by your browser's own speech service.
+        <strong>What we do not do:</strong> no advertising, no analytics on health or profile data, and and your profile is not sent to any AI service. Voice input is turned into text by your browser's own speech service. If you choose “Let AI read my description”, only that description is sent to an AI model on Groq, which does not store it or train on it.
       </p>
       <p>
         <strong>Your control:</strong> you can edit or archive profiles, export your data and delete your account at any time from Settings.

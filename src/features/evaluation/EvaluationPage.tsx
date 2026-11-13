@@ -9,6 +9,12 @@ import { DIET_LABELS } from '../../domain/diet.ts';
 import type { DietPattern } from '../../domain/types.ts';
 import type { EvalReport, Gate } from '../../eval/report.ts';
 import saved from '../../eval/latest-report.json';
+import llmSaved from '../../eval/latest-llm-report.json';
+
+// Summary written by `npm run eval:llm` (needs a model key, so it is run by hand, not in CI).
+interface ReaderScore { precision: number; recall: number; f1: number; critical: number; safeOver: number }
+interface LlmSet { cases: number; rules: ReaderScore; ai: ReaderScore; combined: ReaderScore; rejected: number; latencyMsMedian: number }
+type LlmReport = { status: 'not_run' } | { generatedAt: string; model: string; provider: string; promptVersion: string; dev: LlmSet; held: LlmSet };
 
 const GROUP_ORDER: Gate['group'][] = ['Safety', 'Nutrition', 'Grocery', 'Scope', 'Reliability', 'Voice intake', 'Store matching'];
 const GROUP_NOTE: Record<Gate['group'], string> = {
@@ -142,6 +148,8 @@ export function EvaluationPage() {
         </div>
       </section>
 
+      <AiReaderSection report={llmSaved as LlmReport} heldRules={report.extractionHeldout} />
+
       <section className="card p-5">
         <h2 className="text-lg font-medium">Matching store products</h2>
         <p className="mt-1 text-sm text-on-surface-variant">
@@ -158,5 +166,61 @@ export function EvaluationPage() {
         The checks use our sample food data and Hyderabad catalogue, not live store stock. Nutrition targets are reference estimates for healthy adults, not medical advice. Synthetic people cover the combinations we chose; real descriptions can be messier than our {report.extraction.cases} labelled examples.
       </Notice>
     </div>
+  );
+}
+
+/** Rules vs AI vs AI + rules on the development and held-out sets. */
+function AiReaderSection({ report, heldRules }: { report: LlmReport; heldRules?: EvalReport['extractionHeldout'] }) {
+  const ran = 'dev' in report ? report : null;
+  const sets = ran ? ([['Development set', ran.dev], ['Held-out set', ran.held]] as const) : null;
+  return (
+    <section className="card p-5">
+      <h2 className="text-lg font-medium">AI reader compared with the built-in reader</h2>
+      <p className="mt-1 max-w-prose text-sm text-on-surface-variant">
+        The built-in reader was written against the development set, so it scores almost perfectly there. The held-out set was written afterwards and never used for tuning: it shows how each reader copes with new phrasing. The app uses “AI + rules”: the AI fills gaps, and the rules can only make the result stricter, never looser.
+      </p>
+      {sets ? (
+        <>
+          <p className="mt-2 text-xs text-on-surface-variant">
+            Model {ran!.model} on {ran!.provider}, prompt {ran!.promptVersion}, run {new Date(ran!.generatedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}.
+          </p>
+          {sets.map(([name, s]) => (
+            <div key={name} className="mt-4">
+              <h3 className="text-sm font-medium">
+                {name} ({s.cases} descriptions)
+              </h3>
+              <table className="mt-2 w-full text-sm">
+                <thead className="text-left text-on-surface-variant">
+                  <tr>
+                    <th className="py-1.5 font-medium">Reader</th>
+                    <th className="py-1.5 text-right font-medium">Right when filled</th>
+                    <th className="py-1.5 text-right font-medium">Details captured</th>
+                    <th className="py-1.5 text-right font-medium">Unsafe errors</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant">
+                  {([['Built-in rules', s.rules], ['AI alone (after checks)', s.ai], ['AI + rules (used by the app)', s.combined]] as const).map(([n, x]) => (
+                    <tr key={n}>
+                      <td className="py-1.5">{n}</td>
+                      <td className="py-1.5 text-right">{pct(x.precision)}</td>
+                      <td className="py-1.5 text-right">{pct(x.recall)}</td>
+                      <td className="py-1.5 text-right">{x.critical}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                {s.rejected} AI suggestions rejected by the checks (quoted words not in what was said, or values outside the allowed list). Median model time {(s.latencyMsMedian / 1000).toFixed(1)} s.
+              </p>
+            </div>
+          ))}
+        </>
+      ) : (
+        <Notice className="mt-3" tone="info" title="AI comparison not run yet">
+          It needs a model key, so it is run by hand with <code>npm run eval:llm</code>.
+          {heldRules && ` For now: the built-in reader captures ${pct(heldRules.overall.recall)} of details on the held-out set (with ${heldRules.criticalErrors} unsafe errors), against nearly all of them on the set it was built on.`}
+        </Notice>
+      )}
+    </section>
   );
 }
