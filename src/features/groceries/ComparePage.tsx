@@ -19,10 +19,13 @@ import { searchQueries } from '../../domain/commerce/instamart.ts';
 import { compareStores, STORE_NAMES, type CompareLine, type Comparison, type StoreId } from '../../domain/commerce/compare.ts';
 import type { Listing, PageInput, PageState } from '../../domain/commerce/listings.ts';
 import { markCartFilled } from '../../lib/cartFilled.ts';
+import { NutrionSays } from '../../components/Nutrion.tsx';
 import { aiReadListings, detectShopper, fillStoreCart, readStorePages, STORE_SEARCH, type FillStatus, type ReadJob } from '../../lib/shopper.ts';
 import { STORE_PAGES } from '../../eval/datasets/storePages.ts';
 
 const STORES: StoreId[] = ['zepto', 'instamart'];
+// Where the filled cart is waiting (the cart button is on the store's home page).
+const STORE_HOME: Record<StoreId, string> = { zepto: 'https://www.zepto.com/', instamart: 'https://www.swiggy.com/instamart' };
 const STATE_TEXT: Record<Exclude<PageState, 'ok'>, string> = {
   login_required: 'asked you to log in',
   location_required: 'needs a delivery location',
@@ -281,8 +284,19 @@ export function ComparePage() {
                 })}
               </ul>
             )}
+            {/* Hand-off: the cart is filled; paying needs the person's own UPI PIN or card OTP. */}
             {Object.values(fillResults).some((x) => x === 'added' || x === 'already_in_cart') && !filling && (
-              <p className="mt-3 text-sm font-medium">Done. Open the store app to check the cart and pay.</p>
+              <div className="pop mt-4 rounded-card bg-leaf-soft p-4">
+                <NutrionSays mood="happy" size={52}>Your cart is ready! Check it and pay in the store.</NutrionSays>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {STORES.filter((x) => Object.entries(fillResults).some(([k, v]) => k.startsWith(`${x}:`) && (v === 'added' || v === 'already_in_cart'))).map((x) => (
+                    <a key={x} href={STORE_HOME[x]} target="_blank" rel="noreferrer" className="inline-flex min-h-[52px] items-center gap-2 rounded-full bg-primary px-6 font-semibold text-on-primary active:scale-95">
+                      Go to {STORE_NAMES[x]} to pay <ExternalLink className="h-4 w-4" aria-hidden />
+                    </a>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-on-surface-variant">Paying needs your own UPI PIN or card OTP, so that last tap is always yours.</p>
+              </div>
             )}
             <p className="mt-4 text-xs text-on-surface-variant">Item prices only; each store adds its own delivery fees at checkout. {checksRejected > 0 ? `${checksRejected} product readings didn't match the page and were ignored.` : ''}</p>
           </section>
