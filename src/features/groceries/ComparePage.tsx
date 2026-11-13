@@ -192,7 +192,7 @@ export function ComparePage() {
             <Stat label="Cheapest store for each item" value={formatInr(result.split.costInr)} sub={`${result.split.found} of ${result.lines.length} items; two deliveries`} />
           </div>
           <p className="text-xs text-on-surface-variant">
-            Item prices only. Delivery, handling and small-cart fees depend on your cart and membership, and each store shows them at checkout. Prices were read just now from your browser{model ? ` by AI (${model})` : ''}; {checksRejected} AI reading{checksRejected === 1 ? ' was' : 's were'} thrown out by our checks.
+            Item prices only. Delivery, handling and small-cart fees depend on your cart and membership, and each store shows them at checkout. {sample ? 'Prices come from the saved pages' : 'Prices were read just now from your browser'}{model ? ` by AI (${model})` : ''}; {checksRejected} AI reading{checksRejected === 1 ? ' was' : 's were'} thrown out by our checks.
           </p>
 
           <section className="card overflow-hidden">

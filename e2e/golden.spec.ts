@@ -250,6 +250,31 @@ test('AI reader: model answer is checked before use (model mocked)', async ({ pa
   await shot(page, '04c-ai-reader');
 });
 
+test('label scan: photo read by AI, verdict by our rules (model mocked)', async ({ page }) => {
+  await page.route('**/api/label', (route) =>
+    route.fulfill({
+      json: {
+        model: 'gemini-mock',
+        promptVersion: 'label-prompt-1.0.0',
+        content: JSON.stringify({ productName: 'Fruity Gummy Bears', ingredientsText: 'Sugar, Glucose Syrup, Gelatine, Acidity Regulator (INS 330), Colours (INS 120, INS 133)', containsText: '', mayContainText: '', vegMark: 'brown', readable: true, allergens: [] }),
+      },
+    }),
+  );
+  await signIn(page, 'demo.scan@example.com');
+  await page.getByLabel(/I have read the notice/).check();
+  await page.getByLabel('Profile name').fill('Asha');
+  await page.getByRole('button', { name: 'Create profile and continue' }).click();
+  await page.getByRole('button', { name: 'Use an example' }).click();
+  await page.getByRole('button', { name: 'Review' }).click();
+  await page.getByRole('button', { name: 'Save and see my targets' }).click();
+  await page.getByRole('link', { name: 'Scan', exact: true }).first().click();
+  await page.locator('#label-photo').setInputFiles('eval-data/labels/l06-gummy-gelatin.jpg');
+  await expect(page.getByText('Fruity Gummy Bears')).toBeVisible();
+  await expect(page.getByText('Avoid')).toBeVisible();
+  await expect(page.getByText(/label says “gelatine”/)).toBeVisible();
+  await shot(page, '16-label-scan');
+});
+
 test('step-by-step form still works', async ({ page }) => {
   await signIn(page, 'demo.ravi@example.com');
   await page.getByLabel(/I have read the notice/).check();

@@ -4,7 +4,7 @@
 // The profile switcher sits in the top app bar on every screen size.
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { CalendarDays, ChevronDown, FlaskConical, Home, LineChart, Menu, Package, Receipt, Settings, ShoppingBasket, Users, WifiOff } from 'lucide-react';
+import { CalendarDays, ChevronDown, FlaskConical, Home, LineChart, Menu, Package, Receipt, Settings, ShoppingBasket, Users, WifiOff, ScanLine } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './context.tsx';
 import { useActiveProfile } from './hooks.ts';
@@ -16,6 +16,7 @@ const NAV = [
   { to: '/nutrition', label: 'Nutrition', icon: LineChart, mobile: false },
   { to: '/plans', label: 'Plans', icon: CalendarDays, mobile: true },
   { to: '/groceries', label: 'Groceries', icon: ShoppingBasket, mobile: true },
+  { to: '/scan', label: 'Scan', icon: ScanLine, mobile: true },
   { to: '/pantry', label: 'Pantry', icon: Package, mobile: true },
   { to: '/orders', label: 'Orders', icon: Receipt, mobile: false },
   { to: '/profiles', label: 'Profiles', icon: Users, mobile: false },

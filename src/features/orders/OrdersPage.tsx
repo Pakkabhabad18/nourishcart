@@ -57,7 +57,7 @@ export function OrderDetailPage() {
       <Link to="/orders" className="mb-4 inline-flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-on-surface">
         <ArrowLeft className="h-4 w-4" aria-hidden /> Orders
       </Link>
-      <div className="rounded-card border-2 border-dashed border-warning bg-warninging-container px-5 py-4 text-center">
+      <div className="rounded-card border-2 border-dashed border-warning bg-warning-container px-5 py-4 text-center">
         <p className="text-lg font-medium text-warning">{SIMULATED_LABEL}</p>
         <p className="mt-1 text-sm text-on-surface-variant">No retailer was contacted and no stock was reserved.</p>
       </div>

@@ -11,13 +11,14 @@ import type { EvalReport, Gate } from '../../eval/report.ts';
 import saved from '../../eval/latest-report.json';
 import llmSaved from '../../eval/latest-llm-report.json';
 import listingsSaved from '../../eval/latest-listings-report.json';
+import labelsSaved from '../../eval/latest-labels-report.json';
 
 // Summary written by `npm run eval:llm` (needs a model key, so it is run by hand, not in CI).
 interface ReaderScore { precision: number; recall: number; f1: number; critical: number; safeOver: number }
 interface LlmSet { cases: number; rules: ReaderScore; ai: ReaderScore; combined: ReaderScore; rejected: number; latencyMsMedian: number }
 type LlmReport = { status: 'not_run' } | { generatedAt: string; model: string; provider: string; promptVersion: string; dev: LlmSet; held: LlmSet; held2?: LlmSet };
 
-const GROUP_ORDER: Gate['group'][] = ['Safety', 'Nutrition', 'Grocery', 'Scope', 'Reliability', 'Voice intake', 'Store matching', 'Shopping agent'];
+const GROUP_ORDER: Gate['group'][] = ['Safety', 'Nutrition', 'Grocery', 'Scope', 'Reliability', 'Voice intake', 'Store matching', 'Shopping agent', 'Label scan'];
 const GROUP_NOTE: Record<Gate['group'], string> = {
   Safety: 'Hard rules. A single failure fails the whole evaluation.',
   Nutrition: 'Each planned day is checked against the person’s own energy range and protein floor.',
@@ -26,6 +27,7 @@ const GROUP_NOTE: Record<Gate['group'], string> = {
   Reliability: 'Same input gives the same answer; options are genuinely different.',
   'Voice intake': 'How well spoken or typed descriptions are turned into profile fields.',
   'Store matching': 'Whether real store product titles are mapped to the right ingredient, or safely refused.',
+  'Label scan': 'Packaged-food labels: the AI copies the label, our word lists decide who it suits. Missing an allergen is the costliest error.',
   'Shopping agent': 'Price comparison on real Zepto and Instamart pages: the AI reads the pages, and these checks make sure nothing it reports is invented, unsafe or overpriced.',
 };
 
@@ -167,6 +169,19 @@ export function EvaluationPage() {
         ) : (
           <Notice className="mt-3">Not run yet.</Notice>
         )}
+      </section>
+
+      <section className="card p-5">
+        <h2 className="text-lg font-medium">Label scan from photos (live model)</h2>
+        <p className="mt-1 max-w-prose text-sm text-on-surface-variant">
+          {labelsSaved.labels} label photos in hard styles (small print, tilt, blur, low contrast, Hindi heading, a cut-off list) with traps like eggless mayo, cocoa butter, coconut milk, gelatine and INS 441. For each photo and each of {labelsSaved.people} test people, the verdict from the photo is compared with the verdict from the hand-typed label. Run with <code>npm run eval:labels</code>.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Verdicts agreeing" value={pct(labelsSaved.agreement)} sub={`${labelsSaved.verdicts} person × label pairs`} />
+          <Stat label="Said “fine” when not" value={labelsSaved.criticalSafeErrors} sub="the costly mistake" />
+          <Stat label="Over-cautious" value={labelsSaved.overCautious} sub="said avoid when fine" />
+          <Stat label="Cut-off label spotted" value={labelsSaved.cutoffDetected} sub={`model ${labelsSaved.model}, ${(labelsSaved.latencyMsMedian / 1000).toFixed(1)} s`} />
+        </div>
       </section>
 
       <section className="card p-5">

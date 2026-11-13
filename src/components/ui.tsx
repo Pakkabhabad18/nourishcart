@@ -99,7 +99,7 @@ export function Notice({ tone = 'info', title, children, className }: { tone?: '
       className={clsx(
         'flex gap-3 rounded-ctl border px-4 py-3 text-sm',
         tone === 'info' && 'border-outline-variant bg-secondary-container/50 text-on-surface',
-        tone === 'warn' && 'border-warninging/30 bg-warninging-container text-on-surface',
+        tone === 'warn' && 'border-warning/30 bg-warning-container text-on-surface',
         tone === 'danger' && 'border-error/30 bg-error-container text-on-surface',
         tone === 'success' && 'border-primary/30 bg-secondary-container text-on-surface',
         className,
@@ -116,7 +116,7 @@ export function Notice({ tone = 'info', title, children, className }: { tone?: '
 
 /** Visible on every simulated product, basket and order (FR-012). */
 export function SimulatedTag({ children = 'Simulated' }: { children?: ReactNode }) {
-  return <span className="inline-flex items-center rounded-md border border-warninging/40 bg-warninging-container px-1.5 py-0.5 text-xs font-medium text-warning">{children}</span>;
+  return <span className="inline-flex items-center rounded-md border border-warning/40 bg-warning-container px-1.5 py-0.5 text-xs font-medium text-warning">{children}</span>;
 }
 
 export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'good' | 'warn' | 'danger' }) {
@@ -126,7 +126,7 @@ export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?
         'inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium',
         tone === 'neutral' && 'bg-surface-container text-on-surface-variant ring-1 ring-outline-variant',
         tone === 'good' && 'bg-secondary-container text-primary',
-        tone === 'warn' && 'bg-warninging-container text-warning',
+        tone === 'warn' && 'bg-warning-container text-warning',
         tone === 'danger' && 'bg-error-container text-error',
       )}
     >

@@ -1,6 +1,6 @@
 # Evaluation report
 
-Generated 2026-11-13T12:25:05.035Z (full run). Result: **all gates passed**.
+Generated 2026-11-13T16:47:44.848Z (full run). Result: **all gates passed**.
 
 Versions: planner `planner-1.0.0`, optimiser `optimiser-1.0.0`, extractor `rules-1.0.0`, matcher `matcher-1.0.0`, data `sample-foods-1.0.0+recipes-1.0.0+catalogue-2026-11-11`, energyMethod `energy.fao2004_schofield_pal@1.0.0`.
 
@@ -40,6 +40,8 @@ How the suite works and why each gate exists: see [EVALUATION.md](EVALUATION.md)
 | A2 | Genuine product cards are kept by the page checks | 43/43 | 100% | Pass |
 | A3 (critical) | No chosen product breaks diet or allergy rules (hand labels, every diet x allergy set) | 0 of 410 picks | 0 | Pass |
 | A4 | Chosen product and pack count are the cheapest way to cover the need (brute force) | 0 of 480 differ | 0 | Pass |
+| L1 (critical) | Ingredient word lists find exactly the hand-labelled allergens and animal ingredients | 24/24 labels exact | 100% | Pass |
+| L2 (critical) | An unreadable or cut-off label never says "fine" for anyone | 0 of 264 | 0 | Pass |
 
 ## Recommendations
 
@@ -110,3 +112,7 @@ One sandbox Instamart cart per person (384 carts, 7962 basket lines). The sandbo
 ## Shopping agent (price comparison)
 
 Saved Zepto and Instamart search pages (real, labelled by hand) plus pages with planted text. Fooled-AI readings that survived the page checks: **0 of 54**. Genuine cards wrongly rejected: 0 of 43. Unsafe products chosen across every diet and allergy set: **0 of 410**. Picks that differ from a brute-force cheapest: 0 of 480. The live AI reader is scored separately (`npm run eval:listings`).
+
+## Label scan
+
+24 test labels. Word lists matched the hand-labelled facts on 24/24. Unreadable labels that still said "fine" for someone: **0 of 264**. The live photo path is scored separately (`npm run eval:labels`).

@@ -50,6 +50,9 @@ export function renderMarkdown(r: EvalReport): string {
   const sh = r.shopping;
   lines.push('', '## Shopping agent (price comparison)', '');
   lines.push(`Saved Zepto and Instamart search pages (real, labelled by hand) plus pages with planted text. Fooled-AI readings that survived the page checks: **${sh.fakeSurvived} of ${sh.fakeAnswers}**. Genuine cards wrongly rejected: ${sh.genuineRejected} of ${sh.genuine}. Unsafe products chosen across every diet and allergy set: **${sh.unsafePicks} of ${sh.picksChecked}**. Picks that differ from a brute-force cheapest: ${sh.cheapestMismatches} of ${sh.cheapestChecks}. The live AI reader is scored separately (\`npm run eval:listings\`).`);
+  const lb = r.labels;
+  lines.push('', '## Label scan', '');
+  lines.push(`${lb.labels} test labels. Word lists matched the hand-labelled facts on ${lb.labels - lb.factMismatches.length}/${lb.labels}. Unreadable labels that still said "fine" for someone: **${lb.unreadableSafe} of ${lb.unreadableChecked}**. The live photo path is scored separately (\`npm run eval:labels\`).`);
   lines.push('');
   return lines.join('\n');
 }

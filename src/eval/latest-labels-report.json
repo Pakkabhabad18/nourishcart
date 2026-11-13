@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-11-13T16:46:07.438Z",
+  "model": "gemini-3.5-flash + gemini-flash-lite-latest",
+  "promptVersion": "label-prompt-1.0.0",
+  "labels": 24,
+  "people": 11,
+  "verdicts": 264,
+  "agreement": 0.9924242424242424,
+  "criticalSafeErrors": 0,
+  "overCautious": 2,
+  "cutoffDetected": "1/1",
+  "latencyMsMedian": 4537
+}

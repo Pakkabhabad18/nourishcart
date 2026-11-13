@@ -199,7 +199,7 @@ export function GroceriesPage() {
       </section>
 
       {over && (
-        <section className="card mt-4 border-warninging/40 p-5 sm:p-6" aria-labelledby="neg-h">
+        <section className="card mt-4 border-warning/40 p-5 sm:p-6" aria-labelledby="neg-h">
           <h2 id="neg-h" className="text-lg font-medium">Bring the basket under {formatInr(budget!)}</h2>
           <p className="mt-1 text-sm text-on-surface-variant">
             Biggest costs: {drivers.map((d) => `${d.name} (${formatInr(d.totalInr)}, ${d.sharePct}%)`).join(', ')}. Pick any changes below. Portions and nutrition checks never change silently.

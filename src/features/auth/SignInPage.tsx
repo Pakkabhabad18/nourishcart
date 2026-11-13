@@ -22,7 +22,7 @@ function DemoInbox({ email }: { email: string }) {
   const mine = mails.filter((m) => m.to === email.trim().toLowerCase()).slice(0, 1);
   if (mine.length === 0) return null;
   return (
-    <aside aria-label="Demo inbox" className="mt-6 rounded-card border border-dashed border-warninging/50 bg-warninging-container p-4">
+    <aside aria-label="Demo inbox" className="mt-6 rounded-card border border-dashed border-warning/50 bg-warning-container p-4">
       <p className="text-sm font-medium text-warning">Demo inbox (simulated email, not sent)</p>
       {mine.map((m) => (
         <div key={m.id} className="mt-3 rounded-ctl border border-outline-variant bg-surface p-4">
