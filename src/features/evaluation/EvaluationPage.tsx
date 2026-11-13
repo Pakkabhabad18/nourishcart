@@ -14,7 +14,7 @@ import llmSaved from '../../eval/latest-llm-report.json';
 // Summary written by `npm run eval:llm` (needs a model key, so it is run by hand, not in CI).
 interface ReaderScore { precision: number; recall: number; f1: number; critical: number; safeOver: number }
 interface LlmSet { cases: number; rules: ReaderScore; ai: ReaderScore; combined: ReaderScore; rejected: number; latencyMsMedian: number }
-type LlmReport = { status: 'not_run' } | { generatedAt: string; model: string; provider: string; promptVersion: string; dev: LlmSet; held: LlmSet };
+type LlmReport = { status: 'not_run' } | { generatedAt: string; model: string; provider: string; promptVersion: string; dev: LlmSet; held: LlmSet; held2?: LlmSet };
 
 const GROUP_ORDER: Gate['group'][] = ['Safety', 'Nutrition', 'Grocery', 'Scope', 'Reliability', 'Voice intake', 'Store matching'];
 const GROUP_NOTE: Record<Gate['group'], string> = {
@@ -172,12 +172,12 @@ export function EvaluationPage() {
 /** Rules vs AI vs AI + rules on the development and held-out sets. */
 function AiReaderSection({ report, heldRules }: { report: LlmReport; heldRules?: EvalReport['extractionHeldout'] }) {
   const ran = 'dev' in report ? report : null;
-  const sets = ran ? ([['Development set', ran.dev], ['Held-out set', ran.held]] as const) : null;
+  const sets = ran ? ([['Development set (rules were built on these)', ran.dev], ['Held-out batch 1 (used to spot problems in the first prompt)', ran.held], ...(ran.held2 ? ([['Held-out batch 2 (clean: never seen before this prompt was run)', ran.held2]] as const) : [])] as const) : null;
   return (
     <section className="card p-5">
       <h2 className="text-lg font-medium">AI reader compared with the built-in reader</h2>
       <p className="mt-1 max-w-prose text-sm text-on-surface-variant">
-        The built-in reader was written against the development set, so it scores almost perfectly there. The held-out set was written afterwards and never used for tuning: it shows how each reader copes with new phrasing. The app uses “AI + rules”: the AI fills gaps, and the rules can only make the result stricter, never looser.
+        The built-in reader was written against the development set, so it scores almost perfectly there. The held-out set was written afterwards and never used for tuning: it shows how each reader copes with new phrasing. The app uses “AI + rules”: the AI fills gaps and fixes plain facts, while diet, allergies and health conditions can only end up stricter, never looser. That safety rule is why “AI + rules” is sometimes a little less precise than the AI alone: it keeps the rules’ extra caution.
       </p>
       {sets ? (
         <>

@@ -78,6 +78,7 @@ test('golden demo journey', async ({ page, context }) => {
   await expect(page.getByRole('heading', { name: 'A few more details' })).toBeVisible();
   await expect(page.getByText('Height (cm)')).toHaveCount(0);
   await expect(page.getByText('from “never eat bhindi”')).toBeVisible();
+  await expect(page.getByText('[object Object]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Save and see my targets' }).click();
   await expect(page.getByText(/Still needed: allergies, budget, health conditions/)).toBeVisible();
   await page.getByRole('checkbox', { name: 'No food allergies' }).click();
@@ -193,6 +194,7 @@ test('mobile layout of the key screens @mobile', async ({ page }) => {
   await shot(page, 'm01b-quick-setup');
   await page.getByRole('button', { name: 'Review' }).click();
   await expect(page.getByRole('heading', { name: 'Check what we understood' })).toBeVisible();
+  await expect(page.getByText('₹1,500 a week')).toBeVisible();
   await page.getByRole('button', { name: 'Save and see my targets' }).click();
   await expect(page.getByRole('heading', { name: 'Daily estimates for Demo Asha' })).toBeVisible();
   await shot(page, 'm02-nutrition');
@@ -226,7 +228,7 @@ test('AI reader: model answer is checked before use (model mocked)', async ({ pa
     route.fulfill({
       json: {
         model: 'openai/gpt-oss-120b',
-        promptVersion: 'intake-prompt-1.0.0',
+        promptVersion: 'intake-prompt-1.1.0',
         content: JSON.stringify({
           ageYears: { value: 31, evidence: '31 year old' },
           allergies: { value: ['gluten'], evidence: "can't have gluten" },

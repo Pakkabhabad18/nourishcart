@@ -85,9 +85,23 @@ The person can tick "Let AI read my description". The text goes to an LLM (OpenA
 
 If the AI is off, offline or slow, the rule reader is used and the person sees a note.
 
-**Why it is there: the held-out set.** The rule reader was built against the 40 development descriptions, so it scores about 99% on them. `src/eval/datasets/heldout.ts` holds 19 more, written afterwards and never used for tuning: Telugu-English and Hindi, a rambling cab driver, a Jain teacher, texting shorthand ("23F, 5'2"), two corrections in one sentence, a husband's allergy mentioned alongside the speaker's. On these the rule reader captures only about 70% of details (still 0 unsafe errors, gate V4). Missed details become extra questions, which is exactly the burden the professor flagged.
+**Why it is there: held-out descriptions.** The rule reader was built against the 40 development descriptions, so it scores about 99% on them. `src/eval/datasets/heldout.ts` holds two more batches written afterwards and never used to tune the rules: Telugu-English and Hindi, a rambling cab driver, a Jain teacher, texting shorthand ("23F, 5'2"), corrections mid-sentence, other family members' allergies and conditions mentioned alongside the speaker's. On these the rule reader captures only 55–70% of details (still 0 unsafe errors, gate V4). Missed details become extra questions, which is exactly the burden the professor flagged.
 
-**How it is scored.** `npm run eval:llm` (needs `GROQ_API_KEY`) scores three readers on both sets: rules, AI alone after the checks, and AI + rules (what the app uses). It reports precision, recall, unsafe errors, the number of AI suggestions the checks rejected, and median model time. Rule for shipping: AI + rules must have 0 unsafe errors on both sets. The summary appears on the Evaluation page.
+**What happened during development (kept honest):**
+1. Prompt v1.0.0 on batch 1 raised captured details from 70% to 92%. Running the app live showed weak spots (feet-and-inches heights, "I don't work out", walking guessed from workout talk).
+2. Batch 2 (8 descriptions) was written *before* trying a fix, so it stays a clean test. Prompt v1.1.0 adds general rules for units, job types, walking, workouts and goals. Batch 1 is no longer clean for v1.1.0, because it was used to find these problems.
+3. v1.1.0 caused one unsafe error on the development set: it read "not pregnant and not diabetic" as "no health conditions". It was fixed in the checker, not the prompt: a "none" claim is accepted only when the quoted words say it in general terms ("no health problems", "nothing like that"). The merge was also changed so the AI's reading wins for plain facts (age, budget), because it follows corrections like "1500, no wait, 2000". Safety facts still only get stricter.
+4. One label was corrected for consistency with that policy: k01 ("sugar ledu, BP ledu") no longer counts as "no conditions", same as u07.
+
+**Results (gpt-oss-120b on Groq, prompt v1.1.0):**
+
+| Set | Rules: details captured | AI + rules: details captured | AI + rules: right when filled | Unsafe errors |
+|---|---|---|---|---|
+| Development (40) | 99.7% | 98.6% | 97.9% | 0 |
+| Held-out batch 1 (19) | 70.4% | 96.4% | 96.4% | 0 |
+| Held-out batch 2 (8, clean) | 55.3% | 94.7% | 93.7% | 0 |
+
+"AI + rules" is slightly less precise than the AI alone (batch 2: 93.7% vs 100%) because the merge keeps the rules' extra caution, such as a husband's allergy also counted for the speaker. That over-restriction is shown on the review screen and is the price of never being less safe. Median model time is 2–7 seconds.
 
 **Tested without a key:** unit tests (`aiIntake.test.ts`) check that the function refuses other websites, oversized text and a missing key; that it sends exactly the evaluated prompt; and that an invented field is rejected and a looser diet is overruled. An E2E test plays back a fixed model answer and checks the review screen.
 

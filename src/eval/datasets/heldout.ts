@@ -103,3 +103,53 @@ export const HELDOUT: UtteranceCase[] = [
     gold: { ageYears: 44, sex: 'male', heightCm: 182, weightKg: 95, occupation: 'sedentary', movement: 'low', workoutsPerWeek: 2, workoutMinutes: 60, intensity: 'moderate', dietPattern: 'non_vegetarian', noAllergies: true, goal: 'weight_management', budgetInr: 8000, budgetPeriod: 'monthly', noClinical: true },
   },
 ];
+
+/**
+ * Second held-out batch, written on 13 Nov 2026 AFTER held-out batch 1 had been used to
+ * spot problems in prompt v1.0.0 (so batch 1 is no longer clean for prompts after v1.0.0).
+ * Written before prompt v1.1.0 was run on anything. This is the clean test for v1.1.0.
+ */
+export const HELDOUT_2: UtteranceCase[] = [
+  {
+    id: 'k01-auto-driver-telugu', style: 'hinglish',
+    text: 'nenu auto driver ni, vayasu 38, magavadini. height five feet seven, weight 70 kilolu. roju antha kurchune untanu. exercise emi cheyanu. chicken, fish anni tintanu. allergies levu. sugar ledu, BP ledu. weight thagginchali. vaaraniki 1000 rupees.',
+    gold: { ageYears: 38, sex: 'male', heightCm: 170.2, weightKg: 70, occupation: 'sedentary', workoutsPerWeek: 0, dietPattern: 'non_vegetarian', noAllergies: true, goal: 'weight_management', budgetInr: 1000, budgetPeriod: 'weekly' },
+    // Label note: "sugar ledu, BP ledu" denies two named conditions only, so noClinical is NOT
+    // set (same policy as u07 in the development set). Corrected on 13 Nov after review.
+  },
+  {
+    id: 'k02-nurse-shifts', style: 'spoken',
+    text: "so i'm a nurse on twelve hour shifts always on my feet, i'm twenty nine female one sixty three centimetres sixty one kilos, no gym, eggs yes but no meat or fish, allergic to peanuts, want to stay healthy, around two thousand five hundred a month",
+    gold: { ageYears: 29, sex: 'female', heightCm: 163, weightKg: 61, occupation: 'moderate', workoutsPerWeek: 0, dietPattern: 'eggetarian', allergies: ['peanut'], goal: 'general', budgetInr: 2500, budgetPeriod: 'monthly' },
+  },
+  {
+    id: 'k03-runner-vegan', style: 'typed',
+    text: 'Vegan for 3 years. 34M, 176cm, 66kg. Product designer (desk). I run 5 mornings a week, about 40 min, hard-ish. Around 12k steps on run days. Allergic to sesame. Training for a half marathon. ₹2,000/week.',
+    gold: { ageYears: 34, sex: 'male', heightCm: 176, weightKg: 66, occupation: 'sedentary', workoutsPerWeek: 5, workoutMinutes: 40, intensity: 'vigorous', movement: 'high', dietPattern: 'vegan', allergies: ['sesame'], goal: 'muscle_fitness', budgetInr: 2000, budgetPeriod: 'weekly' },
+  },
+  {
+    id: 'k04-mother-in-law', style: 'adversarial',
+    text: "I'm 50, female, 157 cm, 72 kg. My mother-in-law is diabetic and doesn't eat onion or garlic, but I eat everything except beef. I'm not diabetic. Housework all day. No allergies. Lose weight. 3000 a month.",
+    gold: { ageYears: 50, sex: 'female', heightCm: 157, weightKg: 72, dietPattern: 'non_vegetarian', occupation: 'moderate', noAllergies: true, goal: 'weight_management', budgetInr: 3000, budgetPeriod: 'monthly' },
+  },
+  {
+    id: 'k05-lbs-and-feet', style: 'typed',
+    text: 'F, 27 years, 5 ft 6 in, 140 lbs. Remote job. Walk the dog twice a day, maybe 8000 steps. Pilates 3x/week 50 mins, moderate. Pescatarian, so fish but no chicken or eggs. Lactose intolerant. Tone up. 1800 weekly. No conditions.',
+    gold: { ageYears: 27, sex: 'female', heightCm: 167.6, weightKg: 63.5, occupation: 'sedentary', movement: 'medium', workoutsPerWeek: 3, workoutMinutes: 50, intensity: 'moderate', dietPattern: 'non_vegetarian', allergies: ['dairy'], goal: 'muscle_fitness', budgetInr: 1800, budgetPeriod: 'weekly', noClinical: true },
+  },
+  {
+    id: 'k06-change-of-mind', style: 'adversarial',
+    text: "Male, 40, 180 cm, 85 kg. I used to be vegetarian but now I eat chicken and eggs too. No allergies. Office job. Weight loss. Budget is 1500, no wait, make it 2000 a week.",
+    gold: { ageYears: 40, sex: 'male', heightCm: 180, weightKg: 85, dietPattern: 'non_vegetarian', noAllergies: true, occupation: 'sedentary', goal: 'weight_management', budgetInr: 2000, budgetPeriod: 'weekly' },
+  },
+  {
+    id: 'k07-tree-nut-and-gluten', style: 'typed',
+    text: '22 year old guy, 172 cm, 60 kg, college student. Allergic to cashews and almonds, and wheat makes me sick. Vegetarian. Football 4 days a week, 90 minutes, intense. Want to gain muscle on 700 a week.',
+    gold: { ageYears: 22, sex: 'male', heightCm: 172, weightKg: 60, occupation: 'sedentary', allergies: ['tree_nut', 'gluten'], dietPattern: 'vegetarian', workoutsPerWeek: 4, workoutMinutes: 90, intensity: 'vigorous', goal: 'muscle_fitness', budgetInr: 700, budgetPeriod: 'weekly' },
+  },
+  {
+    id: 'k08-farmer-hindi', style: 'hinglish',
+    text: 'Main 45 saal ka kisaan hoon. Khet mein din bhar mehnat ka kaam. Lambai 5 foot 6 inch, vajan 62 kilo. Shakahari hoon, doodh aur dahi leta hoon, anda nahi. Koi allergy nahi. Taakat chahiye. Mahine ka 3500.',
+    gold: { ageYears: 45, sex: 'male', heightCm: 167.6, weightKg: 62, occupation: 'heavy', dietPattern: 'vegetarian', noAllergies: true, goal: 'muscle_fitness', budgetInr: 3500, budgetPeriod: 'monthly' },
+  },
+];

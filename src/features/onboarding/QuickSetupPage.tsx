@@ -111,7 +111,7 @@ function understood(e: Extraction): { key: string; label: string; value: string;
   add('Never include', e.hardExclusions, (v: string[]) => v.map((id) => INGREDIENT_MAP.get(id)?.name ?? id).join(', '));
   add('Prefer less', e.dislikes, (v: string[]) => v.map((id) => INGREDIENT_MAP.get(id)?.name ?? id).join(', '));
   add('Goal', e.goal, (v: Goal) => GOALS.find((g) => g[0] === v)?.[1] ?? v);
-  add('Budget', e.budgetInr, (v: number) => `₹${v.toLocaleString('en-IN')}${e.budgetPeriod ? ` ${e.budgetPeriod}` : ''}`);
+  add('Budget', e.budgetInr, (v: number) => `₹${v.toLocaleString('en-IN')}${e.budgetPeriod ? (e.budgetPeriod.value === 'weekly' ? ' a week' : ' a month') : ''}`);
   add('Health conditions', e.clinicalFlags, (v: ClinicalFlag[]) => v.map((c) => CLINICAL.find((x) => x[0] === c)?.[1] ?? c).join(', '));
   add('Health conditions', e.noClinical, () => 'None');
   return rows;

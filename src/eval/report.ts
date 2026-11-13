@@ -10,7 +10,7 @@ import { runRecommendationEval, type RecommendationReport } from './recommendati
 import { runExtractionEval, type ExtractionReport } from './extraction.ts';
 import { runMatchingEval, type MatchingReport } from './matching.ts';
 import { runCartEval, type CartReport } from './cart.ts';
-import { HELDOUT } from './datasets/heldout.ts';
+import { HELDOUT, HELDOUT_2 } from './datasets/heldout.ts';
 import type { CollectedBasket } from './recommendations.ts';
 
 export interface Gate {
@@ -80,7 +80,7 @@ export async function runFullEvaluation(cat: Catalog, mode: 'full' | 'quick' = '
   const baskets: CollectedBasket[] = [];
   const recommendation = runRecommendationEval(cat, mode === 'full' ? { perCombination: 3, maxAlternatives: 3, collectBaskets: baskets } : { perCombination: 1, maxAlternatives: 2, seed: 42, collectBaskets: baskets });
   const extraction = runExtractionEval();
-  const extractionHeldout = runExtractionEval(undefined, undefined, HELDOUT);
+  const extractionHeldout = runExtractionEval(undefined, undefined, [...HELDOUT, ...HELDOUT_2]);
   const matching = runMatchingEval(cat.ingredients);
   const cart = await runCartEval(baskets, cat.ingredients);
   const gates = buildGates(recommendation, extraction, matching, cart, extractionHeldout);

@@ -55,6 +55,25 @@ describe('LLM safety layers', () => {
     expect(sanitiseLlmOutput('{"dietPattern":{"value":"pescatarian","evidence":"i am vegetarian"}}', said).extraction.dietPattern).toBeUndefined();
     expect(sanitiseLlmOutput('sorry, I cannot help', said).dropped[0].reason).toBe('not valid JSON');
   });
+  it('accepts "no conditions" only when said in general terms', () => {
+    const claim = (said: string, ev: string) => sanitiseLlmOutput(JSON.stringify({ noClinical: { value: true, evidence: ev } }), said).extraction.noClinical;
+    expect(claim('i am not pregnant and not diabetic', 'not pregnant and not diabetic')).toBeUndefined();
+    expect(claim('sugar ledu bp ledu', 'sugar ledu bp ledu')).toBeUndefined();
+    expect(claim('no health problems', 'no health problems')).toBeDefined();
+    expect(claim('health problems emi levu', 'health problems emi levu')).toBeDefined();
+    expect(claim('not diabetic, nothing like that', 'nothing like that')).toBeDefined();
+  });
+
+  it('lets the AI correct plain facts but never loosen safety ones', () => {
+    const said = "i'm 30... sorry 33, vegetarian, allergic to peanuts";
+    const rules = extractProfile(said, NOW);
+    const llm = sanitiseLlmOutput('{"ageYears":{"value":33,"evidence":"sorry 33"},"dietPattern":{"value":"eggetarian","evidence":"vegetarian"}}', said).extraction;
+    const m = mergeWithRules(rules, llm);
+    expect(m.ageYears?.value).toBe(33);
+    expect(m.dietPattern?.value).toBe('vegetarian');
+    expect(m.allergies?.value).toEqual(['peanut']);
+  });
+
   it('merge can never be less safe than the rules', () => {
     const rules = extractProfile('vegetarian, allergic to peanuts', NOW);
     const llm = sanitiseLlmOutput('{"dietPattern":{"value":"eggetarian","evidence":"vegetarian"},"noAllergies":{"value":true,"evidence":"vegetarian"}}', 'vegetarian, allergic to peanuts').extraction;

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-13T09:35:05.009Z",
+  "generatedAt": "2026-11-13T11:23:43.183Z",
   "model": "openai/gpt-oss-120b",
   "provider": "Groq",
-  "promptVersion": "intake-prompt-1.0.0",
+  "promptVersion": "intake-prompt-1.1.0",
   "dev": {
     "cases": 40,
     "rules": {
@@ -13,21 +13,21 @@
       "safeOver": 2
     },
     "ai": {
-      "precision": 0.9816849816849816,
-      "recall": 0.9305555555555556,
-      "f1": 0.9554367201426026,
+      "precision": 0.9857651245551602,
+      "recall": 0.9618055555555556,
+      "f1": 0.9736379613356767,
       "critical": 0,
       "safeOver": 0
     },
     "combined": {
-      "precision": 0.9862542955326461,
-      "recall": 0.9965277777777778,
-      "f1": 0.991364421416235,
+      "precision": 0.9793103448275862,
+      "recall": 0.9861111111111112,
+      "f1": 0.9826989619377162,
       "critical": 0,
       "safeOver": 2
     },
     "rejected": 1,
-    "latencyMsMedian": 1862
+    "latencyMsMedian": 1575
   },
   "held": {
     "cases": 19,
@@ -39,20 +39,46 @@
       "safeOver": 5
     },
     "ai": {
-      "precision": 0.9574468085106383,
-      "recall": 0.9183673469387755,
-      "f1": 0.9375000000000001,
+      "precision": 0.9948453608247423,
+      "recall": 0.9846938775510204,
+      "f1": 0.9897435897435899,
+      "critical": 0,
+      "safeOver": 0
+    },
+    "combined": {
+      "precision": 0.9642857142857143,
+      "recall": 0.9642857142857143,
+      "f1": 0.9642857142857143,
+      "critical": 0,
+      "safeOver": 5
+    },
+    "rejected": 1,
+    "latencyMsMedian": 6846
+  },
+  "held2": {
+    "cases": 8,
+    "rules": {
+      "precision": 0.8813559322033898,
+      "recall": 0.5531914893617021,
+      "f1": 0.6797385620915033,
       "critical": 0,
       "safeOver": 3
     },
-    "combined": {
-      "precision": 0.9326424870466321,
-      "recall": 0.9183673469387755,
-      "f1": 0.9254498714652956,
+    "ai": {
+      "precision": 1,
+      "recall": 0.9787234042553191,
+      "f1": 0.989247311827957,
       "critical": 0,
-      "safeOver": 6
+      "safeOver": 0
     },
-    "rejected": 0,
-    "latencyMsMedian": 3277
+    "combined": {
+      "precision": 0.9368421052631579,
+      "recall": 0.9468085106382979,
+      "f1": 0.9417989417989417,
+      "critical": 0,
+      "safeOver": 3
+    },
+    "rejected": 1,
+    "latencyMsMedian": 7066
   }
 }

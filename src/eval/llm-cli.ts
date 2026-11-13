@@ -11,7 +11,7 @@
 // (summary shown on the app's Evaluation page). Only the fictional test sentences are sent.
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { UTTERANCES, type UtteranceCase } from './datasets/utterances.ts';
-import { HELDOUT } from './datasets/heldout.ts';
+import { HELDOUT, HELDOUT_2 } from './datasets/heldout.ts';
 import { buildMessages, mergeWithRules, sanitiseLlmOutput, LLM_PROMPT_VERSION } from '../domain/intake/llm.ts';
 import { extractProfile, type Extraction } from '../domain/intake/extract.ts';
 import { runExtractionEval, type ExtractionReport } from './extraction.ts';
@@ -81,10 +81,11 @@ async function runSet(name: string, cases: UtteranceCase[]): Promise<SetResult> 
 }
 
 const dev = await runSet('development set', UTTERANCES);
-const held = await runSet('held-out set', HELDOUT);
+const held = await runSet('held-out batch 1', HELDOUT);
+const held2 = await runSet('held-out batch 2', HELDOUT_2);
 const generatedAt = new Date().toISOString();
 mkdirSync('eval-results', { recursive: true });
-writeFileSync('eval-results/llm-extraction.json', JSON.stringify({ generatedAt, model, promptVersion: LLM_PROMPT_VERSION, dev, held }, null, 2));
+writeFileSync('eval-results/llm-extraction.json', JSON.stringify({ generatedAt, model, promptVersion: LLM_PROMPT_VERSION, dev, held, held2 }, null, 2));
 
 // Small summary for the app (no per-case detail).
 const sum = (r: ExtractionReport) => ({ precision: r.overall.precision, recall: r.overall.recall, f1: r.overall.f1, critical: r.criticalErrors, safeOver: r.safeOverRestrictions });
@@ -95,11 +96,12 @@ writeFileSync(
     generatedAt, model, provider: base.includes('groq') ? 'Groq' : base, promptVersion: LLM_PROMPT_VERSION,
     dev: { cases: UTTERANCES.length, rules: sum(dev.rules), ai: sum(dev.ai), combined: sum(dev.combined), rejected: rejectedCount(dev), latencyMsMedian: dev.latencyMsMedian },
     held: { cases: HELDOUT.length, rules: sum(held.rules), ai: sum(held.ai), combined: sum(held.combined), rejected: rejectedCount(held), latencyMsMedian: held.latencyMsMedian },
+    held2: { cases: HELDOUT_2.length, rules: sum(held2.rules), ai: sum(held2.ai), combined: sum(held2.combined), rejected: rejectedCount(held2), latencyMsMedian: held2.latencyMsMedian },
   }, null, 2) + '\n',
 );
 
 const row = (n: string, r: ExtractionReport) => console.log(`  ${n.padEnd(12)} precision ${(r.overall.precision * 100).toFixed(1)}%  recall ${(r.overall.recall * 100).toFixed(1)}%  F1 ${(r.overall.f1 * 100).toFixed(1)}%  critical ${r.criticalErrors}`);
-for (const [label, s] of [['Development set (40)', dev], [`Held-out set (${HELDOUT.length})`, held]] as const) {
+for (const [label, s] of [['Development set (40)', dev], [`Held-out batch 1 (${HELDOUT.length})`, held], [`Held-out batch 2 (${HELDOUT_2.length}, clean for this prompt)`, held2]] as const) {
   console.log(`\n${label}`);
   row('rules', s.rules);
   row('AI only', s.ai);
