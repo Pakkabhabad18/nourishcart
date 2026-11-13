@@ -28,6 +28,8 @@ import { PantryPage } from '../features/pantry/PantryPage.tsx';
 import { SettingsPage } from '../features/settings/SettingsPage.tsx';
 import { OverviewPage } from '../features/overview/OverviewPage.tsx';
 import { NotFound } from './NotFound.tsx';
+import { MePage } from '../features/me/MePage.tsx';
+import { LegalPage } from '../features/legal/LegalPage.tsx';
 
 // Private data is never persisted by the query cache; refetch on focus keeps profiles fresh.
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: 1, refetchOnWindowFocus: false } } });
@@ -66,6 +68,7 @@ export function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/sign-in" element={<SignInPage />} />
+            <Route path="/legal/:doc" element={<LegalPage />} />
             <Route element={<RequireAuth />}>
               <Route path="/welcome" element={<WelcomePage />} />
               <Route element={<RequireProfile />}>
@@ -90,6 +93,7 @@ export function App() {
                   <Route path="/orders/:id" element={<OrderDetailPage />} />
                   <Route path="/pantry" element={<PantryPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/me" element={<MePage />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Route>

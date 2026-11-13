@@ -1,6 +1,8 @@
 // Profile management (FR-002): create, rename, archive/restore, switch, continue setup.
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Avatar } from '../../components/Avatar.tsx';
+import { RELATIONS } from '../me/MePage.tsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { Archive, Pencil, Plus, RotateCcw, UserRound } from 'lucide-react';
 import { store } from '../../lib/store/index.ts';
@@ -16,7 +18,9 @@ export function ProfilesPage() {
   const { setActiveProfileId, toast, online } = useApp();
   const { profile: active, profiles, all } = useActiveProfile();
   const saveBundle = useSaveBundle();
-  const [adding, setAdding] = useState(false);
+  const [params] = useSearchParams();
+  // Me → "+ Add" opens the add sheet straight away.
+  const [adding, setAdding] = useState(params.get('add') === '1');
   const [renaming, setRenaming] = useState<Profile | null>(null);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -55,7 +59,7 @@ export function ProfilesPage() {
   return (
     <>
       <PageHeader
-        title="Household"
+        title="Family"
         description="Everyone gets their own targets, food rules and budget."
         actions={
           <Button icon={<Plus className="h-4 w-4" aria-hidden />} onClick={() => (setName(''), setAdding(true))} disabled={!online}>
@@ -81,10 +85,12 @@ export function ProfilesPage() {
               <li key={p.id} className={`card p-5 ${isActive ? 'ring-2 ring-primary/40' : ''}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="grid h-10 w-10 place-items-center rounded-full bg-secondary-container font-medium text-primary">{p.displayName.slice(0, 1).toUpperCase()}</span>
+                    <Avatar name={p.displayName} src={p.avatar} size={44} />
                     <div>
                       <h2 className="font-medium">{p.displayName}</h2>
-                      <p className="text-sm text-on-surface-variant">{Number.isNaN(currentAge(p)) ? 'Setup not finished' : `${currentAge(p)} years`}</p>
+                      <p className="text-sm text-on-surface-variant">
+                        {[RELATIONS.find(([v]) => v === p.relation)?.[1], Number.isNaN(currentAge(p)) ? 'setup not finished' : `${currentAge(p)} years`].filter(Boolean).join(', ')}
+                      </p>
                     </div>
                   </div>
                   {isActive ? <Tag tone="good">Active</Tag> : p.onboardingComplete ? null : <Tag tone="warn">Setup incomplete</Tag>}

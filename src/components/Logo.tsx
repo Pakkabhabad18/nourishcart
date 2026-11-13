@@ -1,13 +1,15 @@
-// Wordmark: a bowl that doubles as a basket, in the M3 primary colours.
+// Wordmark: a jamun-plum bowl with a curry-leaf sprout (Nutrion's leaf), so the logo and the
+// mascot read as one family.
 // The name is configurable via VITE_BRAND_NAME.
 export const BRAND = (import.meta.env.VITE_BRAND_NAME as string | undefined) || 'NourishCart';
 
 export function LogoMark({ className = 'h-8 w-8' }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      <rect width="32" height="32" rx="10" fill="#005BBF" />
-      <path d="M7 15h18a9 9 0 0 1-18 0Z" fill="#FFFFFF" />
-      <path d="M12 15c0-3.5 1.8-6 4-7.5M20 15c-.4-2.6-1.6-4.4-3.2-5.6" stroke="#B2C9FE" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <rect width="32" height="32" rx="11" fill="#4A2A6B" />
+      <path d="M6.5 15h19a9.5 9.5 0 0 1-19 0Z" fill="#FFB21A" />
+      <path d="M16 15c0-3 .3-5.4 1-7.4" stroke="#7FD3A1" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <path d="M17 8c2.5-2.6 5.6-2.4 6.6-.7-2 1.5-4.4 1.6-6.6.7Z" fill="#7FD3A1" />
     </svg>
   );
 }
@@ -16,7 +18,7 @@ export function Logo({ compact }: { compact?: boolean }) {
   return (
     <span className="flex items-center gap-2.5">
       <LogoMark className={compact ? 'h-8 w-8 lg:hidden' : 'h-8 w-8'} />
-      <span className="text-xl font-medium tracking-tight text-on-surface">{BRAND}</span>
+      <span className="font-display text-xl font-bold tracking-tight text-primary">{BRAND}</span>
     </span>
   );
 }

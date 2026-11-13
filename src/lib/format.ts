@@ -13,7 +13,7 @@ export function dayName(day: number): string {
 export function dayLong(day: number): string {
   return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][day] ?? `Day ${day + 1}`;
 }
-export const SLOT_LABEL: Record<string, string> = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' };
+export const SLOT_LABEL: Record<string, string> = { breakfast: 'Breakfast', snack_am: 'Morning snack', lunch: 'Lunch', snack: 'Evening snack', dinner: 'Dinner' };
 export function servingsLabel(s: number): string {
   return s === 1 ? '1 serving' : `${s} servings`;
 }

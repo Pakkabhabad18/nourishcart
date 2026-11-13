@@ -2,6 +2,7 @@
 // person's data, and every mutation invalidates exactly what it changes.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { addDays, dayKey } from '../domain/progress/progress.ts';
 import { store } from '../lib/store/index.ts';
 import { useApp } from './context.tsx';
 import { CAT } from '../lib/catalog.ts';
@@ -20,7 +21,13 @@ export const qk = {
   orders: ['orders'] as const,
   consents: ['consents'] as const,
   schedule: (id: string) => ['schedule', id] as const,
+  checkins: (id: string) => ['checkins', id] as const,
 };
+
+/** Check-ins for the last 60 days (enough for streaks, the week strip and badges). */
+export function useCheckins(profileId: string | null | undefined) {
+  return useQuery({ queryKey: qk.checkins(profileId ?? '-'), queryFn: () => store.listCheckins(profileId!, addDays(dayKey(new Date()), -60)), enabled: !!profileId });
+}
 
 export function useProfiles() {
   const { session } = useApp();

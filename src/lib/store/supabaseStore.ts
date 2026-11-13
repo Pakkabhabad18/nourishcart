@@ -7,6 +7,7 @@ import {
   type StoredCalculation, type StoredPlan,
 } from '../../domain/persistence/mappers.ts';
 import type { StoredBasket } from '../../domain/orders/checkout.ts';
+import type { MealCheckin } from '../../domain/progress/progress.ts';
 import type { PantryItem } from '../../domain/inventory/pantry.ts';
 import { NOTICE_VERSION, type ConsentRecord, type NourishStore, type OtpRequestResult, type OtpVerifyResult, type ScheduleRule, type Session } from './types.ts';
 
@@ -200,6 +201,23 @@ export class SupabaseStore implements NourishStore {
     if (error) throw error;
   }
 
+  async listCheckins(profileId: string, fromDay: string): Promise<MealCheckin[]> {
+    const { data, error } = await this.db.from('meal_checkins').select('*').eq('profile_id', profileId).gte('day', fromDay).order('day');
+    if (error) throw error;
+    return data.map((r) => ({ id: r.id, profileId: r.profile_id, day: r.day, slot: r.slot, status: r.status, recipeId: r.recipe_id, servings: r.servings == null ? null : Number(r.servings), kcal: r.kcal, proteinG: r.protein_g == null ? null : Number(r.protein_g), createdAt: r.created_at }));
+  }
+  async saveCheckin(c: MealCheckin) {
+    const { error } = await this.db
+      .from('meal_checkins')
+      .upsert({ id: c.id, profile_id: c.profileId, day: c.day, slot: c.slot, status: c.status, recipe_id: c.recipeId, servings: c.servings, kcal: c.kcal == null ? null : Math.round(c.kcal), protein_g: c.proteinG }, { onConflict: 'profile_id,day,slot' });
+    if (error) throw error;
+    return c;
+  }
+  async deleteCheckin(id: string) {
+    const { error } = await this.db.from('meal_checkins').delete().eq('id', id);
+    if (error) throw error;
+  }
+
   async getScheduleRule(profileId: string): Promise<ScheduleRule | null> {
     const { data } = await this.db.from('scheduled_rules').select('*').eq('profile_id', profileId).maybeSingle();
     return data ? { profileId, enabled: data.enabled, weekday: data.weekday, maxSpendInr: data.max_spend_inr == null ? null : Number(data.max_spend_inr), consentAt: data.consent_at, lastPreparedAt: data.last_prepared_at } : null;
@@ -211,7 +229,7 @@ export class SupabaseStore implements NourishStore {
 
   async exportData() {
     const uid = await this.uid();
-    const tables = ['profiles', 'profile_preferences', 'activity_assessments', 'profile_budgets', 'calculation_runs', 'meal_plans', 'baskets', 'orders', 'pantry_items', 'scheduled_rules', 'consent_records'];
+    const tables = ['profiles', 'meal_checkins', 'profile_preferences', 'activity_assessments', 'profile_budgets', 'calculation_runs', 'meal_plans', 'baskets', 'orders', 'pantry_items', 'scheduled_rules', 'consent_records'];
     const out: Record<string, unknown> = { exportedAt: new Date().toISOString(), userId: uid };
     for (const t of tables) out[t] = (await this.db.from(t).select('*')).data;
     return out;

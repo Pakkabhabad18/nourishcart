@@ -1,29 +1,32 @@
-@import '@fontsource-variable/roboto-flex';
+@import '@fontsource-variable/figtree';
+@import '@fontsource-variable/baloo-2';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Material Design 3 base. Colour roles come from src/styles/m3-tokens.json. */
+/* Base styles. Colour roles come from src/styles/m3-tokens.json (Jamun and Mango palette). */
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
   body { @apply bg-surface text-on-surface font-sans text-base antialiased; }
   .num { font-variant-numeric: tabular-nums; }
   :focus-visible { outline: 2px solid theme('colors.primary'); outline-offset: 2px; border-radius: 8px; }
-  h1, h2, h3 { @apply text-on-surface; }
+  h1, h2, h3 { @apply font-display text-on-surface; letter-spacing: -0.01em; }
+  h1 { @apply font-semibold leading-tight; }
+  h2, h3 { @apply font-semibold; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
 }
 
 @layer components {
-  /* M3 elevated card: surface-container-low + elevation 1 */
-  .card { @apply rounded-card bg-surface-container-low shadow-e1; }
-  /* M3 outlined text field */
-  .field-input { @apply w-full rounded-xs border border-outline bg-transparent px-4 py-3 text-base text-on-surface placeholder:text-on-surface-variant/70 hover:border-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40; }
+  /* Card: white on milk background, hairline plum border, no shadow (only floating things get shadows). */
+  .card { @apply rounded-card border border-outline-variant bg-surface-container-lowest; }
+  /* Text field */
+  .field-input { @apply w-full rounded-ctl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-base text-on-surface placeholder:text-on-surface-variant/70 hover:border-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40; }
   .field-input[aria-invalid='true'] { @apply border-error focus:border-error focus:ring-error; }
   /* M3 filter chip: 32 px tall (44 px touch area), 8 px corners, check mark when selected */
-  .chip { @apply relative inline-flex min-h-[40px] cursor-pointer select-none items-center gap-2 rounded-lg border border-outline bg-transparent px-4 py-1.5 text-sm font-medium text-on-surface-variant transition-colors hover:bg-on-surface/[0.08]; }
-  .chip[aria-pressed='true'], .chip[aria-checked='true'], .chip[aria-selected='true'] { @apply border-transparent bg-secondary-container text-on-secondary-container; }
+  .chip { @apply relative inline-flex min-h-[44px] cursor-pointer select-none items-center gap-2 rounded-ctl border border-outline-variant bg-surface-container-lowest px-4 py-1.5 text-sm font-medium text-on-surface-variant transition-colors hover:bg-on-surface/[0.08]; }
+  .chip[aria-pressed='true'], .chip[aria-checked='true'], .chip[aria-selected='true'] { @apply border-primary bg-primary text-on-primary; }
   .chip[aria-checked='true']::before, .chip[aria-pressed='true']::before, .chip[aria-selected='true']::before { content: ''; @apply -ml-1 h-[18px] w-[18px] shrink-0 bg-current; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center/contain no-repeat; }
   .link { @apply font-medium text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary; }
 }
@@ -32,5 +35,38 @@
 @keyframes settle { from { transform: translateX(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
 .range-marker { animation: settle 500ms cubic-bezier(0.2, 0, 0, 1) both; }
 /* Listening pulse for the microphone button */
-@keyframes listen { 0% { box-shadow: 0 0 0 0 rgba(0, 91, 191, 0.45); } 100% { box-shadow: 0 0 0 22px rgba(0, 91, 191, 0); } }
+@keyframes listen { 0% { box-shadow: 0 0 0 0 rgba(194, 58, 34, 0.45); } 100% { box-shadow: 0 0 0 22px rgba(194, 58, 34, 0); } }
 .mic-live { animation: listen 1.2s cubic-bezier(0.2, 0, 0, 1) infinite; }
+
+/* ---------------------------------------------------------------- motion
+   Only transform and opacity animate (cheap for the GPU). Everything respects reduced motion (above). */
+@keyframes rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+.rise { animation: rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.rise-1 { animation-delay: 60ms; } .rise-2 { animation-delay: 120ms; } .rise-3 { animation-delay: 180ms; } .rise-4 { animation-delay: 240ms; }
+@keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+.pop { animation: pop 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+.skeleton { background: linear-gradient(90deg, theme('colors.surface-container') 25%, theme('colors.surface-container-highest') 50%, theme('colors.surface-container') 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; border-radius: 16px; }
+
+/* Mascot moods (components/Nutrion.tsx) */
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4%); } }
+@keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes talk { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+@keyframes leaf { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(8deg); } }
+@keyframes hop { 0%, 100% { transform: translateY(0) scale(1); } 30% { transform: translateY(-14%) scale(1.03, 0.97); } 55% { transform: translateY(0) scale(1.04, 0.96); } }
+@keyframes think { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+.nutrion-body { transform-box: fill-box; transform-origin: 50% 100%; animation: bob 3.2s ease-in-out infinite; }
+.nutrion-happy .nutrion-body { animation: hop 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 2; }
+.nutrion-eye { transform-box: fill-box; transform-origin: center; animation: blink 4.5s infinite; }
+.nutrion-mouth-talk { transform-box: fill-box; transform-origin: center; animation: talk 0.28s ease-in-out infinite; }
+.nutrion-leaf { transform-box: fill-box; transform-origin: 50% 100%; animation: leaf 2.6s ease-in-out infinite; }
+.nutrion-listening .nutrion-leaf { animation-duration: 0.7s; }
+.nutrion-dot { animation: think 1s ease-in-out infinite; }
+.nutrion-dot:nth-child(2) { animation-delay: 0.2s; } .nutrion-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Progress rings draw in once */
+@keyframes ring { from { stroke-dashoffset: var(--ring-len); } }
+.ring-draw { animation: ring 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+/* Mango sparkle for celebrations */
+@keyframes sparkle { 0% { transform: scale(0) rotate(0); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(1.2) rotate(90deg); opacity: 0; } }
+.sparkle { animation: sparkle 900ms ease-out both; }

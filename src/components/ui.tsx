@@ -1,7 +1,8 @@
 // Small UI kit. Native elements first (button, input, select, dialog) for accessibility.
 import { clsx } from 'clsx';
 import { AlertTriangle, CheckCircle2, Info, Loader2, ShieldAlert, X } from 'lucide-react';
-import { forwardRef, useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { Nutrion } from './Nutrion.tsx';
+import { forwardRef, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 
 // M3 common buttons: primary = filled, secondary = outlined, tonal = filled tonal, ghost = text, danger = filled error.
 type Variant = 'primary' | 'secondary' | 'tonal' | 'ghost' | 'danger';
@@ -13,13 +14,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
         disabled={disabled || loading}
         aria-busy={loading || undefined}
         className={clsx(
-          'inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-[0.01em] transition-[background-color,box-shadow] disabled:cursor-not-allowed disabled:opacity-40',
+          'inline-flex items-center justify-center gap-2 rounded-full font-semibold tracking-[0.01em] transition-[background-color,filter,transform] disabled:cursor-not-allowed disabled:opacity-40',
           size === 'sm' && 'min-h-[36px] px-4 text-sm',
           size === 'md' && 'min-h-[44px] px-6 text-sm',
           size === 'lg' && 'min-h-[52px] px-7 text-base',
-          variant === 'primary' && 'bg-primary text-on-primary hover:shadow-e1 hover:brightness-110',
+          variant === 'primary' && 'bg-primary text-on-primary hover:brightness-110 active:scale-[0.98]',
           variant === 'secondary' && 'border border-outline bg-transparent text-primary hover:bg-primary/[0.08]',
-          variant === 'tonal' && 'bg-secondary-container text-on-secondary-container hover:shadow-e1',
+          variant === 'tonal' && 'bg-primary-container text-on-primary-container hover:brightness-95 active:scale-[0.98]',
           variant === 'ghost' && 'px-3 text-primary hover:bg-primary/[0.08]',
           variant === 'danger' && 'bg-error text-on-error hover:shadow-e1',
           className,
@@ -148,12 +149,35 @@ export function EmptyState({ icon, title, children, action }: { icon?: ReactNode
   );
 }
 
+// Short, true food facts shown while something loads, so a wait feels like a moment, not a stall.
+const TIPS = [
+  'Ragi has about 10 times the calcium of rice.',
+  'A squeeze of lemon on dal helps your body take in its iron.',
+  'Soaking rajma overnight cuts cooking time by about half.',
+  'Two eggs give about 12 g of protein.',
+  'Curd with lunch is an easy calcium boost.',
+  'Seasonal vegetables are usually the cheapest in the basket.',
+];
+
+/** Loading state: Nutrion thinking, the action in plain words, and a rotating food tip. */
 export function Spinner({ label = 'Loading' }: { label?: string }) {
+  const [i, setI] = useState(() => Math.floor(Math.random() * TIPS.length));
+  useEffect(() => {
+    const t = window.setInterval(() => setI((x) => (x + 1) % TIPS.length), 3500);
+    return () => window.clearInterval(t);
+  }, []);
   return (
-    <div className="flex items-center gap-2 py-10 text-on-surface-variant" role="status">
-      <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> {label}…
+    <div className="flex flex-col items-center gap-3 py-14 text-center" role="status" aria-live="polite">
+      <Nutrion mood="thinking" size={88} />
+      <p className="font-display text-lg font-semibold text-on-surface">{label}…</p>
+      <p key={i} className="rise max-w-xs text-sm text-on-surface-variant">{TIPS[i]}</p>
     </div>
   );
+}
+
+/** Placeholder blocks shown in the shape of the content that is coming. */
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={clsx('skeleton', className)} aria-hidden />;
 }
 
 export function ErrorState({ error, retry }: { error: unknown; retry?: () => void }) {

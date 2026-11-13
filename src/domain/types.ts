@@ -8,7 +8,8 @@ export type Goal = 'general' | 'muscle_fitness' | 'weight_management' | 'budget_
 export type OccupationClass = 'sedentary' | 'light' | 'moderate' | 'heavy';
 export type MovementBand = 'low' | 'medium' | 'high';
 export type Intensity = 'light' | 'moderate' | 'vigorous';
-export type MealSlot = 'breakfast' | 'lunch' | 'snack' | 'dinner';
+/** 'snack_am' is a mid-morning snack; it uses the same recipes as the evening 'snack'. */
+export type MealSlot = 'breakfast' | 'snack_am' | 'lunch' | 'snack' | 'dinner';
 export type BudgetPeriod = 'weekly' | 'monthly';
 export type BudgetMode = 'hard' | 'flexible';
 export type Allergen = 'dairy' | 'egg' | 'peanut' | 'tree_nut' | 'gluten' | 'soy' | 'fish' | 'sesame' | 'shellfish';
@@ -29,6 +30,10 @@ export interface Profile {
   ownerUserId: string;
   displayName: string;
   dateOfBirth: string | null; // ISO date
+  /** Profile photo as a small square JPEG data URL (≤ ~40 KB), or null for the initial. */
+  avatar?: string | null;
+  /** Who this is to the account holder: 'me', 'partner', 'parent', 'sibling', 'flatmate', 'other'. */
+  relation?: string | null;
   /** Age the person stated (quick setup), with the date they said it. Used only when dateOfBirth is empty. */
   ageAtEntry: number | null;
   ageEnteredAt: string | null;
@@ -51,7 +56,13 @@ export interface ProfilePreferences {
   hardExclusions: string[]; // ingredient ids (strict)
   allergies: Allergen[];
   allergiesConfirmed: boolean; // user explicitly answered the allergy question
-  mealsPerDay: 3 | 4;
+  /** Number of meals a day (1-5). Kept equal to mealSlots.length when mealSlots is set. */
+  mealsPerDay: number;
+  /**
+   * Which meals the person eats, e.g. lunch + dinner for 16:8 intermittent fasting.
+   * Empty = the default for mealsPerDay (3: breakfast, lunch, dinner; 4: plus a snack).
+   */
+  mealSlots?: MealSlot[];
   maxCookMinutes: number;
   groceryTier: GroceryTier;
   clinicalFlags: ClinicalFlag[];

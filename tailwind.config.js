@@ -1,6 +1,5 @@
-// Material Design 3 theme. Colour roles are generated from one seed colour by Google's
-// material-color-utilities (npm run theme -> src/styles/m3-tokens.json). Class names use
-// M3 role names (bg-primary, text-on-surface-variant, bg-secondary-container, ...).
+// Theme. Colour roles live in src/styles/m3-tokens.json (hand-set Jamun and Mango palette);
+// class names keep Material 3 role names (bg-primary, text-on-surface-variant, ...).
 import tokens from './src/styles/m3-tokens.json' with { type: 'json' };
 
 export default {
@@ -8,7 +7,11 @@ export default {
   theme: {
     extend: {
       colors: { ...tokens.light },
-      fontFamily: { sans: ['"Roboto Flex Variable"', 'Roboto', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'] },
+      // Figtree for reading, Baloo 2 (Ek Type, an Indian foundry) for headings and numbers people glance at.
+      fontFamily: {
+        sans: ['"Figtree Variable"', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        display: ['"Baloo 2 Variable"', '"Figtree Variable"', 'system-ui', 'sans-serif'],
+      },
       // M3 type scale (label / body / title / headline / display), rem at 16 px.
       fontSize: {
         xs: ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.03em' }], // label-small/body-small
@@ -21,12 +24,14 @@ export default {
         '4xl': ['2.8125rem', { lineHeight: '3.25rem' }], // display-small
       },
       // M3 shape scale: extra-small 4, small 8, medium 12, large 16, extra-large 28.
-      borderRadius: { xs: '4px', card: '16px', ctl: '12px', xl2: '28px' },
+      // Shape hierarchy: big friendly cards, softer controls, pill buttons.
+      borderRadius: { xs: '8px', card: '24px', ctl: '16px', xl2: '32px' },
       boxShadow: {
         // M3 elevation levels 1-3
-        e1: '0 1px 2px rgba(0,0,0,.30), 0 1px 3px 1px rgba(0,0,0,.15)',
-        e2: '0 1px 2px rgba(0,0,0,.30), 0 2px 6px 2px rgba(0,0,0,.15)',
-        e3: '0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.30)',
+        // Plum-tinted, used only for things that float (menus, sheets, the log button).
+        e1: '0 1px 2px rgba(46,23,69,.10)',
+        e2: '0 8px 24px -6px rgba(46,23,69,.22)',
+        e3: '0 16px 40px -8px rgba(46,23,69,.30)',
       },
       maxWidth: { prose: '68ch' },
     },

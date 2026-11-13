@@ -6,6 +6,7 @@ import type { Profile, ProfileBundle } from '../../domain/types.ts';
 import type { StoredCalculation, StoredPlan } from '../../domain/persistence/mappers.ts';
 import { DATA_VERSION, weekStartOf } from '../../domain/persistence/mappers.ts';
 import { NO_CUSTOM_TARGETS } from '../../domain/nutrition/personal.ts';
+import type { MealCheckin } from '../../domain/progress/progress.ts';
 import { calculateTargets, planTargetsFrom } from '../../domain/nutrition/targets.ts';
 import { generatePlanOptions, PLANNER_VERSION } from '../../domain/planning/plan.ts';
 import { simulateCheckout, type SimulatedOrder, type StoredBasket } from '../../domain/orders/checkout.ts';
@@ -28,6 +29,7 @@ interface UserData {
   orders: SimulatedOrder[];
   pantry: PantryItem[];
   schedules: ScheduleRule[];
+  checkins?: MealCheckin[];
 }
 
 export interface DemoMail {
@@ -333,6 +335,23 @@ export class DemoStore implements NourishStore {
   async deletePantryItem(id: string) {
     const { db, d } = this.user();
     d.pantry = d.pantry.filter((p) => p.id !== id);
+    save(db);
+  }
+
+  async listCheckins(profileId: string, fromDay: string) {
+    return (this.user().d.checkins ?? []).filter((c) => c.profileId === profileId && c.day >= fromDay);
+  }
+  async saveCheckin(c: MealCheckin) {
+    const { db, d } = this.user();
+    this.ownedBundle(d, c.profileId);
+    // Same rule as the database: one check-in per profile, day and meal.
+    d.checkins = [...(d.checkins ?? []).filter((x) => !(x.profileId === c.profileId && x.day === c.day && x.slot === c.slot)), c];
+    save(db);
+    return c;
+  }
+  async deleteCheckin(id: string) {
+    const { db, d } = this.user();
+    d.checkins = (d.checkins ?? []).filter((x) => x.id !== id);
     save(db);
   }
 

@@ -7,6 +7,7 @@ import type { StoredCalculation, StoredPlan } from '../../domain/persistence/map
 import type { EligibilityResult } from '../../domain/nutrition/eligibility.ts';
 import type { StoredBasket, SimulatedOrder } from '../../domain/orders/checkout.ts';
 import type { PantryItem } from '../../domain/inventory/pantry.ts';
+import type { MealCheckin } from '../../domain/progress/progress.ts';
 
 export interface Session {
   userId: string;
@@ -72,6 +73,12 @@ export interface NourishStore {
   listPantry(profileId: string): Promise<PantryItem[]>;
   savePantryItem(item: PantryItem): Promise<PantryItem>;
   deletePantryItem(id: string): Promise<void>;
+
+  /** Meal check-ins from `fromDay` (YYYY-MM-DD) onwards. */
+  listCheckins(profileId: string, fromDay: string): Promise<MealCheckin[]>;
+  /** One check-in per profile, day and meal: saving again replaces it. */
+  saveCheckin(c: MealCheckin): Promise<MealCheckin>;
+  deleteCheckin(id: string): Promise<void>;
 
   getScheduleRule(profileId: string): Promise<ScheduleRule | null>;
   saveScheduleRule(rule: ScheduleRule): Promise<void>;
