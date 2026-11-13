@@ -275,6 +275,28 @@ test('label scan: photo read by AI, verdict by our rules (model mocked)', async 
   await shot(page, '16-label-scan');
 });
 
+test('cook note: translated menu keeps every quantity (model mocked)', async ({ page }) => {
+  // The mock answer drops one quantity, so the app must refuse it and show English instead.
+  await page.route('**/api/cook', (route) => route.fulfill({ json: { content: 'సోమవారం మెను: పోహా 75 g', model: 'mock', promptVersion: 'cook-prompt-1.0.0' } }));
+  await signIn(page, 'demo.cook@example.com');
+  await page.getByLabel(/I have read the notice/).check();
+  await page.getByLabel('Profile name').fill('Asha');
+  await page.getByRole('button', { name: 'Create profile and continue' }).click();
+  await page.getByRole('button', { name: 'Use an example' }).click();
+  await page.getByRole('button', { name: 'Review' }).click();
+  await page.getByRole('button', { name: 'Save and see my targets' }).click();
+  await page.getByRole('button', { name: 'See meal plan options' }).click();
+  await page.getByRole('button', { name: 'Show me three plans' }).click();
+  await page.getByRole('button', { name: 'Choose Balanced' }).click();
+  await page.getByRole('link', { name: 'Menu for the cook (Telugu / Hindi)' }).click();
+  await page.getByRole('radio', { name: 'Mon' }).click();
+  await page.getByRole('button', { name: 'Make the note' }).click();
+  await expect(page.getByText(/changed some quantities/)).toBeVisible();
+  await expect(page.getByText(/Menu for Monday\./)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Send on WhatsApp' })).toHaveAttribute('href', /wa\.me/);
+  await shot(page, '17-cook-note');
+});
+
 test('step-by-step form still works', async ({ page }) => {
   await signIn(page, 'demo.ravi@example.com');
   await page.getByLabel(/I have read the notice/).check();

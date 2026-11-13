@@ -121,6 +121,20 @@ If the AI is off, offline or slow, the rule reader is used and the person sees a
 
 **Limits:** three real pages is a small set; more should be captured across items and locations. Fees aren't modelled. Store layouts change, which is why reading uses AI rather than per-site code.
 
+## 7. Label scan
+
+**The AI's job:** copy a packet label from a photo: the ingredients word for word, the "contains" and "may contain" statements, and the veg mark. **The decision** is made by fixed word lists (`src/domain/labels/check.ts`) for every person in the household. They cover Indian label terms (maida, besan, ghee, khoa), plant look-alikes (cocoa butter and coconut milk are not dairy), and animal additives (gelatine, INS 120/441/542; INS 627/631 shown as "check"). The AI's own allergen list can only add caution.
+
+**Data:** 24 invented labels in `src/eval/datasets/labels.ts`, rendered to photos (`npm run render:labels`) in hard styles: small print, tilt, blur, low contrast, a Hindi heading, and a list cut off mid-line. They include traps: eggless mayo, egg noodles, gummies with gelatine, jelly with INS 441, cocoa butter, coconut milk powder, "may contain nuts".
+
+**Without a key (gates L1, L2):** the word lists find exactly the hand-labelled facts on 24 of 24 labels. An unreadable label never says "fine" for any of 11 test people (0 of 264).
+
+**Live photos (`npm run eval:labels`, Gemini):** 264 person × label verdicts. **0 times "fine" when it wasn't**, 99.2% agreement with the verdict from the typed label, and the cut-off label was spotted. The 2 disagreements were over-cautious: the AI also listed sesame on the eggless mayo and dairy for coconut milk. Real kitchen photos are the next test set to add.
+
+## 8. Cook note in Telugu and Hindi
+
+The menu and amounts come from the plan, with no AI involved. The AI only rewrites it in Telugu or Hindi. `checkTranslation` requires every number from the English note, and no others, to appear in the translation (Telugu and Devanagari digits are accepted). If the check fails, the cook gets the English note. **Live (`npm run eval:cook`): 12 of 12 menus kept every quantity.**
+
 ## How to run
 
 ```bash
@@ -128,6 +142,8 @@ npm run eval        # full run, writes EVALUATION_REPORT.md, eval-results/report
 npm test            # includes a quick evaluation that blocks on any critical gate
 npm run eval:llm    # AI reader vs rules on both sets (needs GROQ_API_KEY)
 npm run eval:listings  # AI store-page reader on saved pages (needs GEMINI_API_KEY)
+npm run eval:labels    # label photos -> verdicts (needs GEMINI_API_KEY)
+npm run eval:cook      # Telugu/Hindi cook notes keep every quantity (needs GROQ_API_KEY)
 ```
 
 In the app, **Evaluation** shows the last full report and can re-run a quick evaluation in the browser.

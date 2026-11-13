@@ -237,6 +237,9 @@ function Week({ plan, bundle }: { plan: StoredPlan; bundle: ProfileBundle }) {
           <Link to="/groceries" className="flex min-h-[48px] items-center justify-center rounded-full bg-primary px-4 font-medium text-on-primary hover:brightness-110">
             Build this week’s groceries
           </Link>
+          <Link to="/cook" className="flex min-h-[48px] items-center justify-center rounded-full border border-outline px-4 font-medium text-primary hover:bg-primary/[0.08]">
+            Menu for the cook (Telugu / Hindi)
+          </Link>
         </aside>
       </div>
 

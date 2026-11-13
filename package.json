@@ -25,7 +25,8 @@
     "eval:listings": "node --experimental-strip-types --no-warnings src/eval/listings-cli.ts",
     "pack:extension": "bash scripts/pack-extension.sh",
     "render:labels": "node --experimental-strip-types --no-warnings scripts/render-labels.ts",
-    "eval:labels": "node --experimental-strip-types --no-warnings src/eval/labels-cli.ts"
+    "eval:labels": "node --experimental-strip-types --no-warnings src/eval/labels-cli.ts",
+    "eval:cook": "node --experimental-strip-types --no-warnings src/eval/cook-cli.ts"
   },
   "dependencies": {
     "@fontsource-variable/roboto-flex": "^5.3.0",

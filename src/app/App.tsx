@@ -16,6 +16,7 @@ import { EvaluationPage } from '../features/evaluation/EvaluationPage.tsx';
 import { StoreOrderPage } from '../features/orders/StoreOrderPage.tsx';
 import { ComparePage } from '../features/groceries/ComparePage.tsx';
 import { ScanPage } from '../features/scan/ScanPage.tsx';
+import { CookPage } from '../features/cook/CookPage.tsx';
 import { NutritionPage } from '../features/nutrition/NutritionPage.tsx';
 import { PlansPage } from '../features/meal-plans/PlansPage.tsx';
 import { RecipePage } from '../features/meal-plans/RecipePage.tsx';
@@ -81,6 +82,7 @@ export function App() {
                   <Route path="/groceries/catalogue" element={<CataloguePage />} />
                   <Route path="/groceries/compare" element={<ComparePage />} />
                   <Route path="/scan" element={<ScanPage />} />
+                  <Route path="/cook" element={<CookPage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
                   <Route path="/checkout/store" element={<StoreOrderPage />} />
                   <Route path="/orders" element={<OrdersPage />} />

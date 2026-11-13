@@ -68,7 +68,7 @@ export function ingredientUnitCost(ingredientId: string, tier: GroceryTier, prod
   return Math.min(...pool.map((p) => p.priceInr / p.packQty));
 }
 
-function swappedLines(recipe: Recipe, servings: number, swaps: Record<string, IngredientSwap>) {
+export function swappedLines(recipe: Recipe, servings: number, swaps: Record<string, IngredientSwap>) {
   return recipe.ingredients.map((ri) => {
     const s = swaps[ri.ingredientId];
     return s

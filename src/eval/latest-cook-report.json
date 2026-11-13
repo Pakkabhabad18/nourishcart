@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-11-13T17:11:55.708Z",
+  "model": "openai/gpt-oss-120b",
+  "promptVersion": "cook-prompt-1.0.0",
+  "notes": 12,
+  "quantitiesKept": 12,
+  "keptRate": 1,
+  "fails": []
+}

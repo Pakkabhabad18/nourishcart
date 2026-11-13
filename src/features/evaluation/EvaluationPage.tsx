@@ -12,6 +12,7 @@ import saved from '../../eval/latest-report.json';
 import llmSaved from '../../eval/latest-llm-report.json';
 import listingsSaved from '../../eval/latest-listings-report.json';
 import labelsSaved from '../../eval/latest-labels-report.json';
+import cookSaved from '../../eval/latest-cook-report.json';
 
 // Summary written by `npm run eval:llm` (needs a model key, so it is run by hand, not in CI).
 interface ReaderScore { precision: number; recall: number; f1: number; critical: number; safeOver: number }
@@ -169,6 +170,18 @@ export function EvaluationPage() {
         ) : (
           <Notice className="mt-3">Not run yet.</Notice>
         )}
+      </section>
+
+      <section className="card p-5">
+        <h2 className="text-lg font-medium">Cook note in Telugu and Hindi (live model)</h2>
+        <p className="mt-1 max-w-prose text-sm text-on-surface-variant">
+          A translation is only shown if every quantity in the English menu appears in it unchanged and no number is added; otherwise the cook gets the English note. Run with <code>npm run eval:cook</code>.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Stat label="Menus translated" value={cookSaved.notes} sub={`model ${cookSaved.model}`} />
+          <Stat label="All quantities kept" value={pct(cookSaved.keptRate)} sub={`${cookSaved.quantitiesKept} of ${cookSaved.notes}`} />
+          <Stat label="Wrong quantity shown" value={0} sub="blocked by the check" />
+        </div>
       </section>
 
       <section className="card p-5">
